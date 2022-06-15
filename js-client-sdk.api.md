@@ -4,8 +4,22 @@
 
 ```ts
 
+// Warning: (ae-forgotten-export) The symbol "IEppoClient" needs to be exported by the entry point index.d.ts
+//
 // @public
-export function dummy(): string;
+export function getInstance(): IEppoClient;
+
+// @public
+export interface IClientConfig {
+    apiKey: string;
+    baseUrl?: string;
+    // Warning: (ae-forgotten-export) The symbol "AttributeValueType" needs to be exported by the entry point index.d.ts
+    subjectAttributes?: Record<string, AttributeValueType>;
+    subjectKey: string;
+}
+
+// @public
+export function init(config: IClientConfig): Promise<IEppoClient>;
 
 // (No @packageDocumentation comment for this package)
 
