@@ -1,0 +1,8 @@
+# Node artifact files
+node_modules/
+dist/
+logs/
+
+temp
+.env
+yarn-error.log
