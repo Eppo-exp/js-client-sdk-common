@@ -18,6 +18,6 @@ export interface IClientConfig
 |  --- | --- | --- |
 |  [apiKey](./js-client-sdk.iclientconfig.apikey.md) | string | Eppo API key |
 |  [baseUrl?](./js-client-sdk.iclientconfig.baseurl.md) | string | <i>(Optional)</i> Base URL of the Eppo API. Clients should use the default setting in most cases. |
-|  [subjectAttributes?](./js-client-sdk.iclientconfig.subjectattributes.md) | Record&lt;string, AttributeValueType&gt; | <i>(Optional)</i> Optional attributes associated with the subject, for example name and email. The subject attributes are used for evaluating any targeting rules tied to the experiment. |
+|  [subjectAttributes?](./js-client-sdk.iclientconfig.subjectattributes.md) | Record&lt;string, [AttributeValueType](./js-client-sdk.attributevaluetype.md)<!-- -->&gt; | <i>(Optional)</i> Optional attributes associated with the subject, for example name and email. The subject attributes are used for evaluating any targeting rules tied to the experiment. |
 |  [subjectKey](./js-client-sdk.iclientconfig.subjectkey.md) | string | An identifier of the experiment subject, for example a user ID. |
 

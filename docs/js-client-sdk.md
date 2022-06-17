@@ -16,4 +16,11 @@
 |  Interface | Description |
 |  --- | --- |
 |  [IClientConfig](./js-client-sdk.iclientconfig.md) | Configuration used for initializing the Eppo client |
+|  [IEppoClient](./js-client-sdk.ieppoclient.md) | Client for assigning experiment variations. |
+
+## Type Aliases
+
+|  Type Alias | Description |
+|  --- | --- |
+|  [AttributeValueType](./js-client-sdk.attributevaluetype.md) |  |
 

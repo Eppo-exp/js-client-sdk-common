@@ -4,8 +4,9 @@
 
 ```ts
 
-// Warning: (ae-forgotten-export) The symbol "IEppoClient" needs to be exported by the entry point index.d.ts
-//
+// @public (undocumented)
+export type AttributeValueType = string | number;
+
 // @public
 export function getInstance(): IEppoClient;
 
@@ -13,9 +14,13 @@ export function getInstance(): IEppoClient;
 export interface IClientConfig {
     apiKey: string;
     baseUrl?: string;
-    // Warning: (ae-forgotten-export) The symbol "AttributeValueType" needs to be exported by the entry point index.d.ts
     subjectAttributes?: Record<string, AttributeValueType>;
     subjectKey: string;
+}
+
+// @public
+export interface IEppoClient {
+    getAssignment(experimentKey: string): string;
 }
 
 // @public

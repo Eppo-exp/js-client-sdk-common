@@ -13,7 +13,7 @@ export declare function getInstance(): IEppoClient;
 ```
 <b>Returns:</b>
 
-IEppoClient
+[IEppoClient](./js-client-sdk.ieppoclient.md)
 
 a singleton client instance
 
