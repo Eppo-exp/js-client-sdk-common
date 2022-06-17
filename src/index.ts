@@ -71,7 +71,7 @@ export async function init(config: IClientConfig): Promise<IEppoClient> {
     configurationRequestor,
     config.subjectAttributes,
   );
-  if (!configurationStore.isSessionStorageInitialized()) {
+  if (!configurationStore.isInitialized()) {
     await configurationRequestor.fetchAndStoreConfigurations();
   }
   return clientInstance;

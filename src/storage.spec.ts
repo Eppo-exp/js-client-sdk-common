@@ -27,9 +27,9 @@ describe('EppoSessionStorage', () => {
     });
 
     it('returns stored entries', () => {
-      expect(storage.isSessionStorageInitialized()).toEqual(false);
+      expect(storage.isInitialized()).toEqual(false);
       storage.setEntries({ key1: config1, key2: config2 });
-      expect(storage.isSessionStorageInitialized()).toEqual(true);
+      expect(storage.isInitialized()).toEqual(true);
       expect(storage.get<ITestEntry>('key1')).toEqual(config1);
       expect(storage.get<ITestEntry>('key2')).toEqual(config2);
     });
