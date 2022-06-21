@@ -5,7 +5,21 @@
 ```ts
 
 // @public
-export function dummy(): string;
+export function getInstance(): IEppoClient;
+
+// @public
+export interface IClientConfig {
+    apiKey: string;
+    baseUrl?: string;
+}
+
+// @public
+export interface IEppoClient {
+    getAssignment(subjectKey: string, experimentKey: string, subjectAttributes?: Record<string, any>): string;
+}
+
+// @public
+export function init(config: IClientConfig): Promise<IEppoClient>;
 
 // (No @packageDocumentation comment for this package)
 

@@ -8,5 +8,13 @@
 
 |  Function | Description |
 |  --- | --- |
-|  [dummy()](./js-client-sdk.dummy.md) | Test documentation |
+|  [getInstance()](./js-client-sdk.getinstance.md) | Used to access a singleton SDK client instance. Use the method after calling init() to initialize the client. |
+|  [init(config)](./js-client-sdk.init.md) | Initializes the Eppo client with configuration parameters. This method should be called once on application startup. After invocation of this method, the SDK will poll Eppo's API at regular intervals to retrieve assignment configurations. |
+
+## Interfaces
+
+|  Interface | Description |
+|  --- | --- |
+|  [IClientConfig](./js-client-sdk.iclientconfig.md) | Configuration used for initializing the Eppo client |
+|  [IEppoClient](./js-client-sdk.ieppoclient.md) | Client for assigning experiment variations. |
 

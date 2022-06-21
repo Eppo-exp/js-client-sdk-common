@@ -29,6 +29,7 @@
   },
   "homepage": "https://github.com/Eppo-exp/js-client-sdk#readme",
   "devDependencies": {
+    "@google-cloud/storage": "^6.1.0",
     "@microsoft/api-documenter": "^7.17.17",
     "@microsoft/api-extractor": "^7.25.0",
     "@types/jest": "^28.1.1",
@@ -44,8 +45,10 @@
     "jest": "^28.1.1",
     "jest-environment-jsdom": "^28.1.1",
     "prettier": "^2.7.1",
+    "testdouble": "^3.16.6",
     "ts-jest": "^28.0.5",
-    "typescript": "^4.7.3"
+    "typescript": "^4.7.3",
+    "xhr-mock": "^2.5.1"
   },
   "dependencies": {
     "axios": "^0.27.2"
