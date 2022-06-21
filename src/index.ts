@@ -4,7 +4,6 @@ import { BASE_URL, REQUEST_TIMEOUT_MILLIS } from './constants';
 import EppoClient, { IEppoClient } from './eppo-client';
 import ExperimentConfigurationRequestor from './experiment/experiment-configuration-requestor';
 import HttpClient from './http-client';
-import { AttributeValueType } from './rule';
 import { sdkName, sdkVersion } from './sdk-data';
 import { EppoSessionStorage } from './storage';
 import { validateNotBlank } from './validation';
@@ -20,17 +19,6 @@ export interface IClientConfig {
   apiKey: string;
 
   /**
-   * An identifier of the experiment subject, for example a user ID.
-   */
-  subjectKey: string;
-
-  /**
-   * Optional attributes associated with the subject, for example name and email.
-   * The subject attributes are used for evaluating any targeting rules tied to the experiment.
-   */
-  subjectAttributes?: Record<string, AttributeValueType>;
-
-  /**
    * Base URL of the Eppo API.
    * Clients should use the default setting in most cases.
    */
@@ -38,7 +26,6 @@ export interface IClientConfig {
 }
 
 export { IEppoClient } from './eppo-client';
-export { AttributeValueType } from './rule';
 
 let clientInstance: IEppoClient = null;
 
@@ -51,7 +38,6 @@ let clientInstance: IEppoClient = null;
  */
 export async function init(config: IClientConfig): Promise<IEppoClient> {
   validateNotBlank(config.apiKey, 'API key required');
-  validateNotBlank(config.subjectKey, 'subjectKey is required');
   const configurationStore = new EppoSessionStorage();
   const axiosInstance = axios.create({
     baseURL: config.baseUrl || BASE_URL,
@@ -66,11 +52,7 @@ export async function init(config: IClientConfig): Promise<IEppoClient> {
     configurationStore,
     httpClient,
   );
-  clientInstance = new EppoClient(
-    config.subjectKey,
-    configurationRequestor,
-    config.subjectAttributes,
-  );
+  clientInstance = new EppoClient(configurationRequestor);
   if (!configurationStore.isInitialized()) {
     await configurationRequestor.fetchAndStoreConfigurations();
   }

@@ -4,9 +4,6 @@
 
 ```ts
 
-// @public (undocumented)
-export type AttributeValueType = string | number;
-
 // @public
 export function getInstance(): IEppoClient;
 
@@ -14,13 +11,11 @@ export function getInstance(): IEppoClient;
 export interface IClientConfig {
     apiKey: string;
     baseUrl?: string;
-    subjectAttributes?: Record<string, AttributeValueType>;
-    subjectKey: string;
 }
 
 // @public
 export interface IEppoClient {
-    getAssignment(experimentKey: string): string;
+    getAssignment(subjectKey: string, experimentKey: string, subjectAttributes?: Record<string, any>): string;
 }
 
 // @public
