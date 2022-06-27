@@ -8,8 +8,24 @@
 export function getInstance(): IEppoClient;
 
 // @public
+export interface IAssignmentEvent {
+    experiment: string;
+    subject: string;
+    // (undocumented)
+    subjectAttributes: Record<string, any>;
+    timestamp: string;
+    variation: string;
+}
+
+// @public
+export interface IAssignmentLogger {
+    logAssignment(assignment: IAssignmentEvent): void;
+}
+
+// @public
 export interface IClientConfig {
     apiKey: string;
+    assignmentLogger?: IAssignmentLogger;
     baseUrl?: string;
 }
 

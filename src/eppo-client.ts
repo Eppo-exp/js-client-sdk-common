@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 
+import { IAssignmentLogger } from './assignment-logger';
 import { IExperimentConfiguration } from './experiment/experiment-configuration';
 import ExperimentConfigurationRequestor from './experiment/experiment-configuration-requestor';
 import { Rule } from './rule';
@@ -31,7 +32,10 @@ export interface IEppoClient {
 }
 
 export default class EppoClient implements IEppoClient {
-  constructor(private configurationRequestor: ExperimentConfigurationRequestor) {}
+  constructor(
+    private configurationRequestor: ExperimentConfigurationRequestor,
+    private assignmentLogger?: IAssignmentLogger,
+  ) {}
 
   getAssignment(subjectKey: string, experimentKey: string, subjectAttributes = {}): string {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
@@ -50,7 +54,21 @@ export default class EppoClient implements IEppoClient {
     }
     const { variations, subjectShards } = experimentConfig;
     const shard = getShard(`assignment-${subjectKey}-${experimentKey}`, subjectShards);
-    return variations.find((variation) => isShardInRange(shard, variation.shardRange)).name;
+    const assignedVariation = variations.find((variation) =>
+      isShardInRange(shard, variation.shardRange),
+    ).name;
+    try {
+      this.assignmentLogger?.logAssignment({
+        experiment: experimentKey,
+        variation: assignedVariation,
+        timestamp: new Date().toISOString(),
+        subject: subjectKey,
+        subjectAttributes,
+      });
+    } catch (error) {
+      console.error(`[Eppo SDK] Error logging assignment event: ${error.message}`);
+    }
+    return assignedVariation;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -15,6 +15,8 @@
 
 |  Interface | Description |
 |  --- | --- |
+|  [IAssignmentEvent](./js-client-sdk.iassignmentevent.md) | Holds data about the variation a subject was assigned to. |
+|  [IAssignmentLogger](./js-client-sdk.iassignmentlogger.md) | Implement this interface log variation assignments to your data warehouse. |
 |  [IClientConfig](./js-client-sdk.iclientconfig.md) | Configuration used for initializing the Eppo client |
 |  [IEppoClient](./js-client-sdk.ieppoclient.md) | Client for assigning experiment variations. |
 

@@ -1,6 +1,6 @@
 {
   "name": "@eppo/js-client-sdk",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Eppo SDK for client-side JavaScript applications",
   "main": "dist/index.js",
   "files": [
@@ -16,7 +16,7 @@
     "typecheck": "tsc",
     "test": "yarn test:unit",
     "test:unit": "NODE_ENV=test jest '.*\\.spec\\.ts'",
-    "docs": "api-extractor run --local --verbose && api-documenter markdown -i ./temp -o ./docs"
+    "docs": "tsc && api-extractor run --local --verbose && api-documenter markdown -i ./temp -o ./docs"
   },
   "repository": {
     "type": "git",
