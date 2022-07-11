@@ -4,7 +4,7 @@
 
 ## init() function
 
-Initializes the Eppo client with configuration parameters. This method should be called once on application startup. After invocation of this method, the SDK will poll Eppo's API at regular intervals to retrieve assignment configurations.
+Initializes the Eppo client with configuration parameters. This method should be called once on application startup.
 
 <b>Signature:</b>
 

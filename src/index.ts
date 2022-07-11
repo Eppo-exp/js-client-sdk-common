@@ -1,12 +1,13 @@
 import axios from 'axios';
 
 import { IAssignmentLogger } from './assignment-logger';
-import { BASE_URL, REQUEST_TIMEOUT_MILLIS } from './constants';
+import { BASE_URL, REQUEST_TIMEOUT_MILLIS, SESSION_ASSIGNMENT_CONFIG_LOADED } from './constants';
 import EppoClient, { IEppoClient } from './eppo-client';
 import ExperimentConfigurationRequestor from './experiment/experiment-configuration-requestor';
 import HttpClient from './http-client';
+import { EppoLocalStorage } from './local-storage';
 import { sdkName, sdkVersion } from './sdk-data';
-import { EppoSessionStorage } from './storage';
+import { EppoSessionStorage } from './session-storage';
 import { validateNotBlank } from './validation';
 
 /**
@@ -28,24 +29,23 @@ export interface IClientConfig {
   /**
    * Pass a logging implementation to send variation assignments to your data warehouse.
    */
-  assignmentLogger?: IAssignmentLogger;
+  assignmentLogger: IAssignmentLogger;
 }
 
 export { IAssignmentLogger, IAssignmentEvent } from './assignment-logger';
 export { IEppoClient } from './eppo-client';
 
-let clientInstance: IEppoClient = null;
+const localStorage = new EppoLocalStorage();
+const sessionStorage = new EppoSessionStorage();
 
 /**
  * Initializes the Eppo client with configuration parameters.
  * This method should be called once on application startup.
- * After invocation of this method, the SDK will poll Eppo's API at regular intervals to retrieve assignment configurations.
  * @param config client configuration
  * @public
  */
 export async function init(config: IClientConfig): Promise<IEppoClient> {
   validateNotBlank(config.apiKey, 'API key required');
-  const configurationStore = new EppoSessionStorage();
   const axiosInstance = axios.create({
     baseURL: config.baseUrl || BASE_URL,
     timeout: REQUEST_TIMEOUT_MILLIS,
@@ -55,15 +55,13 @@ export async function init(config: IClientConfig): Promise<IEppoClient> {
     sdkName,
     sdkVersion,
   });
-  const configurationRequestor = new ExperimentConfigurationRequestor(
-    configurationStore,
-    httpClient,
-  );
-  clientInstance = new EppoClient(configurationRequestor, config.assignmentLogger);
-  if (!configurationStore.isInitialized()) {
+  EppoClient.instance.setLogger(config.assignmentLogger);
+  const configurationRequestor = new ExperimentConfigurationRequestor(localStorage, httpClient);
+  if (sessionStorage.get(SESSION_ASSIGNMENT_CONFIG_LOADED) !== 'true') {
     await configurationRequestor.fetchAndStoreConfigurations();
+    sessionStorage.set(SESSION_ASSIGNMENT_CONFIG_LOADED, 'true');
   }
-  return clientInstance;
+  return EppoClient.instance;
 }
 
 /**
@@ -72,8 +70,5 @@ export async function init(config: IClientConfig): Promise<IEppoClient> {
  * @returns a singleton client instance
  */
 export function getInstance(): IEppoClient {
-  if (!clientInstance) {
-    throw Error('Expected init() to be called to initialize a client instance');
-  }
-  return clientInstance;
+  return EppoClient.instance;
 }

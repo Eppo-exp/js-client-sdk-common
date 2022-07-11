@@ -25,7 +25,7 @@ export interface IAssignmentLogger {
 // @public
 export interface IClientConfig {
     apiKey: string;
-    assignmentLogger?: IAssignmentLogger;
+    assignmentLogger: IAssignmentLogger;
     baseUrl?: string;
 }
 

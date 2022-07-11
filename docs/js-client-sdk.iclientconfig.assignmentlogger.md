@@ -9,5 +9,5 @@ Pass a logging implementation to send variation assignments to your data warehou
 <b>Signature:</b>
 
 ```typescript
-assignmentLogger?: IAssignmentLogger;
+assignmentLogger: IAssignmentLogger;
 ```

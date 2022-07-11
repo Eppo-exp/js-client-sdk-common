@@ -17,6 +17,6 @@ export interface IClientConfig
 |  Property | Type | Description |
 |  --- | --- | --- |
 |  [apiKey](./js-client-sdk.iclientconfig.apikey.md) | string | Eppo API key |
-|  [assignmentLogger?](./js-client-sdk.iclientconfig.assignmentlogger.md) | [IAssignmentLogger](./js-client-sdk.iassignmentlogger.md) | <i>(Optional)</i> Pass a logging implementation to send variation assignments to your data warehouse. |
+|  [assignmentLogger](./js-client-sdk.iclientconfig.assignmentlogger.md) | [IAssignmentLogger](./js-client-sdk.iassignmentlogger.md) | Pass a logging implementation to send variation assignments to your data warehouse. |
 |  [baseUrl?](./js-client-sdk.iclientconfig.baseurl.md) | string | <i>(Optional)</i> Base URL of the Eppo API. Clients should use the default setting in most cases. |
 

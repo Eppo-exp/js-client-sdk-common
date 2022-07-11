@@ -1,10 +1,12 @@
 import { createHash } from 'crypto';
 
-import { IAssignmentLogger } from './assignment-logger';
+import { IAssignmentEvent, IAssignmentLogger } from './assignment-logger';
+import { MAX_EVENT_QUEUE_SIZE, NULL_SENTINEL, SESSION_ASSIGNMENT_CONFIG_LOADED } from './constants';
 import { IExperimentConfiguration } from './experiment/experiment-configuration';
-import ExperimentConfigurationRequestor from './experiment/experiment-configuration-requestor';
+import { EppoLocalStorage } from './local-storage';
 import { Rule } from './rule';
 import { matchesAnyRule } from './rule_evaluator';
+import { EppoSessionStorage } from './session-storage';
 import { getShard, isShardInRange } from './shard';
 import { validateNotBlank } from './validation';
 
@@ -32,43 +34,105 @@ export interface IEppoClient {
 }
 
 export default class EppoClient implements IEppoClient {
+  public static instance: EppoClient = new EppoClient(
+    new EppoLocalStorage(),
+    new EppoSessionStorage(),
+  );
+
+  private queuedEvents: IAssignmentEvent[] = [];
+  private assignmentLogger: IAssignmentLogger = null;
+
   constructor(
-    private configurationRequestor: ExperimentConfigurationRequestor,
-    private assignmentLogger?: IAssignmentLogger,
+    private configurationStore: EppoLocalStorage,
+    private sessionStorage: EppoSessionStorage,
   ) {}
 
   getAssignment(subjectKey: string, experimentKey: string, subjectAttributes = {}): string {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
     validateNotBlank(experimentKey, 'Invalid argument: experimentKey cannot be blank');
-    const experimentConfig = this.configurationRequestor.getConfiguration(experimentKey);
+    // If getAssignment was called when the latest configuration were still being downloaded
+    // use the old assignment for the remainder of the session to avoid a flickering effect;
+    // we don't want a subject to switch between 2 variations during the same session.
+    const sessionOverrideKey = `${subjectKey}-${experimentKey}-session-override`;
+    const sessionOverride = this.sessionStorage.get(sessionOverrideKey);
+    if (sessionOverride) {
+      if (sessionOverride === NULL_SENTINEL) {
+        return null;
+      }
+      this.logAssignment(experimentKey, sessionOverride, subjectKey, subjectAttributes);
+      return sessionOverride;
+    }
+    const experimentConfig = this.configurationStore.get<IExperimentConfiguration>(experimentKey);
+    const allowListOverride = this.getSubjectVariationOverride(subjectKey, experimentConfig);
+    if (allowListOverride) {
+      this.setSessionOverrideIfLoadingConfigurations(sessionOverrideKey, allowListOverride);
+      return allowListOverride;
+    }
     if (
       !experimentConfig?.enabled ||
       !this.subjectAttributesSatisfyRules(subjectAttributes, experimentConfig.rules) ||
       !this.isInExperimentSample(subjectKey, experimentKey, experimentConfig)
     ) {
+      this.setSessionOverrideIfLoadingConfigurations(sessionOverrideKey, NULL_SENTINEL);
       return null;
-    }
-    const override = this.getSubjectVariationOverride(subjectKey, experimentConfig);
-    if (override) {
-      return override;
     }
     const { variations, subjectShards } = experimentConfig;
     const shard = getShard(`assignment-${subjectKey}-${experimentKey}`, subjectShards);
     const assignedVariation = variations.find((variation) =>
       isShardInRange(shard, variation.shardRange),
     ).name;
+    this.logAssignment(experimentKey, assignedVariation, subjectKey, subjectAttributes);
+    this.setSessionOverrideIfLoadingConfigurations(sessionOverrideKey, assignedVariation);
+    return assignedVariation;
+  }
+
+  public setLogger(logger: IAssignmentLogger) {
+    this.assignmentLogger = logger;
+    this.flushQueuedEvents(); // log any events that may have been queued while initializing
+  }
+
+  private flushQueuedEvents() {
+    const eventsToFlush = this.queuedEvents;
+    this.queuedEvents = [];
     try {
-      this.assignmentLogger?.logAssignment({
-        experiment: experimentKey,
-        variation: assignedVariation,
-        timestamp: new Date().toISOString(),
-        subject: subjectKey,
-        subjectAttributes,
-      });
+      for (const event of eventsToFlush) {
+        this.assignmentLogger.logAssignment(event);
+      }
+    } catch (error) {
+      console.error(`[Eppo SDK] Error flushing assignment events: ${error.message}`);
+    }
+  }
+
+  private logAssignment(
+    experiment: string,
+    variation: string,
+    subjectKey: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    subjectAttributes: Record<string, any>,
+  ) {
+    const event: IAssignmentEvent = {
+      experiment,
+      variation,
+      timestamp: new Date().toISOString(),
+      subject: subjectKey,
+      subjectAttributes,
+    };
+    // assignment logger may be null while waiting for initialization
+    if (this.assignmentLogger == null) {
+      this.queuedEvents.length < MAX_EVENT_QUEUE_SIZE && this.queuedEvents.push(event);
+      return;
+    }
+    try {
+      this.assignmentLogger.logAssignment(event);
     } catch (error) {
       console.error(`[Eppo SDK] Error logging assignment event: ${error.message}`);
     }
-    return assignedVariation;
+  }
+
+  private setSessionOverrideIfLoadingConfigurations(overrideKey: string, assignmentValue: string) {
+    if (this.sessionStorage.get(SESSION_ASSIGNMENT_CONFIG_LOADED) !== 'true') {
+      this.sessionStorage.set(overrideKey, assignmentValue);
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -84,7 +148,7 @@ export default class EppoClient implements IEppoClient {
     experimentConfig: IExperimentConfiguration,
   ): string {
     const subjectHash = createHash('md5').update(subjectKey).digest('hex');
-    return experimentConfig.overrides[subjectHash];
+    return experimentConfig?.overrides[subjectHash];
   }
 
   /**
