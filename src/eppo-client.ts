@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import * as md5 from 'md5';
 
 import { IAssignmentEvent, IAssignmentLogger } from './assignment-logger';
 import { MAX_EVENT_QUEUE_SIZE, NULL_SENTINEL, SESSION_ASSIGNMENT_CONFIG_LOADED } from './constants';
@@ -147,7 +147,7 @@ export default class EppoClient implements IEppoClient {
     subjectKey: string,
     experimentConfig: IExperimentConfiguration,
   ): string {
-    const subjectHash = createHash('md5').update(subjectKey).digest('hex');
+    const subjectHash = md5(subjectKey);
     return experimentConfig?.overrides[subjectHash];
   }
 

@@ -1,6 +1,6 @@
 {
   "name": "@eppo/js-client-sdk",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Eppo SDK for client-side JavaScript applications",
   "main": "dist/index.js",
   "files": [
@@ -11,13 +11,14 @@
     "lint": "eslint '**/*.{ts,tsx}' '**/*.d.{ts,tsx}' --cache",
     "lint:fix": "eslint --fix '**/*.{ts,tsx}' --cache",
     "lint:fix-pre-commit": "eslint -c .eslintrc.pre-commit.js --fix '**/*.{ts,tsx}' --no-eslintrc --cache",
-    "prepare": "husky install",
+    "prepare": "husky install && rm -rf dist/ && tsc && webpack && api-extractor run --local",
     "pre-commit": "lint-staged && tsc && yarn docs",
     "typecheck": "tsc",
     "test": "yarn test:unit",
     "test:unit": "NODE_ENV=test jest '.*\\.spec\\.ts'",
-    "docs": "tsc && api-extractor run --local --verbose && api-documenter markdown -i ./temp -o ./docs"
+    "docs": "api-documenter markdown -i ./temp -o ./docs"
   },
+  "jsdelivr": "dist/eppo-sdk.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Eppo-exp/js-client-sdk.git"
@@ -33,6 +34,7 @@
     "@microsoft/api-documenter": "^7.17.17",
     "@microsoft/api-extractor": "^7.25.0",
     "@types/jest": "^28.1.1",
+    "@types/md5": "^2.3.2",
     "@typescript-eslint/eslint-plugin": "^5.13.0",
     "@typescript-eslint/parser": "^5.13.0",
     "eslint": "^8.17.0",
@@ -45,12 +47,17 @@
     "jest": "^28.1.1",
     "jest-environment-jsdom": "^28.1.1",
     "prettier": "^2.7.1",
+    "terser-webpack-plugin": "^5.3.3",
     "testdouble": "^3.16.6",
     "ts-jest": "^28.0.5",
-    "typescript": "^4.7.3",
+    "ts-loader": "^9.3.1",
+    "typescript": "^4.7.4",
+    "webpack": "^5.73.0",
+    "webpack-cli": "^4.10.0",
     "xhr-mock": "^2.5.1"
   },
   "dependencies": {
-    "axios": "^0.27.2"
+    "axios": "^0.27.2",
+    "md5": "^2.3.0"
   }
 }
