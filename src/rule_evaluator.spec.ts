@@ -117,6 +117,33 @@ describe('matchesAnyRule', () => {
     expect(matchesAnyRule({ userId: 'user15' }, [notOneOfRule])).toEqual(true);
   });
 
+  it('does case insensitive matching with oneOf operator', () => {
+    const oneOfRule: Rule = {
+      conditions: [
+        {
+          operator: OperatorType.ONE_OF,
+          value: ['CA', 'US'],
+          attribute: 'country',
+        },
+      ],
+    };
+    expect(matchesAnyRule({ country: 'us' }, [oneOfRule])).toEqual(true);
+    expect(matchesAnyRule({ country: 'cA' }, [oneOfRule])).toEqual(true);
+  });
+
+  it('does case insensitive matching with notOneOf operator', () => {
+    const notOneOf: Rule = {
+      conditions: [
+        {
+          operator: OperatorType.NOT_ONE_OF,
+          value: ['1.0.BB', '1Ab'],
+          attribute: 'deviceType',
+        },
+      ],
+    };
+    expect(matchesAnyRule({ deviceType: '1ab' }, [notOneOf])).toEqual(false);
+  });
+
   it('handles oneOf rule with number', () => {
     const oneOfRule: Rule = {
       conditions: [

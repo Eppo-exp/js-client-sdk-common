@@ -46,11 +46,15 @@ function evaluateCondition(subjectAttributes: Record<string, any>, condition: Co
 }
 
 function isOneOf(attributeValue: any, conditionValue: string[]) {
-  return conditionValue.includes(attributeValue.toString());
+  return getMatchingStringValues(attributeValue.toString(), conditionValue).length > 0;
 }
 
 function isNotOneOf(attributeValue: any, conditionValue: string[]) {
-  return !conditionValue.includes(attributeValue.toString());
+  return getMatchingStringValues(attributeValue.toString(), conditionValue).length === 0;
+}
+
+function getMatchingStringValues(attributeValue: string, conditionValues: string[]): string[] {
+  return conditionValues.filter((value) => value.toLowerCase() === attributeValue.toLowerCase());
 }
 
 function compareNumber(
