@@ -168,12 +168,6 @@ describe('EppoClient E2E test', () => {
     );
   });
 
-  it('uses the same assignment during the session, even if it changes after local storage update', async () => {
-    expect(getInstance().getAssignment(sessionOverrideSubject, preloadedConfigExperiment)).toEqual(
-      'preloaded-config-variation',
-    );
-  });
-
   it('returns subject from overrides when enabled is true', () => {
     const experiment = 'experiment_5';
     window.localStorage.setItem(

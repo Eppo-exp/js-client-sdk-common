@@ -1,6 +1,6 @@
 {
   "name": "@eppo/js-client-sdk",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Eppo SDK for client-side JavaScript applications",
   "main": "dist/index.js",
   "files": [
