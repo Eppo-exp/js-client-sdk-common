@@ -17,6 +17,8 @@ jobs:
         with:
           path: './node_modules'
           key: ${{ runner.os }}-root-node-modules-${{ hashFiles('./yarn.lock') }}
+      - name: 'Set up GCP SDK for downloading test data'
+        uses: 'google-github-actions/setup-gcloud@v0'
       - name: Install SDK dependencies
         run: yarn --frozen-lockfile
         working-directory: ./

@@ -4,13 +4,15 @@
 import * as td from 'testdouble';
 import mock from 'xhr-mock';
 
-import { IAssignmentTestCase, readAssignmentTestData } from '../test/testHelpers';
+import {
+  IAssignmentTestCase,
+  readAssignmentTestData,
+  readMockRacResponse,
+} from '../test/testHelpers';
 
 import { IAssignmentLogger } from './assignment-logger';
 import { MAX_EVENT_QUEUE_SIZE } from './constants';
 import EppoClient from './eppo-client';
-import { IExperimentConfiguration } from './experiment/experiment-configuration';
-import { IVariation } from './experiment/variation';
 import { EppoLocalStorage } from './local-storage';
 import { OperatorType } from './rule';
 import { EppoSessionStorage } from './session-storage';
@@ -26,20 +28,8 @@ describe('EppoClient E2E test', () => {
     window.sessionStorage.clear();
     mock.setup();
     mock.get(/randomized_assignment\/config*/, (_req, res) => {
-      const testCases: IAssignmentTestCase[] = readAssignmentTestData();
-      const assignmentConfig: Record<string, IExperimentConfiguration> = {};
-      testCases.forEach(({ experiment, percentExposure, variations }) => {
-        assignmentConfig[experiment] = {
-          name: experiment,
-          percentExposure,
-          enabled: true,
-          subjectShards: 10000,
-          variations,
-          overrides: {},
-          rules: [],
-        };
-      });
-      return res.status(200).body(JSON.stringify({ experiments: assignmentConfig }));
+      const rac = readMockRacResponse();
+      return res.status(200).body(JSON.stringify(rac));
     });
     const preloadedConfig = {
       name: preloadedConfigExperiment,
@@ -142,22 +132,16 @@ describe('EppoClient E2E test', () => {
     it.each(readAssignmentTestData())(
       'test variation assignment splits',
       async ({
-        variations,
         experiment,
-        percentExposure,
         subjects,
+        subjectsWithAttributes,
         expectedAssignments,
       }: IAssignmentTestCase) => {
         console.log(`---- Test Case for ${experiment} Experiment ----`);
-        const assignments = getAssignments(subjects, experiment);
-        // verify the assingments don't change across test runs (deterministic)
+        const assignments = subjectsWithAttributes
+          ? getAssignmentsWithSubjectAttributes(subjectsWithAttributes, experiment)
+          : getAssignments(subjects, experiment);
         expect(assignments).toEqual(expectedAssignments);
-        const expectedVariationSplitPercentage = percentExposure / variations.length;
-        const unassignedCount = assignments.filter((assignment) => assignment == null).length;
-        expectToBeCloseToPercentage(unassignedCount / assignments.length, 1 - percentExposure);
-        variations.forEach((variation) => {
-          validateAssignmentCounts(assignments, expectedVariationSplitPercentage, variation);
-        });
       },
     );
   });
@@ -286,30 +270,24 @@ describe('EppoClient E2E test', () => {
     expect(assignment).toEqual('control');
   });
 
-  function validateAssignmentCounts(
-    assignments: string[],
-    expectedPercentage: number,
-    variation: IVariation,
-  ) {
-    const assignedCount = assignments.filter((assignment) => assignment === variation.name).length;
-    console.log(
-      `Expect variation ${variation.name} percentage of ${
-        assignedCount / assignments.length
-      } to be close to ${expectedPercentage}`,
-    );
-    expectToBeCloseToPercentage(assignedCount / assignments.length, expectedPercentage);
-  }
-
-  // expect assignment count to be within 5 percentage points of the expected count (because the hash output is random)
-  function expectToBeCloseToPercentage(percentage: number, expectedPercentage: number) {
-    expect(percentage).toBeGreaterThanOrEqual(expectedPercentage - 0.05);
-    expect(percentage).toBeLessThanOrEqual(expectedPercentage + 0.05);
-  }
-
   function getAssignments(subjects: string[], experiment: string): string[] {
     const client = getInstance();
     return subjects.map((subjectKey) => {
       return client.getAssignment(subjectKey, experiment);
+    });
+  }
+
+  function getAssignmentsWithSubjectAttributes(
+    subjectsWithAttributes: {
+      subjectKey: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      subjectAttributes: Record<string, any>;
+    }[],
+    experiment: string,
+  ): string[] {
+    const client = getInstance();
+    return subjectsWithAttributes.map((subject) => {
+      return client.getAssignment(subject.subjectKey, experiment, subject.subjectAttributes);
     });
   }
 });

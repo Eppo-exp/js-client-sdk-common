@@ -11,7 +11,7 @@
     "lint": "eslint '**/*.{ts,tsx}' '**/*.d.{ts,tsx}' --cache",
     "lint:fix": "eslint --fix '**/*.{ts,tsx}' --cache",
     "lint:fix-pre-commit": "eslint -c .eslintrc.pre-commit.js --fix '**/*.{ts,tsx}' --no-eslintrc --cache",
-    "prepare": "husky install && rm -rf dist/ && tsc && webpack && api-extractor run --local",
+    "prepare": "make prepare",
     "pre-commit": "lint-staged && tsc && yarn docs",
     "typecheck": "tsc",
     "test": "yarn test:unit",
@@ -30,7 +30,6 @@
   },
   "homepage": "https://github.com/Eppo-exp/js-client-sdk#readme",
   "devDependencies": {
-    "@google-cloud/storage": "^6.1.0",
     "@microsoft/api-documenter": "^7.17.17",
     "@microsoft/api-extractor": "^7.25.0",
     "@types/jest": "^28.1.1",

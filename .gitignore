@@ -7,4 +7,4 @@ temp
 .env
 yarn-error.log
 
-test/assignmentTestData
+test/data
