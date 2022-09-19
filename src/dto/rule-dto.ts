@@ -15,6 +15,7 @@ export interface Condition {
   value: any;
 }
 
-export interface Rule {
+export interface IRule {
+  allocationKey: string;
   conditions: Condition[];
 }

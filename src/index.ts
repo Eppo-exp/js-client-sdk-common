@@ -1,9 +1,9 @@
 import axios from 'axios';
 
 import { IAssignmentLogger } from './assignment-logger';
+import EppoClient, { IEppoClient } from './client/eppo-client';
 import { BASE_URL, REQUEST_TIMEOUT_MILLIS, SESSION_ASSIGNMENT_CONFIG_LOADED } from './constants';
-import EppoClient, { IEppoClient } from './eppo-client';
-import ExperimentConfigurationRequestor from './experiment/experiment-configuration-requestor';
+import ExperimentConfigurationRequestor from './experiment-configuration-requestor';
 import HttpClient from './http-client';
 import { EppoLocalStorage } from './local-storage';
 import { sdkName, sdkVersion } from './sdk-data';
@@ -33,7 +33,7 @@ export interface IClientConfig {
 }
 
 export { IAssignmentLogger, IAssignmentEvent } from './assignment-logger';
-export { IEppoClient } from './eppo-client';
+export { IEppoClient } from './client/eppo-client';
 
 const localStorage = new EppoLocalStorage();
 const sessionStorage = new EppoSessionStorage();

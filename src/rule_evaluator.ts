@@ -1,16 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Condition, OperatorType, Rule } from './rule';
+import { Condition, OperatorType, IRule } from './dto/rule-dto';
 
-export function matchesAnyRule(subjectAttributes: Record<string, any>, rules: Rule[]): boolean {
+export function findMatchingRule(subjectAttributes: Record<string, any>, rules: IRule[]): IRule {
   for (const rule of rules) {
     if (matchesRule(subjectAttributes, rule)) {
-      return true;
+      return rule;
     }
   }
-  return false;
+  return null;
 }
 
-function matchesRule(subjectAttributes: Record<string, any>, rule: Rule): boolean {
+function matchesRule(subjectAttributes: Record<string, any>, rule: IRule): boolean {
   const conditionEvaluations = evaluateRuleConditions(subjectAttributes, rule.conditions);
   return !conditionEvaluations.includes(false);
 }
