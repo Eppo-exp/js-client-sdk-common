@@ -1,6 +1,6 @@
+import { IConfigurationStore } from './configuration-store';
 import { IExperimentConfiguration } from './dto/experiment-configuration-dto';
 import HttpClient from './http-client';
-import { EppoLocalStorage } from './local-storage';
 
 const RAC_ENDPOINT = '/randomized_assignment/v2/config';
 
@@ -9,7 +9,7 @@ interface IRandomizedAssignmentConfig {
 }
 
 export default class ExperimentConfigurationRequestor {
-  constructor(private configurationStore: EppoLocalStorage, private httpClient: HttpClient) {}
+  constructor(private configurationStore: IConfigurationStore, private httpClient: HttpClient) {}
 
   async fetchAndStoreConfigurations(): Promise<Record<string, IExperimentConfiguration>> {
     const responseData = await this.httpClient.get<IRandomizedAssignmentConfig>(RAC_ENDPOINT);

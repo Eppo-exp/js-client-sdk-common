@@ -1,14 +1,14 @@
 {
-  "name": "@eppo/js-client-sdk",
+  "name": "@eppo/js-client-sdk-common",
   "version": "0.1.0",
-  "description": "Eppo SDK for client-side JavaScript applications",
+  "description": "Eppo SDK for client-side JavaScript applications (base for both web and react native)",
   "main": "dist/index.js",
   "files": [
     "/dist"
   ],
-  "typings": "dist/js-client-sdk.d.ts",
+  "typings": "dist/js-client-sdk-common.d.ts",
   "scripts": {
-    "lint": "eslint '**/*.{ts,tsx}' '**/*.d.{ts,tsx}' --cache",
+    "lint": "eslint '**/*.{ts,tsx}' --cache",
     "lint:fix": "eslint --fix '**/*.{ts,tsx}' --cache",
     "lint:fix-pre-commit": "eslint -c .eslintrc.pre-commit.js --fix '**/*.{ts,tsx}' --no-eslintrc --cache",
     "prepare": "make prepare",
@@ -21,14 +21,14 @@
   "jsdelivr": "dist/eppo-sdk.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Eppo-exp/js-client-sdk.git"
+    "url": "git+https://github.com/Eppo-exp/js-client-sdk-common.git"
   },
   "author": "",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Eppo-exp/js-client-sdk/issues"
+    "url": "https://github.com/Eppo-exp/js-client-sdk-common/issues"
   },
-  "homepage": "https://github.com/Eppo-exp/js-client-sdk#readme",
+  "homepage": "https://github.com/Eppo-exp/js-client-sdk-common#readme",
   "devDependencies": {
     "@microsoft/api-documenter": "^7.17.17",
     "@microsoft/api-extractor": "^7.25.0",

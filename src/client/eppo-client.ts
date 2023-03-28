@@ -1,12 +1,11 @@
 import * as md5 from 'md5';
 
 import { IAssignmentEvent, IAssignmentLogger } from '../assignment-logger';
+import { IConfigurationStore } from '../configuration-store';
 import { MAX_EVENT_QUEUE_SIZE } from '../constants';
 import { IAllocation } from '../dto/allocation-dto';
 import { IExperimentConfiguration } from '../dto/experiment-configuration-dto';
-import { EppoLocalStorage } from '../local-storage';
 import { findMatchingRule } from '../rule_evaluator';
-import { EppoSessionStorage } from '../session-storage';
 import { getShard, isShardInRange } from '../shard';
 import { validateNotBlank } from '../validation';
 
@@ -34,22 +33,15 @@ export interface IEppoClient {
 }
 
 export default class EppoClient implements IEppoClient {
-  public static instance: EppoClient = new EppoClient(
-    new EppoLocalStorage(),
-    new EppoSessionStorage(),
-  );
-
   private queuedEvents: IAssignmentEvent[] = [];
   private assignmentLogger: IAssignmentLogger = null;
 
-  constructor(
-    private configurationStore: EppoLocalStorage,
-    private sessionStorage: EppoSessionStorage,
-  ) {}
+  constructor(private configurationStore: IConfigurationStore) {}
 
   getAssignment(subjectKey: string, experimentKey: string, subjectAttributes = {}): string {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
     validateNotBlank(experimentKey, 'Invalid argument: experimentKey cannot be blank');
+
     const experimentConfig = this.configurationStore.get<IExperimentConfiguration>(experimentKey);
     const allowListOverride = this.getSubjectVariationOverride(subjectKey, experimentConfig);
 
