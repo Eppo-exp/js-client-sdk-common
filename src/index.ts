@@ -12,5 +12,5 @@ export {
   constants,
   ExperimentConfigurationRequestor,
   HttpClient,
-  validation
-}
+  validation,
+};

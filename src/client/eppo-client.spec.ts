@@ -1,9 +1,9 @@
 /**
  * @jest-environment jsdom
  */
+import axios from 'axios';
 import * as td from 'testdouble';
 import mock from 'xhr-mock';
-import axios from 'axios';
 
 import {
   IAssignmentTestCase,
@@ -11,21 +11,22 @@ import {
   readMockRacResponse,
 } from '../../test/testHelpers';
 import { IAssignmentLogger } from '../assignment-logger';
+import { IConfigurationStore } from '../configuration-store';
 import { MAX_EVENT_QUEUE_SIZE } from '../constants';
 import { OperatorType } from '../dto/rule-dto';
-import { IConfigurationStore } from '../configuration-store';
-import HttpClient from '../http-client';
 import ExperimentConfigurationRequestor from '../experiment-configuration-requestor';
+import HttpClient from '../http-client';
 
 import EppoClient from './eppo-client';
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const packageJson = require('../../package.json');
 
 class TestConfigurationStore implements IConfigurationStore {
   private store = {};
 
   public get<T>(key: string): T {
-    var rval = this.store[key];
+    const rval = this.store[key];
     return rval ? JSON.parse(rval) : null;
   }
 
@@ -45,26 +46,22 @@ export async function init(configurationStore: IConfigurationStore) {
   const httpClient = new HttpClient(axiosInstance, {
     apiKey: 'dummy',
     sdkName: 'js-client-sdk-common',
-    sdkVersion: packageJson.version
+    sdkVersion: packageJson.version,
   });
 
-  const configurationRequestor = new ExperimentConfigurationRequestor(configurationStore, httpClient);
+  const configurationRequestor = new ExperimentConfigurationRequestor(
+    configurationStore,
+    httpClient,
+  );
   await configurationRequestor.fetchAndStoreConfigurations();
 }
 
 describe('EppoClient E2E test', () => {
   const sessionOverrideSubject = 'subject-14';
   const sessionOverrideExperiment = 'exp-100';
-  const preloadedConfigExperiment = 'randomization_algo';
 
-  var storage = new TestConfigurationStore();
-  var globalClient = new EppoClient(storage);
-
-  const assignmentLogger: IAssignmentLogger = {
-      logAssignment(assignment) {
-        console.log(`Logged assignment for subject ${assignment.subject}`);
-      },
-    };
+  const storage = new TestConfigurationStore();
+  const globalClient = new EppoClient(storage);
 
   beforeAll(async () => {
     mock.setup();
@@ -128,7 +125,7 @@ describe('EppoClient E2E test', () => {
 
   describe('setLogger', () => {
     beforeAll(() => {
-      storage.setEntries({ [experimentName] : mockExperimentConfig });
+      storage.setEntries({ [experimentName]: mockExperimentConfig });
     });
 
     it('Invokes logger for queued events', () => {
@@ -178,7 +175,7 @@ describe('EppoClient E2E test', () => {
         subjectsWithAttributes,
         expectedAssignments,
       }: IAssignmentTestCase) => {
-          (`---- Test Case for ${experiment} Experiment ----`);
+        `---- Test Case for ${experiment} Experiment ----`;
         const assignments = subjectsWithAttributes
           ? getAssignmentsWithSubjectAttributes(subjectsWithAttributes, experiment)
           : getAssignments(subjects, experiment);
@@ -214,10 +211,10 @@ describe('EppoClient E2E test', () => {
       enabled: false,
       overrides: {
         '1b50f33aef8f681a13f623963da967ed': 'control',
-      }
+      },
     };
 
-    storage.setEntries({ [experimentName] : entry });
+    storage.setEntries({ [experimentName]: entry });
 
     const client = new EppoClient(storage);
     const assignment = client.getAssignment('subject-10', experimentName);
@@ -227,7 +224,7 @@ describe('EppoClient E2E test', () => {
   it('logs variation assignment', () => {
     const mockLogger = td.object<IAssignmentLogger>();
 
-    storage.setEntries({ [experimentName] : mockExperimentConfig })
+    storage.setEntries({ [experimentName]: mockExperimentConfig });
     const client = new EppoClient(storage);
     client.setLogger(mockLogger);
 
@@ -243,7 +240,7 @@ describe('EppoClient E2E test', () => {
     const mockLogger = td.object<IAssignmentLogger>();
     td.when(mockLogger.logAssignment(td.matchers.anything())).thenThrow(new Error('logging error'));
 
-    storage.setEntries({ [experimentName] : mockExperimentConfig });
+    storage.setEntries({ [experimentName]: mockExperimentConfig });
     const client = new EppoClient(storage);
     client.setLogger(mockLogger);
 
@@ -268,9 +265,9 @@ describe('EppoClient E2E test', () => {
           ],
         },
       ],
-    }
+    };
 
-    storage.setEntries({ [experimentName] : entry });
+    storage.setEntries({ [experimentName]: entry });
 
     const client = new EppoClient(storage);
     let assignment = client.getAssignment('subject-10', experimentName, { appVersion: 9 });

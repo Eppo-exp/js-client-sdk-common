@@ -1,10 +1,10 @@
 import * as md5 from 'md5';
 
 import { IAssignmentEvent, IAssignmentLogger } from '../assignment-logger';
+import { IConfigurationStore } from '../configuration-store';
 import { MAX_EVENT_QUEUE_SIZE } from '../constants';
 import { IAllocation } from '../dto/allocation-dto';
 import { IExperimentConfiguration } from '../dto/experiment-configuration-dto';
-import { IConfigurationStore } from '../configuration-store';
 import { findMatchingRule } from '../rule_evaluator';
 import { getShard, isShardInRange } from '../shard';
 import { validateNotBlank } from '../validation';
@@ -36,9 +36,7 @@ export default class EppoClient implements IEppoClient {
   private queuedEvents: IAssignmentEvent[] = [];
   private assignmentLogger: IAssignmentLogger = null;
 
-  constructor(
-    private configurationStore: IConfigurationStore
-  ) {}
+  constructor(private configurationStore: IConfigurationStore) {}
 
   getAssignment(subjectKey: string, experimentKey: string, subjectAttributes = {}): string {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
