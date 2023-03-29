@@ -47,8 +47,17 @@ export class HttpClient {
 }
 
 // @public
+export interface IAssignmentEvent {
+    experiment: string;
+    subject: string;
+    // (undocumented)
+    subjectAttributes: Record<string, any>;
+    timestamp: string;
+    variation: string;
+}
+
+// @public
 export interface IAssignmentLogger {
-    // Warning: (ae-forgotten-export) The symbol "IAssignmentEvent" needs to be exported by the entry point index.d.ts
     logAssignment(assignment: IAssignmentEvent): void;
 }
 
