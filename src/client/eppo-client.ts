@@ -29,7 +29,7 @@ export interface IEppoClient {
     experimentKey: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subjectAttributes?: Record<string, any>,
-  ): string;
+  ): Promise<string>;
 }
 
 export default class EppoClient implements IEppoClient {
@@ -38,11 +38,13 @@ export default class EppoClient implements IEppoClient {
 
   constructor(private configurationStore: IConfigurationStore) {}
 
-  getAssignment(subjectKey: string, experimentKey: string, subjectAttributes = {}): string {
+  async getAssignment(subjectKey: string, experimentKey: string, subjectAttributes = {}): string {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
     validateNotBlank(experimentKey, 'Invalid argument: experimentKey cannot be blank');
 
-    const experimentConfig = this.configurationStore.get<IExperimentConfiguration>(experimentKey);
+    const experimentConfig = await this.configurationStore.get<IExperimentConfiguration>(
+      experimentKey,
+    );
     const allowListOverride = this.getSubjectVariationOverride(subjectKey, experimentConfig);
 
     if (allowListOverride) return allowListOverride;

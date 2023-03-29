@@ -13,7 +13,7 @@ export default class ExperimentConfigurationRequestor {
 
   async fetchAndStoreConfigurations(): Promise<Record<string, IExperimentConfiguration>> {
     const responseData = await this.httpClient.get<IRandomizedAssignmentConfig>(RAC_ENDPOINT);
-    this.configurationStore.setEntries<IExperimentConfiguration>(responseData.flags);
+    await this.configurationStore.setEntries<IExperimentConfiguration>(responseData.flags);
     return responseData.flags;
   }
 }
