@@ -22,7 +22,6 @@ export { constants }
 
 // @public (undocumented)
 export class EppoClient implements IEppoClient {
-    // Warning: (ae-forgotten-export) The symbol "IConfigurationStore" needs to be exported by the entry point index.d.ts
     constructor(configurationStore: IConfigurationStore);
     // (undocumented)
     getAssignment(subjectKey: string, experimentKey: string, subjectAttributes?: {}): string;
@@ -51,6 +50,14 @@ export class HttpClient {
 export interface IAssignmentLogger {
     // Warning: (ae-forgotten-export) The symbol "IAssignmentEvent" needs to be exported by the entry point index.d.ts
     logAssignment(assignment: IAssignmentEvent): void;
+}
+
+// @public (undocumented)
+export interface IConfigurationStore {
+    // (undocumented)
+    get<T>(key: string): T;
+    // (undocumented)
+    setEntries<T>(entries: Record<string, T>): void;
 }
 
 // @public
