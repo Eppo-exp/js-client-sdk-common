@@ -25,7 +25,7 @@ export class EppoClient implements IEppoClient {
     // Warning: (ae-forgotten-export) The symbol "IConfigurationStore" needs to be exported by the entry point index.d.ts
     constructor(configurationStore: IConfigurationStore);
     // (undocumented)
-    getAssignment(subjectKey: string, experimentKey: string, subjectAttributes?: {}): string;
+    getAssignment(subjectKey: string, experimentKey: string, subjectAttributes?: {}): Promise<string>;
     // (undocumented)
     setLogger(logger: IAssignmentLogger): void;
 }
@@ -55,7 +55,7 @@ export interface IAssignmentLogger {
 
 // @public
 export interface IEppoClient {
-    getAssignment(subjectKey: string, experimentKey: string, subjectAttributes?: Record<string, any>): string;
+    getAssignment(subjectKey: string, experimentKey: string, subjectAttributes?: Record<string, any>): Promise<string>;
 }
 
 // @public (undocumented)

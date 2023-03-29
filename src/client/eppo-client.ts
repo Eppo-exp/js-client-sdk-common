@@ -38,7 +38,11 @@ export default class EppoClient implements IEppoClient {
 
   constructor(private configurationStore: IConfigurationStore) {}
 
-  async getAssignment(subjectKey: string, experimentKey: string, subjectAttributes = {}): string {
+  async getAssignment(
+    subjectKey: string,
+    experimentKey: string,
+    subjectAttributes = {},
+  ): Promise<string> {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
     validateNotBlank(experimentKey, 'Invalid argument: experimentKey cannot be blank');
 
