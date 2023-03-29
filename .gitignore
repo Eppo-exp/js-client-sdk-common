@@ -5,6 +5,7 @@ logs/
 
 temp
 .env
+.eslintcache
 yarn-error.log
 
 test/data

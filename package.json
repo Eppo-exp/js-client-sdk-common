@@ -1,6 +1,6 @@
 {
   "name": "@eppo/js-client-sdk-common",
-  "version": "0.1.0",
+  "version": "1.0.2",
   "description": "Eppo SDK for client-side JavaScript applications (base for both web and react native)",
   "main": "dist/index.js",
   "files": [
