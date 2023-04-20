@@ -7,7 +7,7 @@
 import { AxiosInstance } from 'axios';
 
 // @public (undocumented)
-const BASE_URL = "https://eppo.cloud/api";
+const BASE_URL = "https://fscdn.eppo.cloud/api";
 
 declare namespace constants {
     export {
