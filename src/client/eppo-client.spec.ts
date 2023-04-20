@@ -65,7 +65,7 @@ describe('EppoClient E2E test', () => {
 
   beforeAll(async () => {
     mock.setup();
-    mock.get(/randomized_assignment\/v2\/config*/, (_req, res) => {
+    mock.get(/randomized_assignment\/v3\/config*/, (_req, res) => {
       const rac = readMockRacResponse();
       return res.status(200).body(JSON.stringify(rac));
     });
