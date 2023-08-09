@@ -81,7 +81,7 @@ export default class EppoClient implements IEppoClient {
     assignmentHooks: IAssignmentHooks,
   ): Promise<string> {
     let assignment = await assignmentHooks?.onPreAssignment(subjectKey);
-    if (!assignment) {
+    if (assignment == null) {
       assignment = this.getAssignment(subjectKey, experimentKey, subjectAttributes);
     }
 
