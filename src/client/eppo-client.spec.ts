@@ -320,10 +320,12 @@ describe('EppoClient E2E test', () => {
           experimentName,
           {},
           {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             onPreAssignment(subject: string): Promise<string> {
               return Promise.resolve('my-overridden-variation');
             },
 
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             onPostAssignment(variation: string): Promise<void> {
               return Promise.resolve();
             },
