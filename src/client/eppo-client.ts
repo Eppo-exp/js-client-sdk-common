@@ -1,5 +1,6 @@
 import * as md5 from 'md5';
 
+import { IAssignmentHooks } from '../assignment-hooks';
 import { IAssignmentEvent, IAssignmentLogger } from '../assignment-logger';
 import { IConfigurationStore } from '../configuration-store';
 import { MAX_EVENT_QUEUE_SIZE } from '../constants';
@@ -71,6 +72,22 @@ export default class EppoClient implements IEppoClient {
     // Finally, log assignment and return assignment.
     this.logAssignment(experimentKey, assignedVariation, subjectKey, subjectAttributes);
     return assignedVariation;
+  }
+
+  async getAssignmentWithHooks(
+    subjectKey: string,
+    experimentKey: string,
+    subjectAttributes = {},
+    assignmentHooks: IAssignmentHooks,
+  ): Promise<string> {
+    let assignment = await assignmentHooks?.onPreAssignment(subjectKey);
+    if (assignment == null) {
+      assignment = this.getAssignment(subjectKey, experimentKey, subjectAttributes);
+    }
+
+    assignmentHooks?.onPostAssignment(assignment);
+
+    return assignment;
   }
 
   public setLogger(logger: IAssignmentLogger) {
