@@ -26,6 +26,8 @@ export class EppoClient implements IEppoClient {
     // (undocumented)
     getAssignment(subjectKey: string, experimentKey: string, subjectAttributes?: {}): string;
     // (undocumented)
+    getAssignmentWithHooks(subjectKey: string, experimentKey: string, subjectAttributes: {}, assignmentHooks: IAssignmentHooks): Promise<string>;
+    // (undocumented)
     setLogger(logger: IAssignmentLogger): void;
 }
 
@@ -54,6 +56,12 @@ export interface IAssignmentEvent {
     subjectAttributes: Record<string, any>;
     timestamp: string;
     variation: string;
+}
+
+// @public
+export interface IAssignmentHooks {
+    onPostAssignment(variation: string): Promise<void>;
+    onPreAssignment(subject: string): Promise<string | null>;
 }
 
 // @public

@@ -1,3 +1,4 @@
+import { IAssignmentHooks } from './assignment-hooks';
 import { IAssignmentLogger, IAssignmentEvent } from './assignment-logger';
 import EppoClient, { IEppoClient } from './client/eppo-client';
 import { IConfigurationStore } from './configuration-store';
@@ -7,6 +8,7 @@ import HttpClient from './http-client';
 import * as validation from './validation';
 
 export {
+  IAssignmentHooks,
   IAssignmentLogger,
   IAssignmentEvent,
   EppoClient,
