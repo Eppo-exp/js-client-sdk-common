@@ -31,6 +31,25 @@ export interface IEppoClient {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subjectAttributes?: Record<string, any>,
   ): string;
+
+  /**
+   * Asynchronously maps a subject to a variation for a given experiment, with pre and post assignment hooks
+   *
+   * @param subjectKey an identifier of the experiment subject, for example a user ID.
+   * @param experimentKey experiment identifier
+   * @param assignmentHooks interface for pre and post assignment hooks
+   * @param subjectAttributes optional attributes associated with the subject, for example name and email.
+   * The subject attributes are used for evaluating any targeting rules tied to the experiment.
+   * @returns a variation value if the subject is part of the experiment sample, otherwise null
+   * @public
+   */
+  getAssignmentWithHooks(
+    subjectKey: string,
+    experimentKey: string,
+    assignmentHooks: IAssignmentHooks,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    subjectAttributes?: Record<string, any>,
+  ): Promise<string>;
 }
 
 export default class EppoClient implements IEppoClient {
@@ -77,8 +96,8 @@ export default class EppoClient implements IEppoClient {
   async getAssignmentWithHooks(
     subjectKey: string,
     experimentKey: string,
-    subjectAttributes = {},
     assignmentHooks: IAssignmentHooks,
+    subjectAttributes = {},
   ): Promise<string> {
     let assignment = await assignmentHooks?.onPreAssignment(subjectKey);
     if (assignment == null) {
