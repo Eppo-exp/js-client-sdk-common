@@ -26,7 +26,7 @@ export class EppoClient implements IEppoClient {
     // (undocumented)
     getAssignment(subjectKey: string, experimentKey: string, subjectAttributes?: {}): string;
     // (undocumented)
-    getAssignmentWithHooks(subjectKey: string, experimentKey: string, subjectAttributes: {}, assignmentHooks: IAssignmentHooks): Promise<string>;
+    getAssignmentWithHooks(subjectKey: string, experimentKey: string, assignmentHooks: IAssignmentHooks, subjectAttributes?: {}): Promise<string>;
     // (undocumented)
     setLogger(logger: IAssignmentLogger): void;
 }
@@ -80,6 +80,7 @@ export interface IConfigurationStore {
 // @public
 export interface IEppoClient {
     getAssignment(subjectKey: string, experimentKey: string, subjectAttributes?: Record<string, any>): string;
+    getAssignmentWithHooks(subjectKey: string, experimentKey: string, assignmentHooks: IAssignmentHooks, subjectAttributes?: Record<string, any>): Promise<string>;
 }
 
 // @public (undocumented)
