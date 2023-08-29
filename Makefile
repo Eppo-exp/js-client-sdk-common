@@ -35,8 +35,6 @@ test-data:
 ## prepare
 .PHONY: prepare
 prepare: test-data
-	 husky install
 	 rm -rf dist/
 	 tsc
 	 webpack
-	 api-extractor run --local
