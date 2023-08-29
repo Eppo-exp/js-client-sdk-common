@@ -50,11 +50,6 @@ export default class EppoClient implements IEppoClient {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
     validateNotBlank(experimentKey, 'Invalid argument: experimentKey cannot be blank');
 
-    const assignment = assignmentHooks?.onPreAssignment(experimentKey, subjectKey);
-    if (assignment != null) {
-      return assignment;
-    }
-
     const experimentConfig = this.configurationStore.get<IExperimentConfiguration>(experimentKey);
     const allowListOverride = this.getSubjectVariationOverride(subjectKey, experimentConfig);
 
@@ -62,6 +57,12 @@ export default class EppoClient implements IEppoClient {
 
     // Check for disabled flag.
     if (!experimentConfig?.enabled) return null;
+
+    // check for overridden assignment via hook
+    const assignment = assignmentHooks?.onPreAssignment(experimentKey, subjectKey);
+    if (assignment != null) {
+      return assignment;
+    }
 
     // Attempt to match a rule from the list.
     const matchedRule = findMatchingRule(subjectAttributes || {}, experimentConfig.rules);
