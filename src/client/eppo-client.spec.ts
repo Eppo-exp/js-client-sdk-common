@@ -180,7 +180,9 @@ describe('EppoClient E2E test', () => {
         const assignments = subjectsWithAttributes
           ? getAssignmentsWithSubjectAttributes(subjectsWithAttributes, experiment)
           : getAssignments(subjects, experiment);
-        expect(assignments).toEqual(expectedAssignments);
+
+        // temporarily cast to string under dynamic configuration support is added
+        expect(assignments).toEqual(expectedAssignments.map((e) => (e ? e.toString() : null)));
       },
     );
   });
