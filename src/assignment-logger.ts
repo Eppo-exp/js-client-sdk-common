@@ -1,3 +1,5 @@
+import { Value } from './value';
+
 /**
  * Holds data about the variation a subject was assigned to.
  * @public
@@ -11,7 +13,7 @@ export interface IAssignmentEvent {
   /**
    * The assigned variation
    */
-  variation: string;
+  variation: Value;
 
   /**
    * The entity or user that was assigned to a variation

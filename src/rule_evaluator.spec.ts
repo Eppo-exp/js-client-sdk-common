@@ -1,11 +1,11 @@
-import { OperatorType, Rule } from './dto/rule-dto';
+import { OperatorType, IRule } from './dto/rule-dto';
 import { findMatchingRule } from './rule_evaluator';
 
 describe('findMatchingRule', () => {
-  const ruleWithEmptyConditions: Rule = {
+  const ruleWithEmptyConditions: IRule = {
     conditions: [],
   };
-  const numericRule: Rule = {
+  const numericRule: IRule = {
     conditions: [
       {
         operator: OperatorType.GTE,
@@ -19,7 +19,7 @@ describe('findMatchingRule', () => {
       },
     ],
   };
-  const ruleWithMatchesCondition: Rule = {
+  const ruleWithMatchesCondition: IRule = {
     conditions: [
       {
         operator: OperatorType.MATCHES,
@@ -30,7 +30,7 @@ describe('findMatchingRule', () => {
   };
 
   it('returns null if rules array is empty', () => {
-    const rules: Rule[] = [];
+    const rules: IRule[] = [];
     expect(findMatchingRule({ name: 'my-user' }, rules)).toEqual(null);
   });
 
@@ -67,7 +67,7 @@ describe('findMatchingRule', () => {
   });
 
   it('handles oneOf rule type with boolean', () => {
-    const oneOfRule: Rule = {
+    const oneOfRule: IRule = {
       conditions: [
         {
           operator: OperatorType.ONE_OF,
@@ -76,7 +76,7 @@ describe('findMatchingRule', () => {
         },
       ],
     };
-    const notOneOfRule: Rule = {
+    const notOneOfRule: IRule = {
       conditions: [
         {
           operator: OperatorType.NOT_ONE_OF,
@@ -92,7 +92,7 @@ describe('findMatchingRule', () => {
   });
 
   it('handles oneOf rule type with string', () => {
-    const oneOfRule: Rule = {
+    const oneOfRule: IRule = {
       conditions: [
         {
           operator: OperatorType.ONE_OF,
@@ -101,7 +101,7 @@ describe('findMatchingRule', () => {
         },
       ],
     };
-    const notOneOfRule: Rule = {
+    const notOneOfRule: IRule = {
       conditions: [
         {
           operator: OperatorType.NOT_ONE_OF,
@@ -118,7 +118,7 @@ describe('findMatchingRule', () => {
   });
 
   it('does case insensitive matching with oneOf operator', () => {
-    const oneOfRule: Rule = {
+    const oneOfRule: IRule = {
       conditions: [
         {
           operator: OperatorType.ONE_OF,
@@ -132,7 +132,7 @@ describe('findMatchingRule', () => {
   });
 
   it('does case insensitive matching with notOneOf operator', () => {
-    const notOneOf: Rule = {
+    const notOneOf: IRule = {
       conditions: [
         {
           operator: OperatorType.NOT_ONE_OF,
@@ -145,7 +145,7 @@ describe('findMatchingRule', () => {
   });
 
   it('handles oneOf rule with number', () => {
-    const oneOfRule: Rule = {
+    const oneOfRule: IRule = {
       conditions: [
         {
           operator: OperatorType.ONE_OF,
@@ -154,7 +154,7 @@ describe('findMatchingRule', () => {
         },
       ],
     };
-    const notOneOfRule: Rule = {
+    const notOneOfRule: IRule = {
       conditions: [
         {
           operator: OperatorType.NOT_ONE_OF,

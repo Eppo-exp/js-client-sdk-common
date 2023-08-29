@@ -1,3 +1,5 @@
+import { Value } from './value';
+
 /**
  * Implement this interface to override an assignment or receive a callback post assignment
  * @public
@@ -11,7 +13,7 @@ export interface IAssignmentHooks {
    * then the subject will be assigned with the default assignment logic.
    * @public
    */
-  onPreAssignment(subject: string): Promise<string | null>;
+  onPreAssignment(subject: string): Promise<Value>;
 
   /**
    * Invoked after a subject is assigned. Useful for any post assignment logic needed which is specific
@@ -19,5 +21,5 @@ export interface IAssignmentHooks {
    * @param variation the assigned variation
    * @public
    */
-  onPostAssignment(variation: string): Promise<void>;
+  onPostAssignment(variation: Value): Promise<void>;
 }

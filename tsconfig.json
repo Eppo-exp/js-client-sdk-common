@@ -5,6 +5,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "allowSyntheticDefaultImports": true,
+    "strictNullChecks": true,
     "target": "es2017",
     "outDir": "dist",
     "noImplicitAny": true,

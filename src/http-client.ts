@@ -15,7 +15,7 @@ export class HttpRequestError extends Error {
 export default class HttpClient {
   constructor(private axiosInstance: AxiosInstance, private sdkParams: ISdkParams) {}
 
-  async get<T>(resource: string): Promise<T> {
+  async get<T>(resource: string): Promise<T | undefined> {
     try {
       const response = await this.axiosInstance.get<T>(resource, {
         params: this.sdkParams,

@@ -17,6 +17,7 @@ import { MAX_EVENT_QUEUE_SIZE } from '../constants';
 import { OperatorType } from '../dto/rule-dto';
 import ExperimentConfigurationRequestor from '../experiment-configuration-requestor';
 import HttpClient from '../http-client';
+import { Value } from '../value';
 
 import EppoClient from './eppo-client';
 
@@ -85,6 +86,7 @@ describe('EppoClient E2E test', () => {
     enabled: true,
     subjectShards: 100,
     overrides: {},
+    typedOverrides: {},
     rules: [
       {
         allocationKey: 'allocation1',
@@ -98,6 +100,7 @@ describe('EppoClient E2E test', () => {
           {
             name: 'control',
             value: 'control',
+            typedValue: 'control',
             shardRange: {
               start: 0,
               end: 34,
@@ -106,6 +109,7 @@ describe('EppoClient E2E test', () => {
           {
             name: 'variant-1',
             value: 'variant-1',
+            typedValue: 'variant-1',
             shardRange: {
               start: 34,
               end: 67,
@@ -114,6 +118,7 @@ describe('EppoClient E2E test', () => {
           {
             name: 'variant-2',
             value: 'variant-2',
+            typedValue: 'variant-2',
             shardRange: {
               start: 67,
               end: 100,
@@ -181,8 +186,7 @@ describe('EppoClient E2E test', () => {
           ? getAssignmentsWithSubjectAttributes(subjectsWithAttributes, experiment)
           : getAssignments(subjects, experiment);
 
-        // temporarily cast to string under dynamic configuration support is added
-        expect(assignments).toEqual(expectedAssignments.map((e) => (e ? e.toString() : null)));
+        expect(assignments).toEqual(expectedAssignments);
       },
     );
   });
@@ -198,7 +202,7 @@ describe('EppoClient E2E test', () => {
       experimentName,
       JSON.stringify({
         ...mockExperimentConfig,
-        overrides: {
+        typedOverrides: {
           '1b50f33aef8f681a13f623963da967ed': 'control',
         },
       }),
@@ -212,7 +216,7 @@ describe('EppoClient E2E test', () => {
     const entry = {
       ...mockExperimentConfig,
       enabled: false,
-      overrides: {
+      typedOverrides: {
         '1b50f33aef8f681a13f623963da967ed': 'control',
       },
     };
@@ -232,7 +236,7 @@ describe('EppoClient E2E test', () => {
     client.setLogger(mockLogger);
 
     const subjectAttributes = { foo: 3 };
-    const assignment = client.getAssignment('subject-10', experimentName, subjectAttributes);
+    const assignment = client.getStringAssignment('subject-10', experimentName, subjectAttributes);
 
     expect(assignment).toEqual('control');
     expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
@@ -248,7 +252,7 @@ describe('EppoClient E2E test', () => {
     client.setLogger(mockLogger);
 
     const subjectAttributes = { foo: 3 };
-    const assignment = client.getAssignment('subject-10', experimentName, subjectAttributes);
+    const assignment = client.getStringAssignment('subject-10', experimentName, subjectAttributes);
 
     expect(assignment).toEqual('control');
   });
@@ -273,17 +277,17 @@ describe('EppoClient E2E test', () => {
     storage.setEntries({ [experimentName]: entry });
 
     const client = new EppoClient(storage);
-    let assignment = client.getAssignment('subject-10', experimentName, { appVersion: 9 });
+    let assignment = client.getStringAssignment('subject-10', experimentName, { appVersion: 9 });
     expect(assignment).toEqual(null);
-    assignment = client.getAssignment('subject-10', experimentName);
+    assignment = client.getStringAssignment('subject-10', experimentName);
     expect(assignment).toEqual(null);
-    assignment = client.getAssignment('subject-10', experimentName, { appVersion: 11 });
+    assignment = client.getStringAssignment('subject-10', experimentName, { appVersion: 11 });
     expect(assignment).toEqual('control');
   });
 
-  function getAssignments(subjects: string[], experiment: string): string[] {
+  function getAssignments(subjects: string[], experiment: string): (string | null)[] {
     return subjects.map((subjectKey) => {
-      return globalClient.getAssignment(subjectKey, experiment);
+      return globalClient.getStringAssignment(subjectKey, experiment);
     });
   }
 
@@ -294,7 +298,7 @@ describe('EppoClient E2E test', () => {
       subjectAttributes: Record<string, any>;
     }[],
     experiment: string,
-  ): string[] {
+  ): (string | null)[] {
     return subjectsWithAttributes.map((subject) => {
       return globalClient.getAssignment(subject.subjectKey, experiment, subject.subjectAttributes);
     });
@@ -319,33 +323,35 @@ describe('EppoClient E2E test', () => {
       it('overrides returned assignment', async () => {
         const variation = await client.getAssignmentWithHooks('subject-identifer', experimentName, {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          onPreAssignment(subject: string): Promise<string> {
-            return Promise.resolve('my-overridden-variation');
+          onPreAssignment(subject: string): Promise<Value> {
+            return Promise.resolve(Value.String('my-overridden-variation'));
           },
 
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          onPostAssignment(variation: string): Promise<void> {
+          onPostAssignment(variation: Value): Promise<void> {
             return Promise.resolve();
           },
         });
 
-        expect(variation).toEqual('my-overridden-variation');
+        // todo: generic tests
+        expect(variation).toEqual(Value.String('my-overridden-variation'));
       });
 
       it('uses regular assignment logic if onPreAssignment returns null', async () => {
         const variation = await client.getAssignmentWithHooks('subject-identifer', experimentName, {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          onPreAssignment(subject: string): Promise<string | null> {
-            return Promise.resolve(null);
+          onPreAssignment(subject: string): Promise<Value> {
+            return Promise.resolve(Value.Null());
           },
 
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          onPostAssignment(variation: string): Promise<void> {
+          onPostAssignment(variation: Value): Promise<void> {
             return Promise.resolve();
           },
         });
 
-        expect(variation).not.toEqual(null);
+        // todo: generic tests
+        expect(variation.stringValue).not.toEqual(null);
       });
     });
 

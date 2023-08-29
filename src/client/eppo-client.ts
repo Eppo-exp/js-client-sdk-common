@@ -9,6 +9,7 @@ import { IExperimentConfiguration } from '../dto/experiment-configuration-dto';
 import { findMatchingRule } from '../rule_evaluator';
 import { getShard, isShardInRange } from '../shard';
 import { validateNotBlank } from '../validation';
+import { Value } from '../value';
 
 /**
  * Client for assigning experiment variations.
@@ -28,9 +29,36 @@ export interface IEppoClient {
   getAssignment(
     subjectKey: string,
     experimentKey: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes?: Record<string, any>,
-  ): string;
+    subjectAttributes?: Record<string, Value>,
+  ): string | null;
+
+  /**
+   * Maps a subject to a variation for a given experiment.
+   *
+   * @param subjectKey an identifier of the experiment subject, for example a user ID.
+   * @param experimentKey experiment identifier
+   * @param subjectAttributes optional attributes associated with the subject, for example name and email.
+   * The subject attributes are used for evaluating any targeting rules tied to the experiment.
+   * @returns a variation value if the subject is part of the experiment sample, otherwise null
+   * @public
+   */
+  getStringAssignment(
+    subjectKey: string,
+    experimentKey: string,
+    subjectAttributes?: Record<string, Value>,
+  ): string | null;
+
+  getBoolAssignment(
+    subjectKey: string,
+    experimentKey: string,
+    subjectAttributes?: Record<string, Value>,
+  ): boolean | null;
+
+  getNumericAssignment(
+    subjectKey: string,
+    experimentKey: string,
+    subjectAttributes?: Record<string, Value>,
+  ): number | null;
 
   /**
    * Asynchronously maps a subject to a variation for a given experiment, with pre and post assignment hooks
@@ -47,37 +75,80 @@ export interface IEppoClient {
     subjectKey: string,
     experimentKey: string,
     assignmentHooks: IAssignmentHooks,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes?: Record<string, any>,
-  ): Promise<string>;
+    subjectAttributes?: Record<string, Value>,
+  ): Promise<Value>;
 }
 
 export default class EppoClient implements IEppoClient {
   private queuedEvents: IAssignmentEvent[] = [];
-  private assignmentLogger: IAssignmentLogger = null;
+  private assignmentLogger?: IAssignmentLogger = undefined;
 
   constructor(private configurationStore: IConfigurationStore) {}
 
-  getAssignment(subjectKey: string, experimentKey: string, subjectAttributes = {}): string {
+  public getAssignment(
+    subjectKey: string,
+    experimentKey: string,
+    subjectAttributes = {},
+  ): string | null {
+    return this.getStringAssignment(subjectKey, experimentKey, subjectAttributes);
+  }
+
+  public getBoolAssignment(
+    subjectKey: string,
+    experimentKey: string,
+    subjectAttributes = {},
+  ): boolean | null {
+    return this.getTypedAssignment(subjectKey, experimentKey, subjectAttributes).boolValue ?? null;
+  }
+
+  public getNumericAssignment(
+    subjectKey: string,
+    experimentKey: string,
+    subjectAttributes = {},
+  ): number | null {
+    return (
+      this.getTypedAssignment(subjectKey, experimentKey, subjectAttributes).numericValue ?? null
+    );
+  }
+
+  public getStringAssignment(
+    subjectKey: string,
+    experimentKey: string,
+    subjectAttributes = {},
+  ): string | null {
+    return (
+      this.getTypedAssignment(subjectKey, experimentKey, subjectAttributes).stringValue ?? null
+    );
+  }
+
+  private getTypedAssignment(
+    subjectKey: string,
+    experimentKey: string,
+    subjectAttributes = {},
+  ): Value {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
     validateNotBlank(experimentKey, 'Invalid argument: experimentKey cannot be blank');
 
     const experimentConfig = this.configurationStore.get<IExperimentConfiguration>(experimentKey);
     const allowListOverride = this.getSubjectVariationOverride(subjectKey, experimentConfig);
 
-    if (allowListOverride) return allowListOverride;
+    if (!allowListOverride.isNull()) {
+      return allowListOverride;
+    }
 
     // Check for disabled flag.
-    if (!experimentConfig?.enabled) return null;
+    if (!experimentConfig?.enabled) return Value.Null();
 
     // Attempt to match a rule from the list.
     const matchedRule = findMatchingRule(subjectAttributes || {}, experimentConfig.rules);
-    if (!matchedRule) return null;
+    if (!matchedRule) return Value.Null();
 
     // Check if subject is in allocation sample.
+    if (!matchedRule.allocationKey) return Value.Null();
     const allocation = experimentConfig.allocations[matchedRule.allocationKey];
+
     if (!this.isInExperimentSample(subjectKey, experimentKey, experimentConfig, allocation))
-      return null;
+      return Value.Null();
 
     // Compute variation for subject.
     const { subjectShards } = experimentConfig;
@@ -86,22 +157,26 @@ export default class EppoClient implements IEppoClient {
     const shard = getShard(`assignment-${subjectKey}-${experimentKey}`, subjectShards);
     const assignedVariation = variations.find((variation) =>
       isShardInRange(shard, variation.shardRange),
-    ).value;
+    )?.typedValue;
 
     // Finally, log assignment and return assignment.
-    this.logAssignment(experimentKey, assignedVariation, subjectKey, subjectAttributes);
-    return assignedVariation;
+    if (!assignedVariation) return Value.Null();
+    const typedAssignedVariation = Value.String(assignedVariation as string);
+    this.logAssignment(experimentKey, typedAssignedVariation, subjectKey, subjectAttributes);
+    return typedAssignedVariation;
   }
 
+  // todo: typed assignment hooks?
   async getAssignmentWithHooks(
     subjectKey: string,
     experimentKey: string,
     assignmentHooks: IAssignmentHooks,
     subjectAttributes = {},
-  ): Promise<string> {
-    let assignment = await assignmentHooks?.onPreAssignment(subjectKey);
-    if (assignment == null) {
-      assignment = this.getAssignment(subjectKey, experimentKey, subjectAttributes);
+  ): Promise<Value> {
+    let assignment: Value = await assignmentHooks?.onPreAssignment(subjectKey);
+
+    if (assignment == Value.Null()) {
+      assignment = this.getTypedAssignment(subjectKey, experimentKey, subjectAttributes);
     }
 
     assignmentHooks?.onPostAssignment(assignment);
@@ -119,7 +194,7 @@ export default class EppoClient implements IEppoClient {
     this.queuedEvents = [];
     try {
       for (const event of eventsToFlush) {
-        this.assignmentLogger.logAssignment(event);
+        this.assignmentLogger?.logAssignment(event);
       }
     } catch (error) {
       console.error(`[Eppo SDK] Error flushing assignment events: ${error.message}`);
@@ -128,10 +203,9 @@ export default class EppoClient implements IEppoClient {
 
   private logAssignment(
     experiment: string,
-    variation: string,
+    variation: Value,
     subjectKey: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes: Record<string, any>,
+    subjectAttributes: Record<string, Value>,
   ) {
     const event: IAssignmentEvent = {
       experiment,
@@ -155,9 +229,14 @@ export default class EppoClient implements IEppoClient {
   private getSubjectVariationOverride(
     subjectKey: string,
     experimentConfig: IExperimentConfiguration,
-  ): string {
+  ): Value {
     const subjectHash = md5(subjectKey);
-    return experimentConfig?.overrides[subjectHash];
+    const overridden = experimentConfig?.typedOverrides[subjectHash];
+    if (overridden) {
+      return Value.String(overridden as string);
+    }
+
+    return Value.Null();
   }
 
   /**

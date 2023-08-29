@@ -9,13 +9,13 @@ export enum OperatorType {
 }
 
 export interface Condition {
-  operator: OperatorType;
   attribute: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value: any;
+  operator: OperatorType;
 }
 
 export interface IRule {
-  allocationKey: string;
+  allocationKey?: string;
   conditions: Condition[];
 }
