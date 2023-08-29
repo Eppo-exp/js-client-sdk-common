@@ -45,6 +45,7 @@
     "husky": "^8.0.1",
     "jest": "^28.1.1",
     "jest-environment-jsdom": "^28.1.1",
+    "lint-staged": "^14.0.1",
     "prettier": "^2.7.1",
     "terser-webpack-plugin": "^5.3.3",
     "testdouble": "^3.16.6",
