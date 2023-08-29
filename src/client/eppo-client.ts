@@ -58,12 +58,6 @@ export default class EppoClient implements IEppoClient {
     // Check for disabled flag.
     if (!experimentConfig?.enabled) return null;
 
-    // check for overridden assignment via hook
-    const assignment = assignmentHooks?.onPreAssignment(experimentKey, subjectKey);
-    if (assignment != null) {
-      return assignment;
-    }
-
     // Attempt to match a rule from the list.
     const matchedRule = findMatchingRule(subjectAttributes || {}, experimentConfig.rules);
     if (!matchedRule) return null;
@@ -78,9 +72,15 @@ export default class EppoClient implements IEppoClient {
     const { variations } = allocation;
 
     const shard = getShard(`assignment-${subjectKey}-${experimentKey}`, subjectShards);
-    const assignedVariation = variations.find((variation) =>
+    let assignedVariation = variations.find((variation) =>
       isShardInRange(shard, variation.shardRange),
     ).value;
+
+    // check for overridden assignment via hook
+    const overriddenAssignment = assignmentHooks?.onPreAssignment(experimentKey, subjectKey);
+    if (overriddenAssignment != null) {
+      assignedVariation = overriddenAssignment;
+    }
 
     assignmentHooks?.onPostAssignment(experimentKey, subjectKey, assignedVariation);
 
