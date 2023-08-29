@@ -8,5 +8,5 @@
 
 |  Package | Description |
 |  --- | --- |
-|  [@eppo/js-client-sdk](./js-client-sdk.md) |  |
+|  [@eppo/js-client-sdk-common](./js-client-sdk-common.md) |  |
 
