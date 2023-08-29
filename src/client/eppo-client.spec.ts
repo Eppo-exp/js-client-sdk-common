@@ -300,7 +300,7 @@ describe('EppoClient E2E test', () => {
     });
   }
 
-  describe('getAssignmentWithHooks', () => {
+  describe('getAssignment with hooks', () => {
     let client: EppoClient;
 
     beforeAll(() => {
@@ -309,41 +309,52 @@ describe('EppoClient E2E test', () => {
     });
 
     describe('onPreAssignment', () => {
-      it('called with subject ID', () => {
+      it('called with experiment key and subject id', () => {
         const mockHooks = td.object<IAssignmentHooks>();
-        client.getAssignmentWithHooks('subject-identifer', experimentName, mockHooks);
+        client.getAssignment('subject-identifer', experimentName, {}, mockHooks);
         expect(td.explain(mockHooks.onPreAssignment).callCount).toEqual(1);
-        expect(td.explain(mockHooks.onPreAssignment).calls[0].args[0]).toEqual('subject-identifer');
+        expect(td.explain(mockHooks.onPreAssignment).calls[0].args[0]).toEqual(experimentName);
+        expect(td.explain(mockHooks.onPreAssignment).calls[0].args[1]).toEqual('subject-identifer');
       });
 
       it('overrides returned assignment', async () => {
-        const variation = await client.getAssignmentWithHooks('subject-identifer', experimentName, {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          onPreAssignment(subject: string): Promise<string> {
-            return Promise.resolve('my-overridden-variation');
-          },
+        const variation = await client.getAssignment(
+          'subject-identifer',
+          experimentName,
+          {},
+          {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            onPreAssignment(experimentKey: string, subject: string): string {
+              return 'my-overridden-variation';
+            },
 
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          onPostAssignment(variation: string): Promise<void> {
-            return Promise.resolve();
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            onPostAssignment(experimentKey: string, subject: string, variation: string): void {
+              // no-op
+            },
           },
-        });
+        );
 
         expect(variation).toEqual('my-overridden-variation');
       });
 
       it('uses regular assignment logic if onPreAssignment returns null', async () => {
-        const variation = await client.getAssignmentWithHooks('subject-identifer', experimentName, {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          onPreAssignment(subject: string): Promise<string | null> {
-            return Promise.resolve(null);
-          },
+        const variation = await client.getAssignment(
+          'subject-identifer',
+          experimentName,
+          {},
+          {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            onPreAssignment(experimentKey: string, subject: string): string | null {
+              return null;
+            },
 
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          onPostAssignment(variation: string): Promise<void> {
-            return Promise.resolve();
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            onPostAssignment(experimentKey: string, subject: string, variation: string): void {
+              // no-op
+            },
           },
-        });
+        );
 
         expect(variation).not.toEqual(null);
       });
@@ -352,13 +363,13 @@ describe('EppoClient E2E test', () => {
     describe('onPostAssignment', () => {
       it('called with assigned variation after assignment', async () => {
         const mockHooks = td.object<IAssignmentHooks>();
-        const variation = await client.getAssignmentWithHooks(
-          'subject-identifer',
-          experimentName,
-          mockHooks,
-        );
+        const subject = 'subject-identifier';
+        const variation = client.getAssignment(subject, experimentName, {}, mockHooks);
         expect(td.explain(mockHooks.onPostAssignment).callCount).toEqual(1);
-        expect(td.explain(mockHooks.onPostAssignment).calls[0].args[0]).toEqual(variation);
+        expect(td.explain(mockHooks.onPostAssignment).callCount).toEqual(1);
+        expect(td.explain(mockHooks.onPostAssignment).calls[0].args[0]).toEqual(experimentName);
+        expect(td.explain(mockHooks.onPostAssignment).calls[0].args[1]).toEqual(subject);
+        expect(td.explain(mockHooks.onPostAssignment).calls[0].args[2]).toEqual(variation);
       });
     });
   });

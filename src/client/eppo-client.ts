@@ -22,6 +22,7 @@ export interface IEppoClient {
    * @param experimentKey experiment identifier
    * @param subjectAttributes optional attributes associated with the subject, for example name and email.
    * The subject attributes are used for evaluating any targeting rules tied to the experiment.
+   * @param assignmentHooks optional interface for pre and post assignment hooks
    * @returns a variation value if the subject is part of the experiment sample, otherwise null
    * @public
    */
@@ -30,26 +31,8 @@ export interface IEppoClient {
     experimentKey: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subjectAttributes?: Record<string, any>,
+    assignmentHooks?: IAssignmentHooks,
   ): string;
-
-  /**
-   * Asynchronously maps a subject to a variation for a given experiment, with pre and post assignment hooks
-   *
-   * @param subjectKey an identifier of the experiment subject, for example a user ID.
-   * @param experimentKey experiment identifier
-   * @param assignmentHooks interface for pre and post assignment hooks
-   * @param subjectAttributes optional attributes associated with the subject, for example name and email.
-   * The subject attributes are used for evaluating any targeting rules tied to the experiment.
-   * @returns a variation value if the subject is part of the experiment sample, otherwise null
-   * @public
-   */
-  getAssignmentWithHooks(
-    subjectKey: string,
-    experimentKey: string,
-    assignmentHooks: IAssignmentHooks,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes?: Record<string, any>,
-  ): Promise<string>;
 }
 
 export default class EppoClient implements IEppoClient {
@@ -58,9 +41,19 @@ export default class EppoClient implements IEppoClient {
 
   constructor(private configurationStore: IConfigurationStore) {}
 
-  getAssignment(subjectKey: string, experimentKey: string, subjectAttributes = {}): string {
+  getAssignment(
+    subjectKey: string,
+    experimentKey: string,
+    subjectAttributes = {},
+    assignmentHooks: IAssignmentHooks = null,
+  ): string {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
     validateNotBlank(experimentKey, 'Invalid argument: experimentKey cannot be blank');
+
+    const assignment = assignmentHooks?.onPreAssignment(experimentKey, subjectKey);
+    if (assignment != null) {
+      return assignment;
+    }
 
     const experimentConfig = this.configurationStore.get<IExperimentConfiguration>(experimentKey);
     const allowListOverride = this.getSubjectVariationOverride(subjectKey, experimentConfig);
@@ -88,25 +81,11 @@ export default class EppoClient implements IEppoClient {
       isShardInRange(shard, variation.shardRange),
     ).value;
 
+    assignmentHooks?.onPostAssignment(experimentKey, subjectKey, assignedVariation);
+
     // Finally, log assignment and return assignment.
     this.logAssignment(experimentKey, assignedVariation, subjectKey, subjectAttributes);
     return assignedVariation;
-  }
-
-  async getAssignmentWithHooks(
-    subjectKey: string,
-    experimentKey: string,
-    assignmentHooks: IAssignmentHooks,
-    subjectAttributes = {},
-  ): Promise<string> {
-    let assignment = await assignmentHooks?.onPreAssignment(subjectKey);
-    if (assignment == null) {
-      assignment = this.getAssignment(subjectKey, experimentKey, subjectAttributes);
-    }
-
-    assignmentHooks?.onPostAssignment(assignment);
-
-    return assignment;
   }
 
   public setLogger(logger: IAssignmentLogger) {
