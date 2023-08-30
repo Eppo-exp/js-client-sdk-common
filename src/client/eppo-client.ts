@@ -50,6 +50,23 @@ export default class EppoClient implements IEppoClient {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
     validateNotBlank(experimentKey, 'Invalid argument: experimentKey cannot be blank');
 
+    const assignment = this.getAssignmentInternal(
+      subjectKey,
+      experimentKey,
+      subjectAttributes,
+      assignmentHooks,
+    );
+    assignmentHooks?.onPostAssignment(experimentKey, subjectKey, assignment);
+    this.logAssignment(experimentKey, assignment, subjectKey, subjectAttributes);
+    return assignment;
+  }
+
+  private getAssignmentInternal(
+    subjectKey: string,
+    experimentKey: string,
+    subjectAttributes = {},
+    assignmentHooks: IAssignmentHooks = null,
+  ): string {
     const experimentConfig = this.configurationStore.get<IExperimentConfiguration>(experimentKey);
     const allowListOverride = this.getSubjectVariationOverride(subjectKey, experimentConfig);
 
@@ -57,6 +74,12 @@ export default class EppoClient implements IEppoClient {
 
     // Check for disabled flag.
     if (!experimentConfig?.enabled) return null;
+
+    // check for overridden assignment via hook
+    const overriddenAssignment = assignmentHooks?.onPreAssignment(experimentKey, subjectKey);
+    if (overriddenAssignment !== null) {
+      return overriddenAssignment;
+    }
 
     // Attempt to match a rule from the list.
     const matchedRule = findMatchingRule(subjectAttributes || {}, experimentConfig.rules);
@@ -72,20 +95,10 @@ export default class EppoClient implements IEppoClient {
     const { variations } = allocation;
 
     const shard = getShard(`assignment-${subjectKey}-${experimentKey}`, subjectShards);
-    let assignedVariation = variations.find((variation) =>
+    const assignedVariation = variations.find((variation) =>
       isShardInRange(shard, variation.shardRange),
     ).value;
 
-    // check for overridden assignment via hook
-    const overriddenAssignment = assignmentHooks?.onPreAssignment(experimentKey, subjectKey);
-    if (overriddenAssignment != null) {
-      assignedVariation = overriddenAssignment;
-    }
-
-    assignmentHooks?.onPostAssignment(experimentKey, subjectKey, assignedVariation);
-
-    // Finally, log assignment and return assignment.
-    this.logAssignment(experimentKey, assignedVariation, subjectKey, subjectAttributes);
     return assignedVariation;
   }
 
