@@ -57,7 +57,10 @@ export default class EppoClient implements IEppoClient {
       assignmentHooks,
     );
     assignmentHooks?.onPostAssignment(experimentKey, subjectKey, assignment);
-    this.logAssignment(experimentKey, assignment, subjectKey, subjectAttributes);
+
+    if (assignment !== null)
+      this.logAssignment(experimentKey, assignment, subjectKey, subjectAttributes);
+
     return assignment;
   }
 
@@ -77,7 +80,7 @@ export default class EppoClient implements IEppoClient {
 
     // check for overridden assignment via hook
     const overriddenAssignment = assignmentHooks?.onPreAssignment(experimentKey, subjectKey);
-    if (overriddenAssignment !== null) {
+    if (overriddenAssignment !== null && overriddenAssignment !== undefined) {
       return overriddenAssignment;
     }
 
