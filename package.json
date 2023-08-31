@@ -6,17 +6,22 @@
   "files": [
     "/dist"
   ],
-  "typings": "dist/js-client-sdk-common.d.ts",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
     "lint": "eslint '**/*.{ts,tsx}' --cache",
     "lint:fix": "eslint --fix '**/*.{ts,tsx}' --cache",
     "lint:fix-pre-commit": "eslint -c .eslintrc.pre-commit.js --fix '**/*.{ts,tsx}' --no-eslintrc --cache",
     "prepare": "make prepare",
-    "pre-commit": "lint-staged && tsc && yarn docs",
+    "pre-commit": "lint-staged && tsc",
     "typecheck": "tsc",
     "test": "yarn test:unit",
-    "test:unit": "NODE_ENV=test jest '.*\\.spec\\.ts'",
-    "docs": "api-documenter markdown -i ./temp -o ./docs"
+    "test:unit": "NODE_ENV=test jest '.*\\.spec\\.ts'"
   },
   "jsdelivr": "dist/eppo-sdk.js",
   "repository": {
