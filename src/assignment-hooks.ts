@@ -1,3 +1,5 @@
+import { EppoValue } from './eppo_value';
+
 /**
  * Implement this interface to override an assignment or receive a callback post assignment
  * @public
@@ -12,7 +14,7 @@ export interface IAssignmentHooks {
    * then the subject will be assigned with the default assignment logic.
    * @public
    */
-  onPreAssignment(experimentKey: string, subject: string): string | null;
+  onPreAssignment(experimentKey: string, subject: string): EppoValue | null;
 
   /**
    * Invoked after a subject is assigned. Useful for any post assignment logic needed which is specific
@@ -22,5 +24,5 @@ export interface IAssignmentHooks {
    * @param variation the assigned variation
    * @public
    */
-  onPostAssignment(experimentKey: string, subject: string, variation: string): void;
+  onPostAssignment(experimentKey: string, subject: string, variation: EppoValue | null): void;
 }

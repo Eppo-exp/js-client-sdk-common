@@ -5,7 +5,7 @@ export interface IExperimentConfiguration {
   name: string;
   enabled: boolean;
   subjectShards: number;
-  overrides: Record<string, string>;
+  typedOverrides: Record<string, string>;
   allocations: Record<string, IAllocation>;
   rules: IRule[];
 }
