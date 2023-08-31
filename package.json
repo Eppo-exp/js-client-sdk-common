@@ -6,7 +6,13 @@
   "files": [
     "/dist"
   ],
-  "types": "./typings.d.ts",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
     "lint": "eslint '**/*.{ts,tsx}' --cache",
     "lint:fix": "eslint --fix '**/*.{ts,tsx}' --cache",
