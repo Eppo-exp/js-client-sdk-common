@@ -34,9 +34,7 @@ repoName := sdk-test-data
 test-data: 
 	rm -rf $(testDataDir)
 	mkdir -p $(tempDir)
-	cd ${tempDir} \
-	    && git clone -b ${branchName} --depth 1 --single-branch ${githubRepoLink} \
-	    && rm -rf ${repoName}/.git/
+	cd ${tempDir} && git clone -b ${branchName} --depth 1 --single-branch ${githubRepoLink}
 	cp ${gitDataDir}/rac-experiments-v3.json ${testDataDir}
 	cp -r ${gitDataDir}/assignment-v2 ${testDataDir}
 	rm -rf ${tempDir}
