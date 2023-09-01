@@ -295,7 +295,8 @@ export default class EppoClient implements IEppoClient {
     valueType: ValueType,
   ): EppoValue | null {
     const subjectHash = md5(subjectKey);
-    const overridden = experimentConfig?.typedOverrides[subjectHash];
+    const overridden =
+      experimentConfig?.typedOverrides && experimentConfig.typedOverrides[subjectHash];
     if (overridden) {
       switch (valueType) {
         case ValueType.BoolType:
