@@ -24,9 +24,9 @@ help: Makefile
 	@sed -n 's/^##//p' $<
 
 ## test-data
-testDataDir := test/data
-tempDir := ${testDataDir}/temp
-gitDataDir := ${tempDir}/sdk-test-data
+testDataDir := test/data/
+tempDir := ${testDataDir}temp/
+gitDataDir := ${tempDir}sdk-test-data/
 branchName := main
 githubRepoLink := https://github.com/Eppo-exp/sdk-test-data.git
 repoName := sdk-test-data
@@ -34,9 +34,9 @@ repoName := sdk-test-data
 test-data: 
 	rm -rf $(testDataDir)
 	mkdir -p $(tempDir)
-	cd ${tempDir} && git clone -b ${branchName} --depth 1 --single-branch ${githubRepoLink}
-	cp ${gitDataDir}/rac-experiments-v3.json ${testDataDir}
-	cp -r ${gitDataDir}/assignment-v2 ${testDataDir}
+	git clone -b ${branchName} --depth 1 --single-branch ${githubRepoLink} ${gitDataDir}
+	cp ${gitDataDir}rac-experiments-v3.json ${testDataDir}
+	cp -r ${gitDataDir}assignment-v2 ${testDataDir}
 	rm -rf ${tempDir}
 
 ## prepare

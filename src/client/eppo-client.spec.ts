@@ -16,7 +16,7 @@ import { IAssignmentLogger } from '../assignment-logger';
 import { IConfigurationStore } from '../configuration-store';
 import { MAX_EVENT_QUEUE_SIZE } from '../constants';
 import { OperatorType } from '../dto/rule-dto';
-import { EppoValue, IValue } from '../eppo_value';
+import { EppoValue } from '../eppo_value';
 import ExperimentConfigurationRequestor from '../experiment-configuration-requestor';
 import HttpClient from '../http-client';
 
