@@ -13,7 +13,7 @@ export class EppoValue {
   public numericValue: number | undefined;
   public stringValue: string | undefined;
 
-  constructor(
+  private constructor(
     valueType: ValueType,
     boolValue: boolean | undefined,
     numericValue: number | undefined,
@@ -23,6 +23,19 @@ export class EppoValue {
     this.boolValue = boolValue;
     this.numericValue = numericValue;
     this.stringValue = stringValue;
+  }
+
+  toString(): string {
+    switch (this.valueType) {
+      case ValueType.NullType:
+        return 'null';
+      case ValueType.BoolType:
+        return this.boolValue ? 'true' : 'false';
+      case ValueType.NumericType:
+        return this.numericValue ? this.numericValue.toString() : '0';
+      case ValueType.StringType:
+        return this.stringValue ?? '';
+    }
   }
 
   static Bool(value: boolean): EppoValue {
@@ -35,5 +48,9 @@ export class EppoValue {
 
   static String(value: string): EppoValue {
     return new EppoValue(ValueType.StringType, undefined, undefined, value);
+  }
+
+  static Null(): EppoValue {
+    return new EppoValue(ValueType.NullType, undefined, undefined, undefined);
   }
 }

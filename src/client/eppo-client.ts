@@ -272,7 +272,7 @@ export default class EppoClient implements IEppoClient {
   ) {
     const event: IAssignmentEvent = {
       experiment,
-      variation: variation.stringValue ?? '', // should assignment event have EppoValue?
+      variation: variation.toString(), // return the string representation to the logging callback
       timestamp: new Date().toISOString(),
       subject: subjectKey,
       subjectAttributes,
