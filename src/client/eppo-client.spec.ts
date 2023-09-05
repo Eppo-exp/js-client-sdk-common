@@ -7,6 +7,7 @@ import mock from 'xhr-mock';
 
 import {
   IAssignmentTestCase,
+  ValueTestType,
   readAssignmentTestData,
   readMockRacResponse,
 } from '../../test/testHelpers';
@@ -15,6 +16,7 @@ import { IAssignmentLogger } from '../assignment-logger';
 import { IConfigurationStore } from '../configuration-store';
 import { MAX_EVENT_QUEUE_SIZE } from '../constants';
 import { OperatorType } from '../dto/rule-dto';
+import { EppoValue } from '../eppo_value';
 import ExperimentConfigurationRequestor from '../experiment-configuration-requestor';
 import HttpClient from '../http-client';
 
@@ -85,6 +87,7 @@ describe('EppoClient E2E test', () => {
     enabled: true,
     subjectShards: 100,
     overrides: {},
+    typedOverrides: {},
     rules: [
       {
         allocationKey: 'allocation1',
@@ -98,6 +101,7 @@ describe('EppoClient E2E test', () => {
           {
             name: 'control',
             value: 'control',
+            typedValue: 'control',
             shardRange: {
               start: 0,
               end: 34,
@@ -106,6 +110,7 @@ describe('EppoClient E2E test', () => {
           {
             name: 'variant-1',
             value: 'variant-1',
+            typedValue: 'variant-1',
             shardRange: {
               start: 34,
               end: 67,
@@ -114,6 +119,7 @@ describe('EppoClient E2E test', () => {
           {
             name: 'variant-2',
             value: 'variant-2',
+            typedValue: 'variant-2',
             shardRange: {
               start: 67,
               end: 100,
@@ -172,17 +178,34 @@ describe('EppoClient E2E test', () => {
       'test variation assignment splits',
       async ({
         experiment,
+        valueType = ValueTestType.StringType,
         subjects,
         subjectsWithAttributes,
         expectedAssignments,
       }: IAssignmentTestCase) => {
         `---- Test Case for ${experiment} Experiment ----`;
-        const assignments = subjectsWithAttributes
-          ? getAssignmentsWithSubjectAttributes(subjectsWithAttributes, experiment)
-          : getAssignments(subjects, experiment);
 
-        // temporarily cast to string under dynamic configuration support is added
-        expect(assignments).toEqual(expectedAssignments.map((e) => (e ? e.toString() : null)));
+        const assignments = subjectsWithAttributes
+          ? getAssignmentsWithSubjectAttributes(subjectsWithAttributes, experiment, valueType)
+          : getAssignments(subjects, experiment, valueType);
+
+        switch (valueType) {
+          case ValueTestType.BoolType: {
+            const boolAssignments = assignments.map((a) => a?.boolValue ?? null);
+            expect(boolAssignments).toEqual(expectedAssignments);
+            break;
+          }
+          case ValueTestType.NumericType: {
+            const numericAssignments = assignments.map((a) => a?.numericValue ?? null);
+            expect(numericAssignments).toEqual(expectedAssignments);
+            break;
+          }
+          case ValueTestType.StringType: {
+            const stringAssignments = assignments.map((a) => a?.stringValue ?? null);
+            expect(stringAssignments).toEqual(expectedAssignments);
+            break;
+          }
+        }
       },
     );
   });
@@ -198,7 +221,7 @@ describe('EppoClient E2E test', () => {
       experimentName,
       JSON.stringify({
         ...mockExperimentConfig,
-        overrides: {
+        typedOverrides: {
           '1b50f33aef8f681a13f623963da967ed': 'control',
         },
       }),
@@ -212,7 +235,7 @@ describe('EppoClient E2E test', () => {
     const entry = {
       ...mockExperimentConfig,
       enabled: false,
-      overrides: {
+      typedOverrides: {
         '1b50f33aef8f681a13f623963da967ed': 'control',
       },
     };
@@ -281,9 +304,29 @@ describe('EppoClient E2E test', () => {
     expect(assignment).toEqual('control');
   });
 
-  function getAssignments(subjects: string[], experiment: string): string[] {
+  function getAssignments(
+    subjects: string[],
+    experiment: string,
+    valueTestType: ValueTestType = ValueTestType.StringType,
+  ): (EppoValue | null)[] {
     return subjects.map((subjectKey) => {
-      return globalClient.getAssignment(subjectKey, experiment);
+      switch (valueTestType) {
+        case ValueTestType.BoolType: {
+          const ba = globalClient.getBoolAssignment(subjectKey, experiment);
+          if (ba === null) return null;
+          return EppoValue.Bool(ba);
+        }
+        case ValueTestType.NumericType: {
+          const na = globalClient.getNumericAssignment(subjectKey, experiment);
+          if (na === null) return null;
+          return EppoValue.Numeric(na);
+        }
+        case ValueTestType.StringType: {
+          const sa = globalClient.getStringAssignment(subjectKey, experiment);
+          if (sa === null) return null;
+          return EppoValue.String(sa);
+        }
+      }
     });
   }
 
@@ -294,9 +337,38 @@ describe('EppoClient E2E test', () => {
       subjectAttributes: Record<string, any>;
     }[],
     experiment: string,
-  ): string[] {
+    valueTestType: ValueTestType = ValueTestType.StringType,
+  ): (EppoValue | null)[] {
     return subjectsWithAttributes.map((subject) => {
-      return globalClient.getAssignment(subject.subjectKey, experiment, subject.subjectAttributes);
+      switch (valueTestType) {
+        case ValueTestType.BoolType: {
+          const ba = globalClient.getBoolAssignment(
+            subject.subjectKey,
+            experiment,
+            subject.subjectAttributes,
+          );
+          if (ba === null) return null;
+          return EppoValue.Bool(ba);
+        }
+        case ValueTestType.NumericType: {
+          const na = globalClient.getNumericAssignment(
+            subject.subjectKey,
+            experiment,
+            subject.subjectAttributes,
+          );
+          if (na === null) return null;
+          return EppoValue.Numeric(na);
+        }
+        case ValueTestType.StringType: {
+          const sa = globalClient.getStringAssignment(
+            subject.subjectKey,
+            experiment,
+            subject.subjectAttributes,
+          );
+          if (sa === null) return null;
+          return EppoValue.String(sa);
+        }
+      }
     });
   }
 
@@ -324,12 +396,16 @@ describe('EppoClient E2E test', () => {
           {},
           {
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            onPreAssignment(experimentKey: string, subject: string): string {
-              return 'my-overridden-variation';
+            onPreAssignment(experimentKey: string, subject: string): EppoValue | null {
+              return EppoValue.String('my-overridden-variation');
             },
 
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            onPostAssignment(experimentKey: string, subject: string, variation: string): void {
+            onPostAssignment(
+              experimentKey: string,
+              subject: string,
+              variation: EppoValue | null,
+            ): void {
               // no-op
             },
           },
@@ -345,12 +421,16 @@ describe('EppoClient E2E test', () => {
           {},
           {
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            onPreAssignment(experimentKey: string, subject: string): string | null {
+            onPreAssignment(experimentKey: string, subject: string): EppoValue | null {
               return null;
             },
 
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            onPostAssignment(experimentKey: string, subject: string, variation: string): void {
+            onPostAssignment(
+              experimentKey: string,
+              subject: string,
+              variation: EppoValue | null,
+            ): void {
               // no-op
             },
           },
@@ -369,7 +449,9 @@ describe('EppoClient E2E test', () => {
         expect(td.explain(mockHooks.onPostAssignment).callCount).toEqual(1);
         expect(td.explain(mockHooks.onPostAssignment).calls[0].args[0]).toEqual(experimentName);
         expect(td.explain(mockHooks.onPostAssignment).calls[0].args[1]).toEqual(subject);
-        expect(td.explain(mockHooks.onPostAssignment).calls[0].args[2]).toEqual(variation);
+        expect(td.explain(mockHooks.onPostAssignment).calls[0].args[2]).toEqual(
+          EppoValue.String(variation ?? ''),
+        );
       });
     });
   });
