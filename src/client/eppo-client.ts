@@ -100,8 +100,8 @@ export default class EppoClient implements IEppoClient {
     );
     assignmentHooks?.onPostAssignment(flagKey, subjectKey, assignment, allocationKey);
 
-    if (assignment !== null)
-      this.logAssignment(flagKey, assignment, subjectKey, subjectAttributes);
+    if (assignment !== null && allocationKey !== null)
+      this.logAssignment(flagKey, allocationKey, assignment, subjectKey, subjectAttributes);
 
     return assignment?.stringValue ?? null;
   }
@@ -121,8 +121,8 @@ export default class EppoClient implements IEppoClient {
     );
     assignmentHooks?.onPostAssignment(flagKey, subjectKey, assignment, allocationKey);
 
-    if (assignment !== null)
-      this.logAssignment(flagKey, assignment, subjectKey, subjectAttributes);
+    if (assignment !== null && allocationKey !== null)
+      this.logAssignment(flagKey, allocationKey, assignment, subjectKey, subjectAttributes);
 
     return assignment?.stringValue ?? null;
   }
@@ -142,8 +142,8 @@ export default class EppoClient implements IEppoClient {
     );
     assignmentHooks?.onPostAssignment(flagKey, subjectKey, assignment, allocationKey);
 
-    if (assignment !== null)
-      this.logAssignment(flagKey, assignment, subjectKey, subjectAttributes);
+    if (assignment !== null && allocationKey !== null)
+      this.logAssignment(flagKey, allocationKey, assignment, subjectKey, subjectAttributes);
 
     return assignment?.boolValue ?? null;
   }
@@ -163,8 +163,8 @@ export default class EppoClient implements IEppoClient {
     );
     assignmentHooks?.onPostAssignment(flagKey, subjectKey, assignment, allocationKey);
 
-    if (assignment !== null)
-      this.logAssignment(flagKey, assignment, subjectKey, subjectAttributes,);
+    if (assignment !== null && allocationKey !== null)
+      this.logAssignment(flagKey, allocationKey, assignment, subjectKey, subjectAttributes);
 
     return assignment?.numericValue ?? null;
   }
@@ -185,7 +185,7 @@ export default class EppoClient implements IEppoClient {
     assignmentHooks?.onPostAssignment(flagKey, subjectKey, assignment, allocationKey);
 
     if (assignment !== null)
-      this.logAssignment(flagKey, assignment, subjectKey, subjectAttributes);
+      this.logAssignment(flagKey, allocationKey, assignment, subjectKey, subjectAttributes);
 
     return assignment?.stringValue ?? null;
   }
@@ -196,9 +196,11 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes = {},
     assignmentHooks: IAssignmentHooks | undefined,
     valueType: ValueType,
-  ): { allocationKey?: string, assignment: EppoValue | null } {
+  ): { allocationKey: string | null, assignment: EppoValue | null } {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
     validateNotBlank(flagKey, 'Invalid argument: flagKey cannot be blank');
+
+    const nullAssignment = { allocationKey: null, assignment: null };
 
     const experimentConfig = this.configurationStore.get<IExperimentConfiguration>(flagKey);
     const allowListOverride = this.getSubjectVariationOverride(
@@ -207,9 +209,8 @@ export default class EppoClient implements IEppoClient {
       valueType,
     );
 
-    const nullAssignment = { assignment: null };
+    if (allowListOverride) return { ...nullAssignment, assignment: allowListOverride };
 
-    if (allowListOverride) return { assignment: allowListOverride };
 
     // Check for disabled flag.
     if (!experimentConfig?.enabled) return nullAssignment;
@@ -217,7 +218,7 @@ export default class EppoClient implements IEppoClient {
     // check for overridden assignment via hook
     const overriddenAssignment = assignmentHooks?.onPreAssignment(flagKey, subjectKey);
     if (overriddenAssignment !== null && overriddenAssignment !== undefined) {
-      return { assignment: overriddenAssignment };
+      return { ...nullAssignment, assignment: overriddenAssignment };
     }
 
     // Attempt to match a rule from the list.
@@ -271,13 +272,14 @@ export default class EppoClient implements IEppoClient {
 
   private logAssignment(
     flagKey: string,
+    allocationKey: string,
     variation: EppoValue,
     subjectKey: string,
     subjectAttributes: Record<string, EppoValue> | undefined = {},
   ) {
     const event: IAssignmentEvent = {
-      allocation: flagKey,
-      experiment: flagKey,
+      allocation: allocationKey,
+      experiment: `${flagKey}-${allocationKey}`,
       featureFlag: flagKey,
       variation: variation.toString(), // return the string representation to the logging callback
       timestamp: new Date().toISOString(),

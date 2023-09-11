@@ -25,5 +25,5 @@ export interface IAssignmentHooks {
    * @param allocationKey key of the allocation being used for assignment
    * @public
    */
-  onPostAssignment(flagKey: string, subject: string, variation: EppoValue | null, allocationKey?: string): void;
+  onPostAssignment(flagKey: string, subject: string, variation: EppoValue | null, allocationKey?: string | null): void;
 }
