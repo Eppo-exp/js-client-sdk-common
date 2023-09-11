@@ -4,9 +4,19 @@
  */
 export interface IAssignmentEvent {
   /**
+   * An Eppo allocation key
+   */
+  allocation: string;
+
+  /**
    * An Eppo experiment key
    */
   experiment: string;
+
+  /**
+   * An Eppo feature flag key
+   */
+  featureFlag: string;
 
   /**
    * The assigned variation

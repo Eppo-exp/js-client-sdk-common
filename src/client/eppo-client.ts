@@ -20,7 +20,7 @@ export interface IEppoClient {
    * Maps a subject to a variation for a given experiment.
    *
    * @param subjectKey an identifier of the experiment subject, for example a user ID.
-   * @param experimentKey experiment identifier
+   * @param flagKey feature flag identifier
    * @param subjectAttributes optional attributes associated with the subject, for example name and email.
    * The subject attributes are used for evaluating any targeting rules tied to the experiment.
    * @param assignmentHooks optional interface for pre and post assignment hooks
@@ -29,7 +29,7 @@ export interface IEppoClient {
    */
   getAssignment(
     subjectKey: string,
-    experimentKey: string,
+    flagKey: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subjectAttributes?: Record<string, any>,
     assignmentHooks?: IAssignmentHooks,
@@ -39,7 +39,7 @@ export interface IEppoClient {
    * Maps a subject to a variation for a given experiment.
    *
    * @param subjectKey an identifier of the experiment subject, for example a user ID.
-   * @param experimentKey experiment identifier
+   * @param flagKey feature flag identifier
    * @param subjectAttributes optional attributes associated with the subject, for example name and email.
    * The subject attributes are used for evaluating any targeting rules tied to the experiment.
    * @returns a variation value if the subject is part of the experiment sample, otherwise null
@@ -47,7 +47,7 @@ export interface IEppoClient {
    */
   getStringAssignment(
     subjectKey: string,
-    experimentKey: string,
+    flagKey: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subjectAttributes?: Record<string, any>,
     assignmentHooks?: IAssignmentHooks,
@@ -55,7 +55,7 @@ export interface IEppoClient {
 
   getBoolAssignment(
     subjectKey: string,
-    experimentKey: string,
+    flagKey: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subjectAttributes?: Record<string, any>,
     assignmentHooks?: IAssignmentHooks,
@@ -63,7 +63,7 @@ export interface IEppoClient {
 
   getNumericAssignment(
     subjectKey: string,
-    experimentKey: string,
+    flagKey: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subjectAttributes?: Record<string, any>,
     assignmentHooks?: IAssignmentHooks,
@@ -71,7 +71,7 @@ export interface IEppoClient {
 
   getJSONAssignment(
     subjectKey: string,
-    experimentKey: string,
+    flagKey: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subjectAttributes?: Record<string, any>,
     assignmentHooks?: IAssignmentHooks,
@@ -82,124 +82,124 @@ export default class EppoClient implements IEppoClient {
   private queuedEvents: IAssignmentEvent[] = [];
   private assignmentLogger: IAssignmentLogger | undefined;
 
-  constructor(private configurationStore: IConfigurationStore) {}
+  constructor(private configurationStore: IConfigurationStore) { }
 
   public getAssignment(
     subjectKey: string,
-    experimentKey: string,
+    flagKey: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subjectAttributes: Record<string, any> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
   ): string | null {
     const assignment = this.getAssignmentInternal(
       subjectKey,
-      experimentKey,
+      flagKey,
       subjectAttributes,
       assignmentHooks,
       ValueType.StringType,
     );
-    assignmentHooks?.onPostAssignment(experimentKey, subjectKey, assignment);
+    assignmentHooks?.onPostAssignment(flagKey, subjectKey, assignment);
 
     if (assignment !== null)
-      this.logAssignment(experimentKey, assignment, subjectKey, subjectAttributes);
+      this.logAssignment(flagKey, assignment, subjectKey, subjectAttributes);
 
     return assignment?.stringValue ?? null;
   }
 
   public getStringAssignment(
     subjectKey: string,
-    experimentKey: string,
+    flagKey: string,
     subjectAttributes: Record<string, EppoValue> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
   ): string | null {
     const assignment = this.getAssignmentInternal(
       subjectKey,
-      experimentKey,
+      flagKey,
       subjectAttributes,
       assignmentHooks,
       ValueType.StringType,
     );
-    assignmentHooks?.onPostAssignment(experimentKey, subjectKey, assignment);
+    assignmentHooks?.onPostAssignment(flagKey, subjectKey, assignment);
 
     if (assignment !== null)
-      this.logAssignment(experimentKey, assignment, subjectKey, subjectAttributes);
+      this.logAssignment(flagKey, assignment, subjectKey, subjectAttributes);
 
     return assignment?.stringValue ?? null;
   }
 
   getBoolAssignment(
     subjectKey: string,
-    experimentKey: string,
+    flagKey: string,
     subjectAttributes: Record<string, EppoValue> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
   ): boolean | null {
     const assignment = this.getAssignmentInternal(
       subjectKey,
-      experimentKey,
+      flagKey,
       subjectAttributes,
       assignmentHooks,
       ValueType.BoolType,
     );
-    assignmentHooks?.onPostAssignment(experimentKey, subjectKey, assignment);
+    assignmentHooks?.onPostAssignment(flagKey, subjectKey, assignment);
 
     if (assignment !== null)
-      this.logAssignment(experimentKey, assignment, subjectKey, subjectAttributes);
+      this.logAssignment(flagKey, assignment, subjectKey, subjectAttributes);
 
     return assignment?.boolValue ?? null;
   }
 
   getNumericAssignment(
     subjectKey: string,
-    experimentKey: string,
+    flagKey: string,
     subjectAttributes?: Record<string, EppoValue>,
     assignmentHooks?: IAssignmentHooks | undefined,
   ): number | null {
     const assignment = this.getAssignmentInternal(
       subjectKey,
-      experimentKey,
+      flagKey,
       subjectAttributes,
       assignmentHooks,
       ValueType.NumericType,
     );
 
     if (assignment !== null)
-      this.logAssignment(experimentKey, assignment, subjectKey, subjectAttributes);
+      this.logAssignment(flagKey, assignment, subjectKey, subjectAttributes);
 
     return assignment?.numericValue ?? null;
   }
 
   public getJSONAssignment(
     subjectKey: string,
-    experimentKey: string,
+    flagKey: string,
     subjectAttributes: Record<string, EppoValue> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
   ): string | null {
     const assignment = this.getAssignmentInternal(
       subjectKey,
-      experimentKey,
+      flagKey,
       subjectAttributes,
       assignmentHooks,
       ValueType.StringType,
     );
-    assignmentHooks?.onPostAssignment(experimentKey, subjectKey, assignment);
+    assignmentHooks?.onPostAssignment(flagKey, subjectKey, assignment);
 
     if (assignment !== null)
-      this.logAssignment(experimentKey, assignment, subjectKey, subjectAttributes);
+      this.logAssignment(flagKey, assignment, subjectKey, subjectAttributes);
 
     return assignment?.stringValue ?? null;
   }
 
   private getAssignmentInternal(
     subjectKey: string,
-    experimentKey: string,
+    flagKey: string,
     subjectAttributes = {},
     assignmentHooks: IAssignmentHooks | undefined,
     valueType: ValueType,
   ): EppoValue | null {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
-    validateNotBlank(experimentKey, 'Invalid argument: experimentKey cannot be blank');
+    validateNotBlank(flagKey, 'Invalid argument: flagKey cannot be blank');
 
-    const experimentConfig = this.configurationStore.get<IExperimentConfiguration>(experimentKey);
+    const experimentConfig = this.configurationStore.get<IExperimentConfiguration>(flagKey);
     const allowListOverride = this.getSubjectVariationOverride(
       subjectKey,
       experimentConfig,
@@ -212,7 +212,7 @@ export default class EppoClient implements IEppoClient {
     if (!experimentConfig?.enabled) return null;
 
     // check for overridden assignment via hook
-    const overriddenAssignment = assignmentHooks?.onPreAssignment(experimentKey, subjectKey);
+    const overriddenAssignment = assignmentHooks?.onPreAssignment(flagKey, subjectKey);
     if (overriddenAssignment !== null && overriddenAssignment !== undefined) {
       return overriddenAssignment;
     }
@@ -223,14 +223,14 @@ export default class EppoClient implements IEppoClient {
 
     // Check if subject is in allocation sample.
     const allocation = experimentConfig.allocations[matchedRule.allocationKey];
-    if (!this.isInExperimentSample(subjectKey, experimentKey, experimentConfig, allocation))
+    if (!this.isInExperimentSample(subjectKey, flagKey, experimentConfig, allocation))
       return null;
 
     // Compute variation for subject.
     const { subjectShards } = experimentConfig;
     const { variations } = allocation;
 
-    const shard = getShard(`assignment-${subjectKey}-${experimentKey}`, subjectShards);
+    const shard = getShard(`assignment-${subjectKey}-${flagKey}`, subjectShards);
     const assignedVariation = variations.find((variation) =>
       isShardInRange(shard, variation.shardRange),
     )?.typedValue;
@@ -265,13 +265,15 @@ export default class EppoClient implements IEppoClient {
   }
 
   private logAssignment(
-    experiment: string,
+    flagKey: string,
     variation: EppoValue,
     subjectKey: string,
     subjectAttributes: Record<string, EppoValue> | undefined = {},
   ) {
     const event: IAssignmentEvent = {
-      experiment,
+      allocation: flagKey,
+      experiment: flagKey,
+      featureFlag: flagKey,
       variation: variation.toString(), // return the string representation to the logging callback
       timestamp: new Date().toISOString(),
       subject: subjectKey,
@@ -320,13 +322,13 @@ export default class EppoClient implements IEppoClient {
    */
   private isInExperimentSample(
     subjectKey: string,
-    experimentKey: string,
+    flagKey: string,
     experimentConfig: IExperimentConfiguration,
     allocation: IAllocation,
   ): boolean {
     const { subjectShards } = experimentConfig;
     const { percentExposure } = allocation;
-    const shard = getShard(`exposure-${subjectKey}-${experimentKey}`, subjectShards);
+    const shard = getShard(`exposure-${subjectKey}-${flagKey}`, subjectShards);
     return shard <= percentExposure * subjectShards;
   }
 }
