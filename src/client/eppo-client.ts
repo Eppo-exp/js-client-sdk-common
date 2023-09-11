@@ -184,7 +184,7 @@ export default class EppoClient implements IEppoClient {
     );
     assignmentHooks?.onPostAssignment(flagKey, subjectKey, assignment, allocationKey);
 
-    if (assignment !== null)
+    if (assignment !== null && allocationKey !== null)
       this.logAssignment(flagKey, allocationKey, assignment, subjectKey, subjectAttributes);
 
     return assignment?.stringValue ?? null;
