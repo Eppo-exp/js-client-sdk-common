@@ -82,7 +82,7 @@ export default class EppoClient implements IEppoClient {
   private queuedEvents: IAssignmentEvent[] = [];
   private assignmentLogger: IAssignmentLogger | undefined;
 
-  constructor(private configurationStore: IConfigurationStore) { }
+  constructor(private configurationStore: IConfigurationStore) {}
 
   public getAssignment(
     subjectKey: string,
@@ -91,12 +91,15 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes: Record<string, any> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
   ): string | null {
-    return this.getAssignmentVariation(
-      subjectKey,
-      flagKey,
-      subjectAttributes,
-      assignmentHooks,
-      ValueType.StringType)?.stringValue ?? null;
+    return (
+      this.getAssignmentVariation(
+        subjectKey,
+        flagKey,
+        subjectAttributes,
+        assignmentHooks,
+        ValueType.StringType,
+      )?.stringValue ?? null
+    );
   }
 
   public getStringAssignment(
@@ -105,12 +108,15 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes: Record<string, EppoValue> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
   ): string | null {
-    return this.getAssignmentVariation(
-      subjectKey,
-      flagKey,
-      subjectAttributes,
-      assignmentHooks,
-      ValueType.StringType)?.stringValue ?? null;
+    return (
+      this.getAssignmentVariation(
+        subjectKey,
+        flagKey,
+        subjectAttributes,
+        assignmentHooks,
+        ValueType.StringType,
+      )?.stringValue ?? null
+    );
   }
 
   getBoolAssignment(
@@ -119,12 +125,15 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes: Record<string, EppoValue> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
   ): boolean | null {
-    return this.getAssignmentVariation(
-      subjectKey,
-      flagKey,
-      subjectAttributes,
-      assignmentHooks,
-      ValueType.BoolType)?.boolValue ?? null;
+    return (
+      this.getAssignmentVariation(
+        subjectKey,
+        flagKey,
+        subjectAttributes,
+        assignmentHooks,
+        ValueType.BoolType,
+      )?.boolValue ?? null
+    );
   }
 
   getNumericAssignment(
@@ -133,12 +142,15 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes?: Record<string, EppoValue>,
     assignmentHooks?: IAssignmentHooks | undefined,
   ): number | null {
-    return this.getAssignmentVariation(
-      subjectKey,
-      flagKey,
-      subjectAttributes,
-      assignmentHooks,
-      ValueType.NumericType)?.numericValue ?? null;
+    return (
+      this.getAssignmentVariation(
+        subjectKey,
+        flagKey,
+        subjectAttributes,
+        assignmentHooks,
+        ValueType.NumericType,
+      )?.numericValue ?? null
+    );
   }
 
   public getJSONAssignment(
@@ -147,12 +159,15 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes: Record<string, EppoValue> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
   ): string | null {
-    return this.getAssignmentVariation(
-      subjectKey,
-      flagKey,
-      subjectAttributes,
-      assignmentHooks,
-      ValueType.StringType)?.stringValue ?? null;
+    return (
+      this.getAssignmentVariation(
+        subjectKey,
+        flagKey,
+        subjectAttributes,
+        assignmentHooks,
+        ValueType.StringType,
+      )?.stringValue ?? null
+    );
   }
 
   private getAssignmentVariation(
@@ -174,7 +189,7 @@ export default class EppoClient implements IEppoClient {
     if (!assignment.isNullType() && allocationKey !== null)
       this.logAssignment(flagKey, allocationKey, assignment, subjectKey, subjectAttributes);
 
-    return assignment
+    return assignment;
   }
 
   private getAssignmentInternal(
@@ -183,7 +198,7 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes = {},
     assignmentHooks: IAssignmentHooks | undefined,
     valueType: ValueType,
-  ): { allocationKey: string | null; assignment: EppoValue; } {
+  ): { allocationKey: string | null; assignment: EppoValue } {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
     validateNotBlank(flagKey, 'Invalid argument: flagKey cannot be blank');
 
@@ -198,8 +213,8 @@ export default class EppoClient implements IEppoClient {
 
     if (allowListOverride) {
       if (!allowListOverride.isExpectedType()) return nullAssignment;
-      return { ...nullAssignment, assignment: allowListOverride }
-    };
+      return { ...nullAssignment, assignment: allowListOverride };
+    }
 
     // Check for disabled flag.
     if (!experimentConfig?.enabled) return nullAssignment;
@@ -229,17 +244,20 @@ export default class EppoClient implements IEppoClient {
       isShardInRange(shard, variation.shardRange),
     )?.typedValue;
 
-    const internalAssignment = { allocationKey: matchedRule.allocationKey, assignment: EppoValue.Null() };
+    const internalAssignment = {
+      allocationKey: matchedRule.allocationKey,
+      assignment: EppoValue.Null(),
+    };
 
     switch (valueType) {
       case ValueType.BoolType:
-        internalAssignment['assignment'] = EppoValue.Bool(assignedVariation as boolean)
+        internalAssignment['assignment'] = EppoValue.Bool(assignedVariation as boolean);
         break;
       case ValueType.NumericType:
-        internalAssignment['assignment'] = EppoValue.Numeric(assignedVariation as number)
+        internalAssignment['assignment'] = EppoValue.Numeric(assignedVariation as number);
         break;
       case ValueType.StringType:
-        internalAssignment['assignment'] = EppoValue.String(assignedVariation as string)
+        internalAssignment['assignment'] = EppoValue.String(assignedVariation as string);
         break;
       default:
         return nullAssignment;
