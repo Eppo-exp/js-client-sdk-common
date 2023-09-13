@@ -91,19 +91,11 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes: Record<string, any> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
   ): string | null {
-    const { allocationKey, assignment } = this.getAssignmentInternal(
-      subjectKey,
+    return this.getAssignmentVariation(subjectKey,
       flagKey,
       subjectAttributes,
       assignmentHooks,
-      ValueType.StringType,
-    );
-    assignmentHooks?.onPostAssignment(flagKey, subjectKey, assignment, allocationKey);
-
-    if (assignment !== null && allocationKey !== null)
-      this.logAssignment(flagKey, allocationKey, assignment, subjectKey, subjectAttributes);
-
-    return assignment?.stringValue ?? null;
+      ValueType.StringType)?.stringValue ?? null;
   }
 
   public getStringAssignment(
@@ -112,19 +104,11 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes: Record<string, EppoValue> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
   ): string | null {
-    const { allocationKey, assignment } = this.getAssignmentInternal(
-      subjectKey,
+    return this.getAssignmentVariation(subjectKey,
       flagKey,
       subjectAttributes,
       assignmentHooks,
-      ValueType.StringType,
-    );
-    assignmentHooks?.onPostAssignment(flagKey, subjectKey, assignment, allocationKey);
-
-    if (assignment !== null && allocationKey !== null)
-      this.logAssignment(flagKey, allocationKey, assignment, subjectKey, subjectAttributes);
-
-    return assignment?.stringValue ?? null;
+      ValueType.StringType)?.stringValue ?? null;
   }
 
   getBoolAssignment(
@@ -133,19 +117,11 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes: Record<string, EppoValue> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
   ): boolean | null {
-    const { allocationKey, assignment } = this.getAssignmentInternal(
-      subjectKey,
+    return this.getAssignmentVariation(subjectKey,
       flagKey,
       subjectAttributes,
       assignmentHooks,
-      ValueType.BoolType,
-    );
-    assignmentHooks?.onPostAssignment(flagKey, subjectKey, assignment, allocationKey);
-
-    if (assignment !== null && allocationKey !== null)
-      this.logAssignment(flagKey, allocationKey, assignment, subjectKey, subjectAttributes);
-
-    return assignment?.boolValue ?? null;
+      ValueType.BoolType)?.boolValue ?? null;
   }
 
   getNumericAssignment(
@@ -154,19 +130,11 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes?: Record<string, EppoValue>,
     assignmentHooks?: IAssignmentHooks | undefined,
   ): number | null {
-    const { allocationKey, assignment } = this.getAssignmentInternal(
-      subjectKey,
+    return this.getAssignmentVariation(subjectKey,
       flagKey,
       subjectAttributes,
       assignmentHooks,
-      ValueType.NumericType,
-    );
-    assignmentHooks?.onPostAssignment(flagKey, subjectKey, assignment, allocationKey);
-
-    if (assignment !== null && allocationKey !== null)
-      this.logAssignment(flagKey, allocationKey, assignment, subjectKey, subjectAttributes);
-
-    return assignment?.numericValue ?? null;
+      ValueType.NumericType)?.numericValue ?? null;
   }
 
   public getJSONAssignment(
@@ -175,19 +143,33 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes: Record<string, EppoValue> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
   ): string | null {
+    return this.getAssignmentVariation(subjectKey,
+      flagKey,
+      subjectAttributes,
+      assignmentHooks,
+      ValueType.StringType)?.stringValue ?? null;
+  }
+
+  private getAssignmentVariation(
+    subjectKey: string,
+    flagKey: string,
+    subjectAttributes: Record<string, EppoValue> = {},
+    assignmentHooks: IAssignmentHooks | undefined,
+    valueType: ValueType,
+  ): EppoValue | null {
     const { allocationKey, assignment } = this.getAssignmentInternal(
       subjectKey,
       flagKey,
       subjectAttributes,
       assignmentHooks,
-      ValueType.StringType,
+      valueType,
     );
     assignmentHooks?.onPostAssignment(flagKey, subjectKey, assignment, allocationKey);
 
     if (assignment !== null && allocationKey !== null)
       this.logAssignment(flagKey, allocationKey, assignment, subjectKey, subjectAttributes);
 
-    return assignment?.stringValue ?? null;
+    return assignment
   }
 
   private getAssignmentInternal(
