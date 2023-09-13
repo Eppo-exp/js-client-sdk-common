@@ -402,9 +402,9 @@ describe('EppoClient E2E test', () => {
 
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             onPostAssignment(
-              experimentKey: string,
-              subject: string,
-              variation: EppoValue | null,
+              experimentKey: string, // eslint-disable-line @typescript-eslint/no-unused-vars
+              subject: string, // eslint-disable-line @typescript-eslint/no-unused-vars
+              variation: EppoValue | null, // eslint-disable-line @typescript-eslint/no-unused-vars
             ): void {
               // no-op
             },
@@ -425,11 +425,10 @@ describe('EppoClient E2E test', () => {
               return null;
             },
 
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             onPostAssignment(
-              experimentKey: string,
-              subject: string,
-              variation: EppoValue | null,
+              experimentKey: string, // eslint-disable-line @typescript-eslint/no-unused-vars
+              subject: string, // eslint-disable-line @typescript-eslint/no-unused-vars
+              variation: EppoValue | null, // eslint-disable-line @typescript-eslint/no-unused-vars
             ): void {
               // no-op
             },

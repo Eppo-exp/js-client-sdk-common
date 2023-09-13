@@ -91,7 +91,8 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes: Record<string, any> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
   ): string | null {
-    return this.getAssignmentVariation(subjectKey,
+    return this.getAssignmentVariation(
+      subjectKey,
       flagKey,
       subjectAttributes,
       assignmentHooks,
@@ -104,7 +105,8 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes: Record<string, EppoValue> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
   ): string | null {
-    return this.getAssignmentVariation(subjectKey,
+    return this.getAssignmentVariation(
+      subjectKey,
       flagKey,
       subjectAttributes,
       assignmentHooks,
@@ -117,7 +119,8 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes: Record<string, EppoValue> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
   ): boolean | null {
-    return this.getAssignmentVariation(subjectKey,
+    return this.getAssignmentVariation(
+      subjectKey,
       flagKey,
       subjectAttributes,
       assignmentHooks,
@@ -130,7 +133,8 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes?: Record<string, EppoValue>,
     assignmentHooks?: IAssignmentHooks | undefined,
   ): number | null {
-    return this.getAssignmentVariation(subjectKey,
+    return this.getAssignmentVariation(
+      subjectKey,
       flagKey,
       subjectAttributes,
       assignmentHooks,
@@ -143,7 +147,8 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes: Record<string, EppoValue> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
   ): string | null {
-    return this.getAssignmentVariation(subjectKey,
+    return this.getAssignmentVariation(
+      subjectKey,
       flagKey,
       subjectAttributes,
       assignmentHooks,
