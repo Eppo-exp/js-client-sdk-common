@@ -14,10 +14,7 @@ export interface IAssignmentHooks {
    * then the subject will be assigned with the default assignment logic.
    * @public
    */
-  onPreAssignment(
-    flagKey: string,
-    subject: string
-  ): EppoValue | null;
+  onPreAssignment(flagKey: string, subject: string): EppoValue | null;
 
   /**
    * Invoked after a subject is assigned. Useful for any post assignment logic needed which is specific
@@ -32,6 +29,6 @@ export interface IAssignmentHooks {
     flagKey: string,
     subject: string,
     variation: EppoValue | null,
-    allocationKey?: string | null
+    allocationKey?: string | null,
   ): void;
 }
