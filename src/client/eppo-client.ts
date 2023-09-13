@@ -166,7 +166,7 @@ export default class EppoClient implements IEppoClient {
     );
     assignmentHooks?.onPostAssignment(flagKey, subjectKey, assignment, allocationKey);
 
-    if (assignment !== null && allocationKey !== null)
+    if (!assignment.isNullType() && allocationKey !== null)
       this.logAssignment(flagKey, allocationKey, assignment, subjectKey, subjectAttributes);
 
     return assignment
@@ -178,11 +178,11 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes = {},
     assignmentHooks: IAssignmentHooks | undefined,
     valueType: ValueType,
-  ): { allocationKey: string | null, assignment: EppoValue | null } {
+  ): { allocationKey: string | null; assignment: EppoValue; } {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
     validateNotBlank(flagKey, 'Invalid argument: flagKey cannot be blank');
 
-    const nullAssignment = { allocationKey: null, assignment: null };
+    const nullAssignment = { allocationKey: null, assignment: EppoValue.Null() };
 
     const experimentConfig = this.configurationStore.get<IExperimentConfiguration>(flagKey);
     const allowListOverride = this.getSubjectVariationOverride(
@@ -191,8 +191,10 @@ export default class EppoClient implements IEppoClient {
       valueType,
     );
 
-    if (allowListOverride) return { ...nullAssignment, assignment: allowListOverride };
-
+    if (allowListOverride) {
+      if (!allowListOverride.isExpectedType()) return nullAssignment;
+      return { ...nullAssignment, assignment: allowListOverride }
+    };
 
     // Check for disabled flag.
     if (!experimentConfig?.enabled) return nullAssignment;
@@ -200,6 +202,7 @@ export default class EppoClient implements IEppoClient {
     // check for overridden assignment via hook
     const overriddenAssignment = assignmentHooks?.onPreAssignment(flagKey, subjectKey);
     if (overriddenAssignment !== null && overriddenAssignment !== undefined) {
+      if (!overriddenAssignment.isExpectedType()) return nullAssignment;
       return { ...nullAssignment, assignment: overriddenAssignment };
     }
 
@@ -221,18 +224,23 @@ export default class EppoClient implements IEppoClient {
       isShardInRange(shard, variation.shardRange),
     )?.typedValue;
 
-    const allocationKey = { allocationKey: matchedRule.allocationKey };
+    const internalAssignment = { allocationKey: matchedRule.allocationKey, assignment: EppoValue.Null() };
 
     switch (valueType) {
       case ValueType.BoolType:
-        return { ...allocationKey, assignment: EppoValue.Bool(assignedVariation as boolean) };
+        internalAssignment['assignment'] = EppoValue.Bool(assignedVariation as boolean)
+        break;
       case ValueType.NumericType:
-        return { ...allocationKey, assignment: EppoValue.Numeric(assignedVariation as number) };
+        internalAssignment['assignment'] = EppoValue.Numeric(assignedVariation as number)
+        break;
       case ValueType.StringType:
-        return { ...allocationKey, assignment: EppoValue.String(assignedVariation as string) };
+        internalAssignment['assignment'] = EppoValue.String(assignedVariation as string)
+        break;
       default:
         return nullAssignment;
     }
+
+    return internalAssignment.assignment.isExpectedType() ? internalAssignment : nullAssignment;
   }
 
   public setLogger(logger: IAssignmentLogger) {
