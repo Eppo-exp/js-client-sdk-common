@@ -38,6 +38,23 @@ export class EppoValue {
     }
   }
 
+  isExpectedType(): boolean {
+    switch (this.valueType) {
+      case ValueType.BoolType:
+        return typeof this.boolValue === 'boolean';
+      case ValueType.NumericType:
+        return typeof this.numericValue === 'number';
+      case ValueType.StringType:
+        return typeof this.stringValue === 'string';
+      default:
+        return true;
+    }
+  }
+
+  isNullType(): boolean {
+    return this.valueType === ValueType.NullType;
+  }
+
   static Bool(value: boolean): EppoValue {
     return new EppoValue(ValueType.BoolType, value, undefined, undefined);
   }

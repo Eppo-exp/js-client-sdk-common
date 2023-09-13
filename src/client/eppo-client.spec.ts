@@ -80,10 +80,10 @@ describe('EppoClient E2E test', () => {
     mock.teardown();
   });
 
-  const experimentName = 'mock-experiment';
+  const flagKey = 'mock-experiment';
 
   const mockExperimentConfig = {
-    name: experimentName,
+    name: flagKey,
     enabled: true,
     subjectShards: 100,
     overrides: {},
@@ -132,14 +132,14 @@ describe('EppoClient E2E test', () => {
 
   describe('setLogger', () => {
     beforeAll(() => {
-      storage.setEntries({ [experimentName]: mockExperimentConfig });
+      storage.setEntries({ [flagKey]: mockExperimentConfig });
     });
 
     it('Invokes logger for queued events', () => {
       const mockLogger = td.object<IAssignmentLogger>();
 
       const client = new EppoClient(storage);
-      client.getAssignment('subject-to-be-logged', experimentName);
+      client.getAssignment('subject-to-be-logged', flagKey);
       client.setLogger(mockLogger);
 
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
@@ -153,7 +153,7 @@ describe('EppoClient E2E test', () => {
 
       const client = new EppoClient(storage);
 
-      client.getAssignment('subject-to-be-logged', experimentName);
+      client.getAssignment('subject-to-be-logged', flagKey);
       client.setLogger(mockLogger);
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
 
@@ -166,7 +166,7 @@ describe('EppoClient E2E test', () => {
 
       const client = new EppoClient(storage);
       for (let i = 0; i < MAX_EVENT_QUEUE_SIZE + 100; i++) {
-        client.getAssignment(`subject-to-be-logged-${i}`, experimentName);
+        client.getAssignment(`subject-to-be-logged-${i}`, flagKey);
       }
       client.setLogger(mockLogger);
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(MAX_EVENT_QUEUE_SIZE);
@@ -218,7 +218,7 @@ describe('EppoClient E2E test', () => {
 
   it('returns subject from overrides when enabled is true', () => {
     window.localStorage.setItem(
-      experimentName,
+      flagKey,
       JSON.stringify({
         ...mockExperimentConfig,
         typedOverrides: {
@@ -227,7 +227,7 @@ describe('EppoClient E2E test', () => {
       }),
     );
     const client = new EppoClient(storage);
-    const assignment = client.getAssignment('subject-10', experimentName);
+    const assignment = client.getAssignment('subject-10', flagKey);
     expect(assignment).toEqual('control');
   });
 
@@ -240,22 +240,22 @@ describe('EppoClient E2E test', () => {
       },
     };
 
-    storage.setEntries({ [experimentName]: entry });
+    storage.setEntries({ [flagKey]: entry });
 
     const client = new EppoClient(storage);
-    const assignment = client.getAssignment('subject-10', experimentName);
+    const assignment = client.getAssignment('subject-10', flagKey);
     expect(assignment).toEqual('control');
   });
 
   it('logs variation assignment', () => {
     const mockLogger = td.object<IAssignmentLogger>();
 
-    storage.setEntries({ [experimentName]: mockExperimentConfig });
+    storage.setEntries({ [flagKey]: mockExperimentConfig });
     const client = new EppoClient(storage);
     client.setLogger(mockLogger);
 
     const subjectAttributes = { foo: 3 };
-    const assignment = client.getAssignment('subject-10', experimentName, subjectAttributes);
+    const assignment = client.getAssignment('subject-10', flagKey, subjectAttributes);
 
     expect(assignment).toEqual('control');
     expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
@@ -266,12 +266,12 @@ describe('EppoClient E2E test', () => {
     const mockLogger = td.object<IAssignmentLogger>();
     td.when(mockLogger.logAssignment(td.matchers.anything())).thenThrow(new Error('logging error'));
 
-    storage.setEntries({ [experimentName]: mockExperimentConfig });
+    storage.setEntries({ [flagKey]: mockExperimentConfig });
     const client = new EppoClient(storage);
     client.setLogger(mockLogger);
 
     const subjectAttributes = { foo: 3 };
-    const assignment = client.getAssignment('subject-10', experimentName, subjectAttributes);
+    const assignment = client.getAssignment('subject-10', flagKey, subjectAttributes);
 
     expect(assignment).toEqual('control');
   });
@@ -293,14 +293,14 @@ describe('EppoClient E2E test', () => {
       ],
     };
 
-    storage.setEntries({ [experimentName]: entry });
+    storage.setEntries({ [flagKey]: entry });
 
     const client = new EppoClient(storage);
-    let assignment = client.getAssignment('subject-10', experimentName, { appVersion: 9 });
+    let assignment = client.getAssignment('subject-10', flagKey, { appVersion: 9 });
     expect(assignment).toEqual(null);
-    assignment = client.getAssignment('subject-10', experimentName);
+    assignment = client.getAssignment('subject-10', flagKey);
     expect(assignment).toEqual(null);
-    assignment = client.getAssignment('subject-10', experimentName, { appVersion: 11 });
+    assignment = client.getAssignment('subject-10', flagKey, { appVersion: 11 });
     expect(assignment).toEqual('control');
   });
 
@@ -376,23 +376,23 @@ describe('EppoClient E2E test', () => {
     let client: EppoClient;
 
     beforeAll(() => {
-      storage.setEntries({ [experimentName]: mockExperimentConfig });
+      storage.setEntries({ [flagKey]: mockExperimentConfig });
       client = new EppoClient(storage);
     });
 
     describe('onPreAssignment', () => {
       it('called with experiment key and subject id', () => {
         const mockHooks = td.object<IAssignmentHooks>();
-        client.getAssignment('subject-identifer', experimentName, {}, mockHooks);
+        client.getAssignment('subject-identifer', flagKey, {}, mockHooks);
         expect(td.explain(mockHooks.onPreAssignment).callCount).toEqual(1);
-        expect(td.explain(mockHooks.onPreAssignment).calls[0].args[0]).toEqual(experimentName);
+        expect(td.explain(mockHooks.onPreAssignment).calls[0].args[0]).toEqual(flagKey);
         expect(td.explain(mockHooks.onPreAssignment).calls[0].args[1]).toEqual('subject-identifer');
       });
 
       it('overrides returned assignment', async () => {
         const variation = await client.getAssignment(
           'subject-identifer',
-          experimentName,
+          flagKey,
           {},
           {
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -402,9 +402,9 @@ describe('EppoClient E2E test', () => {
 
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             onPostAssignment(
-              experimentKey: string,
-              subject: string,
-              variation: EppoValue | null,
+              experimentKey: string, // eslint-disable-line @typescript-eslint/no-unused-vars
+              subject: string, // eslint-disable-line @typescript-eslint/no-unused-vars
+              variation: EppoValue | null, // eslint-disable-line @typescript-eslint/no-unused-vars
             ): void {
               // no-op
             },
@@ -417,7 +417,7 @@ describe('EppoClient E2E test', () => {
       it('uses regular assignment logic if onPreAssignment returns null', async () => {
         const variation = await client.getAssignment(
           'subject-identifer',
-          experimentName,
+          flagKey,
           {},
           {
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -425,11 +425,10 @@ describe('EppoClient E2E test', () => {
               return null;
             },
 
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             onPostAssignment(
-              experimentKey: string,
-              subject: string,
-              variation: EppoValue | null,
+              experimentKey: string, // eslint-disable-line @typescript-eslint/no-unused-vars
+              subject: string, // eslint-disable-line @typescript-eslint/no-unused-vars
+              variation: EppoValue | null, // eslint-disable-line @typescript-eslint/no-unused-vars
             ): void {
               // no-op
             },
@@ -444,10 +443,10 @@ describe('EppoClient E2E test', () => {
       it('called with assigned variation after assignment', async () => {
         const mockHooks = td.object<IAssignmentHooks>();
         const subject = 'subject-identifier';
-        const variation = client.getAssignment(subject, experimentName, {}, mockHooks);
+        const variation = client.getAssignment(subject, flagKey, {}, mockHooks);
         expect(td.explain(mockHooks.onPostAssignment).callCount).toEqual(1);
         expect(td.explain(mockHooks.onPostAssignment).callCount).toEqual(1);
-        expect(td.explain(mockHooks.onPostAssignment).calls[0].args[0]).toEqual(experimentName);
+        expect(td.explain(mockHooks.onPostAssignment).calls[0].args[0]).toEqual(flagKey);
         expect(td.explain(mockHooks.onPostAssignment).calls[0].args[1]).toEqual(subject);
         expect(td.explain(mockHooks.onPostAssignment).calls[0].args[2]).toEqual(
           EppoValue.String(variation ?? ''),
