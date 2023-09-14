@@ -415,14 +415,17 @@ describe('EppoClient E2E test', () => {
   }
 
   describe('getAssignment with hooks', () => {
+    let client: EppoClient;
+
     beforeAll(() => {
       storage.setEntries({ [flagKey]: mockExperimentConfig });
+      client = new EppoClient(storage);
     });
 
     describe('onPreAssignment', () => {
       it('called with experiment key and subject id', () => {
         const mockHooks = td.object<IAssignmentHooks>();
-        const client = new EppoClient(storage);
+
         client.getAssignment('subject-identifer', flagKey, {}, mockHooks);
         expect(td.explain(mockHooks.onPreAssignment).callCount).toEqual(1);
         expect(td.explain(mockHooks.onPreAssignment).calls[0].args[0]).toEqual(flagKey);
@@ -430,9 +433,9 @@ describe('EppoClient E2E test', () => {
       });
 
       it('overrides returned assignment', async () => {
-        const client = new EppoClient(storage);
         const mockLogger = td.object<IAssignmentLogger>();
         client.setLogger(mockLogger);
+        td.reset();
         const variation = await client.getAssignment(
           'subject-identifer',
           flagKey,
@@ -459,9 +462,9 @@ describe('EppoClient E2E test', () => {
       });
 
       it('uses regular assignment logic if onPreAssignment returns null', async () => {
-        const client = new EppoClient(storage);
         const mockLogger = td.object<IAssignmentLogger>();
         client.setLogger(mockLogger);
+        td.reset();
         const variation = await client.getAssignment(
           'subject-identifer',
           flagKey,
@@ -491,7 +494,6 @@ describe('EppoClient E2E test', () => {
       it('called with assigned variation after assignment', async () => {
         const mockHooks = td.object<IAssignmentHooks>();
         const subject = 'subject-identifier';
-        const client = new EppoClient(storage);
         const variation = client.getAssignment(subject, flagKey, {}, mockHooks);
         expect(td.explain(mockHooks.onPostAssignment).callCount).toEqual(1);
         expect(td.explain(mockHooks.onPostAssignment).callCount).toEqual(1);
