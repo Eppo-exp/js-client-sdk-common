@@ -425,7 +425,6 @@ describe('EppoClient E2E test', () => {
     describe('onPreAssignment', () => {
       it('called with experiment key and subject id', () => {
         const mockHooks = td.object<IAssignmentHooks>();
-
         client.getAssignment('subject-identifer', flagKey, {}, mockHooks);
         expect(td.explain(mockHooks.onPreAssignment).callCount).toEqual(1);
         expect(td.explain(mockHooks.onPreAssignment).calls[0].args[0]).toEqual(flagKey);
