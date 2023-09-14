@@ -205,6 +205,11 @@ describe('EppoClient E2E test', () => {
             expect(stringAssignments).toEqual(expectedAssignments);
             break;
           }
+          case ValueTestType.JSONType: {
+            const jsonStringAssignments = assignments.map((a) => a?.stringValue ?? null);
+            expect(jsonStringAssignments).toEqual(expectedAssignments);
+            break;
+          }
         }
       },
     );
@@ -221,6 +226,9 @@ describe('EppoClient E2E test', () => {
       flagKey,
       JSON.stringify({
         ...mockExperimentConfig,
+        overrides: {
+          '1b50f33aef8f681a13f623963da967ed': 'control',
+        },
         typedOverrides: {
           '1b50f33aef8f681a13f623963da967ed': 'control',
         },
@@ -235,6 +243,9 @@ describe('EppoClient E2E test', () => {
     const entry = {
       ...mockExperimentConfig,
       enabled: false,
+      overrides: {
+        '1b50f33aef8f681a13f623963da967ed': 'control',
+      },
       typedOverrides: {
         '1b50f33aef8f681a13f623963da967ed': 'control',
       },
@@ -326,6 +337,12 @@ describe('EppoClient E2E test', () => {
           if (sa === null) return null;
           return EppoValue.String(sa);
         }
+        case ValueTestType.JSONType: {
+          const sa = globalClient.getJSONStringAssignment(subjectKey, experiment);
+          const oa = globalClient.getParsedJSONAssignment(subjectKey, experiment);
+          if (oa == null || sa === null) return null;
+          return EppoValue.JSON(sa, oa);
+        }
       }
     });
   }
@@ -367,6 +384,20 @@ describe('EppoClient E2E test', () => {
           );
           if (sa === null) return null;
           return EppoValue.String(sa);
+        }
+        case ValueTestType.JSONType: {
+          const sa = globalClient.getJSONStringAssignment(
+            subject.subjectKey,
+            experiment,
+            subject.subjectAttributes,
+          );
+          const oa = globalClient.getParsedJSONAssignment(
+            subject.subjectKey,
+            experiment,
+            subject.subjectAttributes,
+          );
+          if (oa == null || sa === null) return null;
+          return EppoValue.JSON(sa, oa);
         }
       }
     });

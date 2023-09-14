@@ -12,6 +12,7 @@ export enum ValueTestType {
   BoolType = 'boolean',
   NumericType = 'numeric',
   StringType = 'string',
+  JSONType = 'json',
 }
 
 export interface IAssignmentTestCase {
