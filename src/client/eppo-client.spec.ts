@@ -2,7 +2,6 @@
  * @jest-environment jsdom
  */
 import axios from 'axios';
-import * as md5 from 'md5';
 import * as td from 'testdouble';
 import mock from 'xhr-mock';
 
