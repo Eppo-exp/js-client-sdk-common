@@ -93,7 +93,7 @@ export default class EppoClient implements IEppoClient {
   ): string | null {
     return (
       this.getAssignmentVariation(subjectKey, flagKey, subjectAttributes, assignmentHooks)
-        ?.stringValue ?? null
+        .stringValue ?? null
     );
   }
 
@@ -110,7 +110,7 @@ export default class EppoClient implements IEppoClient {
         subjectAttributes,
         assignmentHooks,
         ValueType.StringType,
-      )?.stringValue ?? null
+      ).stringValue ?? null
     );
   }
 
@@ -127,7 +127,7 @@ export default class EppoClient implements IEppoClient {
         subjectAttributes,
         assignmentHooks,
         ValueType.BoolType,
-      )?.boolValue ?? null
+      ).boolValue ?? null
     );
   }
 
@@ -144,7 +144,7 @@ export default class EppoClient implements IEppoClient {
         subjectAttributes,
         assignmentHooks,
         ValueType.NumericType,
-      )?.numericValue ?? null
+      ).numericValue ?? null
     );
   }
 
@@ -161,7 +161,7 @@ export default class EppoClient implements IEppoClient {
         subjectAttributes,
         assignmentHooks,
         ValueType.JSONType,
-      )?.stringValue ?? null
+      ).stringValue ?? null
     );
   }
 
@@ -178,7 +178,7 @@ export default class EppoClient implements IEppoClient {
         subjectAttributes,
         assignmentHooks,
         ValueType.JSONType,
-      )?.objectValue ?? null
+      ).objectValue ?? null
     );
   }
 
