@@ -62,7 +62,11 @@ export class EppoValue {
       case ValueType.StringType:
         return this.stringValue ?? '';
       case ValueType.JSONType:
-        return JSON.stringify(this.objectValue) ?? '';
+        try {
+          return JSON.stringify(this.objectValue) ?? '';
+        } catch {
+          return this.stringValue ?? '';
+        }
     }
   }
 
@@ -75,11 +79,15 @@ export class EppoValue {
       case ValueType.StringType:
         return typeof this.stringValue === 'string';
       case ValueType.JSONType:
-        return (
-          typeof this.objectValue === 'object' &&
-          typeof this.stringValue === 'string' &&
-          JSON.stringify(JSON.parse(this.stringValue)) === JSON.stringify(this.objectValue)
-        );
+        try {
+          return (
+            typeof this.objectValue === 'object' &&
+            typeof this.stringValue === 'string' &&
+            JSON.stringify(JSON.parse(this.stringValue)) === JSON.stringify(this.objectValue)
+          );
+        } catch {
+          return false;
+        }
       case ValueType.NullType:
         return false;
     }
