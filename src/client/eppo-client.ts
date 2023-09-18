@@ -84,6 +84,7 @@ export default class EppoClient implements IEppoClient {
 
   constructor(private configurationStore: IConfigurationStore) {}
 
+  // @deprecated getAssignment is deprecated in favor of the typed get<Type>Assignment methods
   public getAssignment(
     subjectKey: string,
     flagKey: string,
