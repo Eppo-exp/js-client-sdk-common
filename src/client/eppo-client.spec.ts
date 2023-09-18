@@ -266,7 +266,7 @@ describe('EppoClient E2E test', () => {
     expect(td.explain(mockLogger.logAssignment).callCount).toEqual(0);
   });
 
-  it('logs variation assignment', () => {
+  it('logs variation assignment and experiment key', () => {
     const mockLogger = td.object<IAssignmentLogger>();
 
     storage.setEntries({ [flagKey]: mockExperimentConfig });
@@ -279,8 +279,12 @@ describe('EppoClient E2E test', () => {
     expect(assignment).toEqual('control');
     expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
     expect(td.explain(mockLogger.logAssignment).calls[0].args[0].subject).toEqual('subject-10');
+    expect(td.explain(mockLogger.logAssignment).calls[0].args[0].featureFlag).toEqual(flagKey);
     expect(td.explain(mockLogger.logAssignment).calls[0].args[0].experiment).toEqual(
       `${flagKey}-${mockExperimentConfig.rules[0].allocationKey}`,
+    );
+    expect(td.explain(mockLogger.logAssignment).calls[0].args[0].allocation).toEqual(
+      `${mockExperimentConfig.rules[0].allocationKey}`,
     );
   });
 
