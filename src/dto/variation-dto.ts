@@ -7,6 +7,7 @@ export interface IShardRange {
 
 export interface IVariation {
   name: string;
+  value: string;
   typedValue: IValue;
   shardRange: IShardRange;
 }

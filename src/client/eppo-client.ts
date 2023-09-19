@@ -69,7 +69,7 @@ export interface IEppoClient {
     assignmentHooks?: IAssignmentHooks,
   ): number | null;
 
-  getJSONAssignment(
+  getJSONStringAssignment(
     subjectKey: string,
     flagKey: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -84,6 +84,7 @@ export default class EppoClient implements IEppoClient {
 
   constructor(private configurationStore: IConfigurationStore) {}
 
+  // @deprecated getAssignment is deprecated in favor of the typed get<Type>Assignment methods
   public getAssignment(
     subjectKey: string,
     flagKey: string,
@@ -92,13 +93,8 @@ export default class EppoClient implements IEppoClient {
     assignmentHooks?: IAssignmentHooks | undefined,
   ): string | null {
     return (
-      this.getAssignmentVariation(
-        subjectKey,
-        flagKey,
-        subjectAttributes,
-        assignmentHooks,
-        ValueType.StringType,
-      )?.stringValue ?? null
+      this.getAssignmentVariation(subjectKey, flagKey, subjectAttributes, assignmentHooks)
+        .stringValue ?? null
     );
   }
 
@@ -115,7 +111,7 @@ export default class EppoClient implements IEppoClient {
         subjectAttributes,
         assignmentHooks,
         ValueType.StringType,
-      )?.stringValue ?? null
+      ).stringValue ?? null
     );
   }
 
@@ -132,7 +128,7 @@ export default class EppoClient implements IEppoClient {
         subjectAttributes,
         assignmentHooks,
         ValueType.BoolType,
-      )?.boolValue ?? null
+      ).boolValue ?? null
     );
   }
 
@@ -149,11 +145,11 @@ export default class EppoClient implements IEppoClient {
         subjectAttributes,
         assignmentHooks,
         ValueType.NumericType,
-      )?.numericValue ?? null
+      ).numericValue ?? null
     );
   }
 
-  public getJSONAssignment(
+  public getJSONStringAssignment(
     subjectKey: string,
     flagKey: string,
     subjectAttributes: Record<string, EppoValue> = {},
@@ -165,8 +161,25 @@ export default class EppoClient implements IEppoClient {
         flagKey,
         subjectAttributes,
         assignmentHooks,
-        ValueType.StringType,
-      )?.stringValue ?? null
+        ValueType.JSONType,
+      ).stringValue ?? null
+    );
+  }
+
+  public getParsedJSONAssignment(
+    subjectKey: string,
+    flagKey: string,
+    subjectAttributes: Record<string, EppoValue> = {},
+    assignmentHooks?: IAssignmentHooks | undefined,
+  ): object | null {
+    return (
+      this.getAssignmentVariation(
+        subjectKey,
+        flagKey,
+        subjectAttributes,
+        assignmentHooks,
+        ValueType.JSONType,
+      ).objectValue ?? null
     );
   }
 
@@ -175,8 +188,8 @@ export default class EppoClient implements IEppoClient {
     flagKey: string,
     subjectAttributes: Record<string, EppoValue> = {},
     assignmentHooks: IAssignmentHooks | undefined,
-    valueType: ValueType,
-  ): EppoValue | null {
+    valueType?: ValueType,
+  ): EppoValue {
     const { allocationKey, assignment } = this.getAssignmentInternal(
       subjectKey,
       flagKey,
@@ -197,7 +210,7 @@ export default class EppoClient implements IEppoClient {
     flagKey: string,
     subjectAttributes = {},
     assignmentHooks: IAssignmentHooks | undefined,
-    valueType: ValueType,
+    expectedValueType?: ValueType,
   ): { allocationKey: string | null; assignment: EppoValue } {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
     validateNotBlank(flagKey, 'Invalid argument: flagKey cannot be blank');
@@ -208,11 +221,13 @@ export default class EppoClient implements IEppoClient {
     const allowListOverride = this.getSubjectVariationOverride(
       subjectKey,
       experimentConfig,
-      valueType,
+      expectedValueType,
     );
 
-    if (allowListOverride) {
-      if (!allowListOverride.isExpectedType()) return nullAssignment;
+    if (!allowListOverride.isNullType()) {
+      if (!allowListOverride.isExpectedType()) {
+        return nullAssignment;
+      }
       return { ...nullAssignment, assignment: allowListOverride };
     }
 
@@ -242,27 +257,16 @@ export default class EppoClient implements IEppoClient {
     const shard = getShard(`assignment-${subjectKey}-${flagKey}`, subjectShards);
     const assignedVariation = variations.find((variation) =>
       isShardInRange(shard, variation.shardRange),
-    )?.typedValue;
+    );
 
     const internalAssignment = {
       allocationKey: matchedRule.allocationKey,
-      assignment: EppoValue.Null(),
+      assignment: EppoValue.generateEppoValue(
+        expectedValueType,
+        assignedVariation?.value,
+        assignedVariation?.typedValue,
+      ),
     };
-
-    switch (valueType) {
-      case ValueType.BoolType:
-        internalAssignment['assignment'] = EppoValue.Bool(assignedVariation as boolean);
-        break;
-      case ValueType.NumericType:
-        internalAssignment['assignment'] = EppoValue.Numeric(assignedVariation as number);
-        break;
-      case ValueType.StringType:
-        internalAssignment['assignment'] = EppoValue.String(assignedVariation as string);
-        break;
-      default:
-        return nullAssignment;
-    }
-
     return internalAssignment.assignment.isExpectedType() ? internalAssignment : nullAssignment;
   }
 
@@ -314,25 +318,13 @@ export default class EppoClient implements IEppoClient {
   private getSubjectVariationOverride(
     subjectKey: string,
     experimentConfig: IExperimentConfiguration,
-    valueType: ValueType,
-  ): EppoValue | null {
+    expectedValueType?: ValueType,
+  ): EppoValue {
     const subjectHash = md5(subjectKey);
-    const overridden =
+    const override = experimentConfig?.overrides && experimentConfig.overrides[subjectHash];
+    const typedOverride =
       experimentConfig?.typedOverrides && experimentConfig.typedOverrides[subjectHash];
-    if (overridden) {
-      switch (valueType) {
-        case ValueType.BoolType:
-          return EppoValue.Bool(overridden as unknown as boolean);
-        case ValueType.NumericType:
-          return EppoValue.Numeric(overridden as unknown as number);
-        case ValueType.StringType:
-          return EppoValue.String(overridden as string);
-        default:
-          return null;
-      }
-    }
-
-    return null;
+    return EppoValue.generateEppoValue(expectedValueType, override, typedOverride);
   }
 
   /**

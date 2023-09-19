@@ -205,6 +205,11 @@ describe('EppoClient E2E test', () => {
             expect(stringAssignments).toEqual(expectedAssignments);
             break;
           }
+          case ValueTestType.JSONType: {
+            const jsonStringAssignments = assignments.map((a) => a?.stringValue ?? null);
+            expect(jsonStringAssignments).toEqual(expectedAssignments);
+            break;
+          }
         }
       },
     );
@@ -217,37 +222,51 @@ describe('EppoClient E2E test', () => {
   });
 
   it('returns subject from overrides when enabled is true', () => {
-    window.localStorage.setItem(
-      flagKey,
-      JSON.stringify({
-        ...mockExperimentConfig,
-        typedOverrides: {
-          '1b50f33aef8f681a13f623963da967ed': 'control',
-        },
-      }),
-    );
-    const client = new EppoClient(storage);
-    const assignment = client.getAssignment('subject-10', flagKey);
-    expect(assignment).toEqual('control');
-  });
-
-  it('returns subject from overrides when enabled is false', () => {
     const entry = {
       ...mockExperimentConfig,
       enabled: false,
+      overrides: {
+        '1b50f33aef8f681a13f623963da967ed': 'override',
+      },
       typedOverrides: {
-        '1b50f33aef8f681a13f623963da967ed': 'control',
+        '1b50f33aef8f681a13f623963da967ed': 'override',
       },
     };
 
     storage.setEntries({ [flagKey]: entry });
 
     const client = new EppoClient(storage);
+    const mockLogger = td.object<IAssignmentLogger>();
+    client.setLogger(mockLogger);
+
     const assignment = client.getAssignment('subject-10', flagKey);
-    expect(assignment).toEqual('control');
+    expect(assignment).toEqual('override');
+    expect(td.explain(mockLogger.logAssignment).callCount).toEqual(0);
   });
 
-  it('logs variation assignment', () => {
+  it('returns subject from overrides when enabled is false', () => {
+    const entry = {
+      ...mockExperimentConfig,
+      enabled: false,
+      overrides: {
+        '1b50f33aef8f681a13f623963da967ed': 'override',
+      },
+      typedOverrides: {
+        '1b50f33aef8f681a13f623963da967ed': 'override',
+      },
+    };
+
+    storage.setEntries({ [flagKey]: entry });
+
+    const client = new EppoClient(storage);
+    const mockLogger = td.object<IAssignmentLogger>();
+    client.setLogger(mockLogger);
+    const assignment = client.getAssignment('subject-10', flagKey);
+    expect(assignment).toEqual('override');
+    expect(td.explain(mockLogger.logAssignment).callCount).toEqual(0);
+  });
+
+  it('logs variation assignment and experiment key', () => {
     const mockLogger = td.object<IAssignmentLogger>();
 
     storage.setEntries({ [flagKey]: mockExperimentConfig });
@@ -260,6 +279,13 @@ describe('EppoClient E2E test', () => {
     expect(assignment).toEqual('control');
     expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
     expect(td.explain(mockLogger.logAssignment).calls[0].args[0].subject).toEqual('subject-10');
+    expect(td.explain(mockLogger.logAssignment).calls[0].args[0].featureFlag).toEqual(flagKey);
+    expect(td.explain(mockLogger.logAssignment).calls[0].args[0].experiment).toEqual(
+      `${flagKey}-${mockExperimentConfig.rules[0].allocationKey}`,
+    );
+    expect(td.explain(mockLogger.logAssignment).calls[0].args[0].allocation).toEqual(
+      `${mockExperimentConfig.rules[0].allocationKey}`,
+    );
   });
 
   it('handles logging exception', () => {
@@ -326,6 +352,12 @@ describe('EppoClient E2E test', () => {
           if (sa === null) return null;
           return EppoValue.String(sa);
         }
+        case ValueTestType.JSONType: {
+          const sa = globalClient.getJSONStringAssignment(subjectKey, experiment);
+          const oa = globalClient.getParsedJSONAssignment(subjectKey, experiment);
+          if (oa == null || sa === null) return null;
+          return EppoValue.JSON(sa, oa);
+        }
       }
     });
   }
@@ -368,6 +400,20 @@ describe('EppoClient E2E test', () => {
           if (sa === null) return null;
           return EppoValue.String(sa);
         }
+        case ValueTestType.JSONType: {
+          const sa = globalClient.getJSONStringAssignment(
+            subject.subjectKey,
+            experiment,
+            subject.subjectAttributes,
+          );
+          const oa = globalClient.getParsedJSONAssignment(
+            subject.subjectKey,
+            experiment,
+            subject.subjectAttributes,
+          );
+          if (oa == null || sa === null) return null;
+          return EppoValue.JSON(sa, oa);
+        }
       }
     });
   }
@@ -390,6 +436,9 @@ describe('EppoClient E2E test', () => {
       });
 
       it('overrides returned assignment', async () => {
+        const mockLogger = td.object<IAssignmentLogger>();
+        client.setLogger(mockLogger);
+        td.reset();
         const variation = await client.getAssignment(
           'subject-identifer',
           flagKey,
@@ -412,9 +461,13 @@ describe('EppoClient E2E test', () => {
         );
 
         expect(variation).toEqual('my-overridden-variation');
+        expect(td.explain(mockLogger.logAssignment).callCount).toEqual(0);
       });
 
       it('uses regular assignment logic if onPreAssignment returns null', async () => {
+        const mockLogger = td.object<IAssignmentLogger>();
+        client.setLogger(mockLogger);
+        td.reset();
         const variation = await client.getAssignment(
           'subject-identifer',
           flagKey,
@@ -436,6 +489,7 @@ describe('EppoClient E2E test', () => {
         );
 
         expect(variation).not.toEqual(null);
+        expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
       });
     });
 
