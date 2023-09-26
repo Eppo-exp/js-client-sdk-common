@@ -76,6 +76,14 @@ export interface IEppoClient {
     subjectAttributes?: Record<string, any>,
     assignmentHooks?: IAssignmentHooks,
   ): string | null;
+
+  getParsedJSONAssignment(
+    subjectKey: string,
+    flagKey: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    subjectAttributes?: Record<string, any>,
+    assignmentHooks?: IAssignmentHooks,
+  ): object | null;
 }
 
 export default class EppoClient implements IEppoClient {
@@ -101,7 +109,8 @@ export default class EppoClient implements IEppoClient {
   public getStringAssignment(
     subjectKey: string,
     flagKey: string,
-    subjectAttributes: Record<string, EppoValue> = {},
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    subjectAttributes: Record<string, any> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
   ): string | null {
     return (
@@ -118,7 +127,8 @@ export default class EppoClient implements IEppoClient {
   getBoolAssignment(
     subjectKey: string,
     flagKey: string,
-    subjectAttributes: Record<string, EppoValue> = {},
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    subjectAttributes: Record<string, any> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
   ): boolean | null {
     return (
@@ -152,7 +162,8 @@ export default class EppoClient implements IEppoClient {
   public getJSONStringAssignment(
     subjectKey: string,
     flagKey: string,
-    subjectAttributes: Record<string, EppoValue> = {},
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    subjectAttributes: Record<string, any> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
   ): string | null {
     return (
@@ -169,7 +180,8 @@ export default class EppoClient implements IEppoClient {
   public getParsedJSONAssignment(
     subjectKey: string,
     flagKey: string,
-    subjectAttributes: Record<string, EppoValue> = {},
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    subjectAttributes: Record<string, any> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
   ): object | null {
     return (
@@ -186,7 +198,8 @@ export default class EppoClient implements IEppoClient {
   private getAssignmentVariation(
     subjectKey: string,
     flagKey: string,
-    subjectAttributes: Record<string, EppoValue> = {},
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    subjectAttributes: Record<string, any> = {},
     assignmentHooks: IAssignmentHooks | undefined,
     valueType?: ValueType,
   ): EppoValue {
@@ -292,7 +305,8 @@ export default class EppoClient implements IEppoClient {
     allocationKey: string,
     variation: EppoValue,
     subjectKey: string,
-    subjectAttributes: Record<string, EppoValue> | undefined = {},
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    subjectAttributes: Record<string, any> | undefined = {},
   ) {
     const event: IAssignmentEvent = {
       allocation: allocationKey,
