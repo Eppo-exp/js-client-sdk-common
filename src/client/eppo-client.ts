@@ -76,6 +76,14 @@ export interface IEppoClient {
     subjectAttributes?: Record<string, any>,
     assignmentHooks?: IAssignmentHooks,
   ): string | null;
+
+  getParsedJSONAssignment(
+    subjectKey: string,
+    flagKey: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    subjectAttributes?: Record<string, any>,
+    assignmentHooks?: IAssignmentHooks,
+  ): object | null;
 }
 
 export default class EppoClient implements IEppoClient {
