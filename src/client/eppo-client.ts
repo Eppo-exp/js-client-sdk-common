@@ -89,6 +89,7 @@ export interface IEppoClient {
 export default class EppoClient implements IEppoClient {
   private queuedEvents: IAssignmentEvent[] = [];
   private assignmentLogger: IAssignmentLogger | undefined;
+  private isGracefulFailureMode = true;
 
   constructor(private configurationStore: IConfigurationStore) {}
 
@@ -100,10 +101,18 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes: Record<string, any> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
   ): string | null {
-    return (
-      this.getAssignmentVariation(subjectKey, flagKey, subjectAttributes, assignmentHooks)
-        .stringValue ?? null
-    );
+    try {
+      return (
+        this.getAssignmentVariation(subjectKey, flagKey, subjectAttributes, assignmentHooks)
+          .stringValue ?? null
+      );
+    } catch (error) {
+      if (this.isGracefulFailureMode) {
+        console.error(`[Eppo SDK] Error getting assignment: ${error.message}`);
+        return null;
+      }
+      throw error;
+    }
   }
 
   public getStringAssignment(
@@ -113,15 +122,23 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes: Record<string, any> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
   ): string | null {
-    return (
-      this.getAssignmentVariation(
-        subjectKey,
-        flagKey,
-        subjectAttributes,
-        assignmentHooks,
-        ValueType.StringType,
-      ).stringValue ?? null
-    );
+    try {
+      return (
+        this.getAssignmentVariation(
+          subjectKey,
+          flagKey,
+          subjectAttributes,
+          assignmentHooks,
+          ValueType.StringType,
+        ).stringValue ?? null
+      );
+    } catch (error) {
+      if (this.isGracefulFailureMode) {
+        console.error(`[Eppo SDK] Error getting string assignment: ${error.message}`);
+        return null;
+      }
+      throw error;
+    }
   }
 
   getBoolAssignment(
@@ -131,15 +148,23 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes: Record<string, any> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
   ): boolean | null {
-    return (
-      this.getAssignmentVariation(
-        subjectKey,
-        flagKey,
-        subjectAttributes,
-        assignmentHooks,
-        ValueType.BoolType,
-      ).boolValue ?? null
-    );
+    try {
+      return (
+        this.getAssignmentVariation(
+          subjectKey,
+          flagKey,
+          subjectAttributes,
+          assignmentHooks,
+          ValueType.BoolType,
+        ).boolValue ?? null
+      );
+    } catch (error) {
+      if (this.isGracefulFailureMode) {
+        console.error(`[Eppo SDK] Error getting bool assignment: ${error.message}`);
+        return null;
+      }
+      throw error;
+    }
   }
 
   getNumericAssignment(
@@ -148,15 +173,23 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes?: Record<string, EppoValue>,
     assignmentHooks?: IAssignmentHooks | undefined,
   ): number | null {
-    return (
-      this.getAssignmentVariation(
-        subjectKey,
-        flagKey,
-        subjectAttributes,
-        assignmentHooks,
-        ValueType.NumericType,
-      ).numericValue ?? null
-    );
+    try {
+      return (
+        this.getAssignmentVariation(
+          subjectKey,
+          flagKey,
+          subjectAttributes,
+          assignmentHooks,
+          ValueType.NumericType,
+        ).numericValue ?? null
+      );
+    } catch (error) {
+      if (this.isGracefulFailureMode) {
+        console.error(`[Eppo SDK] Error getting numeric assignment: ${error.message}`);
+        return null;
+      }
+      throw error;
+    }
   }
 
   public getJSONStringAssignment(
@@ -166,15 +199,23 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes: Record<string, any> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
   ): string | null {
-    return (
-      this.getAssignmentVariation(
-        subjectKey,
-        flagKey,
-        subjectAttributes,
-        assignmentHooks,
-        ValueType.JSONType,
-      ).stringValue ?? null
-    );
+    try {
+      return (
+        this.getAssignmentVariation(
+          subjectKey,
+          flagKey,
+          subjectAttributes,
+          assignmentHooks,
+          ValueType.JSONType,
+        ).stringValue ?? null
+      );
+    } catch (error) {
+      if (this.isGracefulFailureMode) {
+        console.error(`[Eppo SDK] Error getting JSON string assignment: ${error.message}`);
+        return null;
+      }
+      throw error;
+    }
   }
 
   public getParsedJSONAssignment(
@@ -184,15 +225,23 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes: Record<string, any> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
   ): object | null {
-    return (
-      this.getAssignmentVariation(
-        subjectKey,
-        flagKey,
-        subjectAttributes,
-        assignmentHooks,
-        ValueType.JSONType,
-      ).objectValue ?? null
-    );
+    try {
+      return (
+        this.getAssignmentVariation(
+          subjectKey,
+          flagKey,
+          subjectAttributes,
+          assignmentHooks,
+          ValueType.JSONType,
+        ).objectValue ?? null
+      );
+    } catch (error) {
+      if (this.isGracefulFailureMode) {
+        console.error(`[Eppo SDK] Error getting parsed JSON assignment: ${error.message}`);
+        return null;
+      }
+      throw error;
+    }
   }
 
   private getAssignmentVariation(
@@ -286,6 +335,10 @@ export default class EppoClient implements IEppoClient {
   public setLogger(logger: IAssignmentLogger) {
     this.assignmentLogger = logger;
     this.flushQueuedEvents(); // log any events that may have been queued while initializing
+  }
+
+  public setIsGracefulFailureMode(gracefulFailureMode: boolean) {
+    this.isGracefulFailureMode = gracefulFailureMode;
   }
 
   private flushQueuedEvents() {
