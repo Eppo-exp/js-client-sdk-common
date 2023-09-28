@@ -143,6 +143,10 @@ describe('EppoClient E2E test', () => {
       });
     });
 
+    afterAll(() => {
+      td.reset();
+    });
+
     it('returns null when graceful failure if error encountered', async () => {
       client.setIsGracefulFailureMode(true);
 
