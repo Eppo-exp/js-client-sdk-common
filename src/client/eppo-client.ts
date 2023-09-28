@@ -107,11 +107,7 @@ export default class EppoClient implements IEppoClient {
           .stringValue ?? null
       );
     } catch (error) {
-      if (this.isGracefulFailureMode) {
-        console.error(`[Eppo SDK] Error getting assignment: ${error.message}`);
-        return null;
-      }
-      throw error;
+      return this.rethrowIfNotGraceful(error);
     }
   }
 
@@ -133,11 +129,7 @@ export default class EppoClient implements IEppoClient {
         ).stringValue ?? null
       );
     } catch (error) {
-      if (this.isGracefulFailureMode) {
-        console.error(`[Eppo SDK] Error getting string assignment: ${error.message}`);
-        return null;
-      }
-      throw error;
+      return this.rethrowIfNotGraceful(error);
     }
   }
 
@@ -159,11 +151,7 @@ export default class EppoClient implements IEppoClient {
         ).boolValue ?? null
       );
     } catch (error) {
-      if (this.isGracefulFailureMode) {
-        console.error(`[Eppo SDK] Error getting bool assignment: ${error.message}`);
-        return null;
-      }
-      throw error;
+      return this.rethrowIfNotGraceful(error);
     }
   }
 
@@ -184,11 +172,7 @@ export default class EppoClient implements IEppoClient {
         ).numericValue ?? null
       );
     } catch (error) {
-      if (this.isGracefulFailureMode) {
-        console.error(`[Eppo SDK] Error getting numeric assignment: ${error.message}`);
-        return null;
-      }
-      throw error;
+      return this.rethrowIfNotGraceful(error);
     }
   }
 
@@ -210,11 +194,7 @@ export default class EppoClient implements IEppoClient {
         ).stringValue ?? null
       );
     } catch (error) {
-      if (this.isGracefulFailureMode) {
-        console.error(`[Eppo SDK] Error getting JSON string assignment: ${error.message}`);
-        return null;
-      }
-      throw error;
+      return this.rethrowIfNotGraceful(error);
     }
   }
 
@@ -236,12 +216,16 @@ export default class EppoClient implements IEppoClient {
         ).objectValue ?? null
       );
     } catch (error) {
-      if (this.isGracefulFailureMode) {
-        console.error(`[Eppo SDK] Error getting parsed JSON assignment: ${error.message}`);
-        return null;
-      }
-      throw error;
+      return this.rethrowIfNotGraceful(error);
     }
+  }
+
+  private rethrowIfNotGraceful(err: Error): null {
+    if (this.isGracefulFailureMode) {
+      console.error(`[Eppo SDK] Error getting assignment: ${err.message}`);
+      return null;
+    }
+    throw err;
   }
 
   private getAssignmentVariation(

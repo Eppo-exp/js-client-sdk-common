@@ -130,6 +130,63 @@ describe('EppoClient E2E test', () => {
     },
   };
 
+  describe('error encountered', () => {
+    let client: EppoClient;
+    const mockHooks = td.object<IAssignmentHooks>();
+
+    beforeAll(() => {
+      storage.setEntries({ [flagKey]: mockExperimentConfig });
+      client = new EppoClient(storage);
+
+      td.replace(EppoClient.prototype, 'getAssignmentVariation', function () {
+        throw new Error('So Graceful Error');
+      });
+    });
+
+    it('returns null when graceful failure if error encountered', async () => {
+      client.setIsGracefulFailureMode(true);
+
+      expect(client.getAssignment('subject-identifer', flagKey, {}, mockHooks)).toBeNull();
+      expect(client.getBoolAssignment('subject-identifer', flagKey, {}, mockHooks)).toBeNull();
+      expect(
+        client.getJSONStringAssignment('subject-identifer', flagKey, {}, mockHooks),
+      ).toBeNull();
+      expect(client.getNumericAssignment('subject-identifer', flagKey, {}, mockHooks)).toBeNull();
+      expect(
+        client.getParsedJSONAssignment('subject-identifer', flagKey, {}, mockHooks),
+      ).toBeNull();
+      expect(client.getStringAssignment('subject-identifer', flagKey, {}, mockHooks)).toBeNull();
+    });
+
+    it('throws error when graceful failure is false', async () => {
+      client.setIsGracefulFailureMode(false);
+
+      expect(() => {
+        client.getAssignment('subject-identifer', flagKey, {}, mockHooks);
+      }).toThrow();
+
+      expect(() => {
+        client.getBoolAssignment('subject-identifer', flagKey, {}, mockHooks);
+      }).toThrow();
+
+      expect(() => {
+        client.getJSONStringAssignment('subject-identifer', flagKey, {}, mockHooks);
+      }).toThrow();
+
+      expect(() => {
+        client.getParsedJSONAssignment('subject-identifer', flagKey, {}, mockHooks);
+      }).toThrow();
+
+      expect(() => {
+        client.getNumericAssignment('subject-identifer', flagKey, {}, mockHooks);
+      }).toThrow();
+
+      expect(() => {
+        client.getStringAssignment('subject-identifer', flagKey, {}, mockHooks);
+      }).toThrow();
+    });
+  });
+
   describe('setLogger', () => {
     beforeAll(() => {
       storage.setEntries({ [flagKey]: mockExperimentConfig });
