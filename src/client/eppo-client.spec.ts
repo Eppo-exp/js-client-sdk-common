@@ -9,7 +9,9 @@ import {
   IAssignmentTestCase,
   ValueTestType,
   readAssignmentTestData,
+  readMockObfuscatedRacResponse,
   readMockRacResponse,
+  writeObfuscatedMockRacIfNotExists,
 } from '../../test/testHelpers';
 import { IAssignmentHooks } from '../assignment-hooks';
 import { IAssignmentLogger } from '../assignment-logger';
@@ -403,6 +405,7 @@ describe('EppoClient E2E test', () => {
     }[],
     experiment: string,
     valueTestType: ValueTestType = ValueTestType.StringType,
+    obfuscated = false,
   ): (EppoValue | null)[] {
     return subjectsWithAttributes.map((subject) => {
       switch (valueTestType) {
@@ -411,6 +414,8 @@ describe('EppoClient E2E test', () => {
             subject.subjectKey,
             experiment,
             subject.subjectAttributes,
+            undefined,
+            obfuscated,
           );
           if (ba === null) return null;
           return EppoValue.Bool(ba);
@@ -541,4 +546,127 @@ describe('EppoClient E2E test', () => {
       });
     });
   });
+});
+
+describe('getAssignmentFromObfuscatedRac', () => {
+  const storage = new TestConfigurationStore();
+  const globalClient = new EppoClient(storage);
+
+  beforeAll(async () => {
+    writeObfuscatedMockRacIfNotExists();
+    mock.setup();
+    mock.get(/randomized_assignment\/v3\/config*/, (_req, res) => {
+      const rac = readMockObfuscatedRacResponse();
+      return res.status(200).body(JSON.stringify(rac));
+    });
+    await init(storage);
+  });
+
+  afterAll(() => {
+    mock.teardown();
+  });
+
+  it.each(readAssignmentTestData())(
+    'test variation assignment splits',
+    async ({
+      experiment,
+      valueType = ValueTestType.StringType,
+      subjects,
+      subjectsWithAttributes,
+      expectedAssignments,
+    }: IAssignmentTestCase) => {
+      `---- Test Case for ${experiment} Experiment ----`;
+
+      if (valueType === ValueTestType.BoolType) {
+        const assignments = getAssignmentsWithSubjectAttributes(
+          subjectsWithAttributes
+            ? subjectsWithAttributes
+            : subjects.map((subject) => ({ subjectKey: subject })),
+          experiment,
+          valueType,
+        );
+
+        switch (valueType) {
+          case ValueTestType.BoolType: {
+            const boolAssignments = assignments.map((a) => a?.boolValue ?? null);
+            expect(boolAssignments).toEqual(expectedAssignments);
+            break;
+          }
+          // case ValueTestType.NumericType: {
+          //   const numericAssignments = assignments.map((a) => a?.numericValue ?? null);
+          //   expect(numericAssignments).toEqual(expectedAssignments);
+          //   break;
+          // }
+          // case ValueTestType.StringType: {
+          //   const stringAssignments = assignments.map((a) => a?.stringValue ?? null);
+          //   expect(stringAssignments).toEqual(expectedAssignments);
+          //   break;
+          // }
+          // case ValueTestType.JSONType: {
+          //   const jsonStringAssignments = assignments.map((a) => a?.stringValue ?? null);
+          //   expect(jsonStringAssignments).toEqual(expectedAssignments);
+          //   break;
+          // }
+        }
+      }
+    },
+  );
+
+  function getAssignmentsWithSubjectAttributes(
+    subjectsWithAttributes: {
+      subjectKey: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      subjectAttributes?: Record<string, any>;
+    }[],
+    experiment: string,
+    valueTestType: ValueTestType = ValueTestType.StringType,
+  ): (EppoValue | null)[] {
+    return subjectsWithAttributes.map((subject) => {
+      switch (valueTestType) {
+        case ValueTestType.BoolType: {
+          const ba = globalClient.getBoolAssignment(
+            subject.subjectKey,
+            experiment,
+            subject.subjectAttributes,
+            undefined,
+            true,
+          );
+          if (ba === null) return null;
+          return EppoValue.Bool(ba);
+        }
+        case ValueTestType.NumericType: {
+          const na = globalClient.getNumericAssignment(
+            subject.subjectKey,
+            experiment,
+            subject.subjectAttributes,
+          );
+          if (na === null) return null;
+          return EppoValue.Numeric(na);
+        }
+        case ValueTestType.StringType: {
+          const sa = globalClient.getStringAssignment(
+            subject.subjectKey,
+            experiment,
+            subject.subjectAttributes,
+          );
+          if (sa === null) return null;
+          return EppoValue.String(sa);
+        }
+        case ValueTestType.JSONType: {
+          const sa = globalClient.getJSONStringAssignment(
+            subject.subjectKey,
+            experiment,
+            subject.subjectAttributes,
+          );
+          const oa = globalClient.getParsedJSONAssignment(
+            subject.subjectKey,
+            experiment,
+            subject.subjectAttributes,
+          );
+          if (oa == null || sa === null) return null;
+          return EppoValue.JSON(sa, oa);
+        }
+      }
+    });
+  }
 });

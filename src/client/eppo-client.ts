@@ -7,6 +7,7 @@ import { MAX_EVENT_QUEUE_SIZE } from '../constants';
 import { IAllocation } from '../dto/allocation-dto';
 import { IExperimentConfiguration } from '../dto/experiment-configuration-dto';
 import { EppoValue, ValueType } from '../eppo_value';
+import { getMD5Hash } from '../obfuscation';
 import { findMatchingRule } from '../rule_evaluator';
 import { getShard, isShardInRange } from '../shard';
 import { validateNotBlank } from '../validation';
@@ -139,6 +140,7 @@ export default class EppoClient implements IEppoClient {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subjectAttributes: Record<string, any> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
+    obfuscated = false,
   ): boolean | null {
     try {
       return (
@@ -148,6 +150,7 @@ export default class EppoClient implements IEppoClient {
           subjectAttributes,
           assignmentHooks,
           ValueType.BoolType,
+          obfuscated,
         ).boolValue ?? null
       );
     } catch (error) {
@@ -235,6 +238,7 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes: Record<string, any> = {},
     assignmentHooks: IAssignmentHooks | undefined,
     valueType?: ValueType,
+    obfuscated = false,
   ): EppoValue {
     const { allocationKey, assignment } = this.getAssignmentInternal(
       subjectKey,
@@ -242,6 +246,7 @@ export default class EppoClient implements IEppoClient {
       subjectAttributes,
       assignmentHooks,
       valueType,
+      obfuscated,
     );
     assignmentHooks?.onPostAssignment(flagKey, subjectKey, assignment, allocationKey);
 
@@ -257,13 +262,16 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes = {},
     assignmentHooks: IAssignmentHooks | undefined,
     expectedValueType?: ValueType,
+    obfuscated = false,
   ): { allocationKey: string | null; assignment: EppoValue } {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
     validateNotBlank(flagKey, 'Invalid argument: flagKey cannot be blank');
 
     const nullAssignment = { allocationKey: null, assignment: EppoValue.Null() };
 
-    const experimentConfig = this.configurationStore.get<IExperimentConfiguration>(flagKey);
+    const experimentConfig = this.configurationStore.get<IExperimentConfiguration>(
+      obfuscated ? getMD5Hash(flagKey) : flagKey,
+    );
     const allowListOverride = this.getSubjectVariationOverride(
       subjectKey,
       experimentConfig,
