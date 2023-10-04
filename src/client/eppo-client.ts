@@ -101,11 +101,17 @@ export default class EppoClient implements IEppoClient {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subjectAttributes: Record<string, any> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
+    obfuscated = false,
   ): string | null {
     try {
       return (
-        this.getAssignmentVariation(subjectKey, flagKey, subjectAttributes, assignmentHooks)
-          .stringValue ?? null
+        this.getAssignmentVariation(
+          subjectKey,
+          flagKey,
+          subjectAttributes,
+          assignmentHooks,
+          obfuscated,
+        ).stringValue ?? null
       );
     } catch (error) {
       return this.rethrowIfNotGraceful(error);
@@ -118,6 +124,7 @@ export default class EppoClient implements IEppoClient {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subjectAttributes: Record<string, any> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
+    obfuscated = false,
   ): string | null {
     try {
       return (
@@ -126,6 +133,7 @@ export default class EppoClient implements IEppoClient {
           flagKey,
           subjectAttributes,
           assignmentHooks,
+          obfuscated,
           ValueType.StringType,
         ).stringValue ?? null
       );
@@ -149,8 +157,8 @@ export default class EppoClient implements IEppoClient {
           flagKey,
           subjectAttributes,
           assignmentHooks,
-          ValueType.BoolType,
           obfuscated,
+          ValueType.BoolType,
         ).boolValue ?? null
       );
     } catch (error) {
@@ -163,6 +171,7 @@ export default class EppoClient implements IEppoClient {
     flagKey: string,
     subjectAttributes?: Record<string, EppoValue>,
     assignmentHooks?: IAssignmentHooks | undefined,
+    obfuscated = false,
   ): number | null {
     try {
       return (
@@ -171,6 +180,7 @@ export default class EppoClient implements IEppoClient {
           flagKey,
           subjectAttributes,
           assignmentHooks,
+          obfuscated,
           ValueType.NumericType,
         ).numericValue ?? null
       );
@@ -185,6 +195,7 @@ export default class EppoClient implements IEppoClient {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subjectAttributes: Record<string, any> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
+    obfuscated = false,
   ): string | null {
     try {
       return (
@@ -193,6 +204,7 @@ export default class EppoClient implements IEppoClient {
           flagKey,
           subjectAttributes,
           assignmentHooks,
+          obfuscated,
           ValueType.JSONType,
         ).stringValue ?? null
       );
@@ -207,6 +219,7 @@ export default class EppoClient implements IEppoClient {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subjectAttributes: Record<string, any> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
+    obfuscated = false,
   ): object | null {
     try {
       return (
@@ -215,6 +228,7 @@ export default class EppoClient implements IEppoClient {
           flagKey,
           subjectAttributes,
           assignmentHooks,
+          obfuscated,
           ValueType.JSONType,
         ).objectValue ?? null
       );
@@ -237,16 +251,16 @@ export default class EppoClient implements IEppoClient {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subjectAttributes: Record<string, any> = {},
     assignmentHooks: IAssignmentHooks | undefined,
+    obfuscated: boolean,
     valueType?: ValueType,
-    obfuscated = false,
   ): EppoValue {
     const { allocationKey, assignment } = this.getAssignmentInternal(
       subjectKey,
       flagKey,
       subjectAttributes,
       assignmentHooks,
-      valueType,
       obfuscated,
+      valueType,
     );
     assignmentHooks?.onPostAssignment(flagKey, subjectKey, assignment, allocationKey);
 
@@ -261,8 +275,8 @@ export default class EppoClient implements IEppoClient {
     flagKey: string,
     subjectAttributes = {},
     assignmentHooks: IAssignmentHooks | undefined,
+    obfuscated: boolean,
     expectedValueType?: ValueType,
-    obfuscated = false,
   ): { allocationKey: string | null; assignment: EppoValue } {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
     validateNotBlank(flagKey, 'Invalid argument: flagKey cannot be blank');

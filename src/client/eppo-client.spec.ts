@@ -548,7 +548,7 @@ describe('EppoClient E2E test', () => {
   });
 });
 
-describe('getAssignmentFromObfuscatedRac', () => {
+describe(' EppoClient getAssignment From Obfuscated RAC', () => {
   const storage = new TestConfigurationStore();
   const globalClient = new EppoClient(storage);
 
@@ -577,7 +577,7 @@ describe('getAssignmentFromObfuscatedRac', () => {
     }: IAssignmentTestCase) => {
       `---- Test Case for ${experiment} Experiment ----`;
 
-      if (valueType === ValueTestType.BoolType) {
+      if (experiment === 'experiment_with_numeric_variations') {
         const assignments = getAssignmentsWithSubjectAttributes(
           subjectsWithAttributes
             ? subjectsWithAttributes
@@ -592,21 +592,21 @@ describe('getAssignmentFromObfuscatedRac', () => {
             expect(boolAssignments).toEqual(expectedAssignments);
             break;
           }
-          // case ValueTestType.NumericType: {
-          //   const numericAssignments = assignments.map((a) => a?.numericValue ?? null);
-          //   expect(numericAssignments).toEqual(expectedAssignments);
-          //   break;
-          // }
-          // case ValueTestType.StringType: {
-          //   const stringAssignments = assignments.map((a) => a?.stringValue ?? null);
-          //   expect(stringAssignments).toEqual(expectedAssignments);
-          //   break;
-          // }
-          // case ValueTestType.JSONType: {
-          //   const jsonStringAssignments = assignments.map((a) => a?.stringValue ?? null);
-          //   expect(jsonStringAssignments).toEqual(expectedAssignments);
-          //   break;
-          // }
+          case ValueTestType.NumericType: {
+            const numericAssignments = assignments.map((a) => a?.numericValue ?? null);
+            expect(numericAssignments).toEqual(expectedAssignments);
+            break;
+          }
+          case ValueTestType.StringType: {
+            const stringAssignments = assignments.map((a) => a?.stringValue ?? null);
+            expect(stringAssignments).toEqual(expectedAssignments);
+            break;
+          }
+          case ValueTestType.JSONType: {
+            const jsonStringAssignments = assignments.map((a) => a?.stringValue ?? null);
+            expect(jsonStringAssignments).toEqual(expectedAssignments);
+            break;
+          }
         }
       }
     },
@@ -639,6 +639,8 @@ describe('getAssignmentFromObfuscatedRac', () => {
             subject.subjectKey,
             experiment,
             subject.subjectAttributes,
+            undefined,
+            true,
           );
           if (na === null) return null;
           return EppoValue.Numeric(na);
