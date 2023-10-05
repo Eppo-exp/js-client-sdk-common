@@ -7,9 +7,10 @@ import mock from 'xhr-mock';
 
 import {
   IAssignmentTestCase,
+  MOCK_RAC_RESPONSE_FILE,
+  OBFUSCATED_MOCK_RAC_RESPONSE_FILE,
   ValueTestType,
   readAssignmentTestData,
-  readMockObfuscatedRacResponse,
   readMockRacResponse,
 } from '../../test/testHelpers';
 import { IAssignmentHooks } from '../assignment-hooks';
@@ -70,7 +71,7 @@ describe('EppoClient E2E test', () => {
   beforeAll(async () => {
     mock.setup();
     mock.get(/randomized_assignment\/v3\/config*/, (_req, res) => {
-      const rac = readMockRacResponse();
+      const rac = readMockRacResponse(MOCK_RAC_RESPONSE_FILE);
       return res.status(200).body(JSON.stringify(rac));
     });
 
@@ -554,7 +555,7 @@ describe(' EppoClient getAssignment From Obfuscated RAC', () => {
   beforeAll(async () => {
     mock.setup();
     mock.get(/randomized_assignment\/v3\/config*/, (_req, res) => {
-      const rac = readMockObfuscatedRacResponse();
+      const rac = readMockRacResponse(OBFUSCATED_MOCK_RAC_RESPONSE_FILE);
       return res.status(200).body(JSON.stringify(rac));
     });
     await init(storage);
@@ -575,36 +576,34 @@ describe(' EppoClient getAssignment From Obfuscated RAC', () => {
     }: IAssignmentTestCase) => {
       `---- Test Case for ${experiment} Experiment ----`;
 
-      if (experiment === 'targeting_rules_experiment') {
-        const assignments = getAssignmentsWithSubjectAttributes(
-          subjectsWithAttributes
-            ? subjectsWithAttributes
-            : subjects.map((subject) => ({ subjectKey: subject })),
-          experiment,
-          valueType,
-        );
+      const assignments = getAssignmentsWithSubjectAttributes(
+        subjectsWithAttributes
+          ? subjectsWithAttributes
+          : subjects.map((subject) => ({ subjectKey: subject })),
+        experiment,
+        valueType,
+      );
 
-        switch (valueType) {
-          case ValueTestType.BoolType: {
-            const boolAssignments = assignments.map((a) => a?.boolValue ?? null);
-            expect(boolAssignments).toEqual(expectedAssignments);
-            break;
-          }
-          case ValueTestType.NumericType: {
-            const numericAssignments = assignments.map((a) => a?.numericValue ?? null);
-            expect(numericAssignments).toEqual(expectedAssignments);
-            break;
-          }
-          case ValueTestType.StringType: {
-            const stringAssignments = assignments.map((a) => a?.stringValue ?? null);
-            expect(stringAssignments).toEqual(expectedAssignments);
-            break;
-          }
-          case ValueTestType.JSONType: {
-            const jsonStringAssignments = assignments.map((a) => a?.stringValue ?? null);
-            expect(jsonStringAssignments).toEqual(expectedAssignments);
-            break;
-          }
+      switch (valueType) {
+        case ValueTestType.BoolType: {
+          const boolAssignments = assignments.map((a) => a?.boolValue ?? null);
+          expect(boolAssignments).toEqual(expectedAssignments);
+          break;
+        }
+        case ValueTestType.NumericType: {
+          const numericAssignments = assignments.map((a) => a?.numericValue ?? null);
+          expect(numericAssignments).toEqual(expectedAssignments);
+          break;
+        }
+        case ValueTestType.StringType: {
+          const stringAssignments = assignments.map((a) => a?.stringValue ?? null);
+          expect(stringAssignments).toEqual(expectedAssignments);
+          break;
+        }
+        case ValueTestType.JSONType: {
+          const jsonStringAssignments = assignments.map((a) => a?.stringValue ?? null);
+          expect(jsonStringAssignments).toEqual(expectedAssignments);
+          break;
         }
       }
     },

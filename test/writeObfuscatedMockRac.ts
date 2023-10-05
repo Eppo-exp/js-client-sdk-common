@@ -3,13 +3,14 @@ import * as fs from 'fs';
 import { encodeBase64Hash, getMD5Hash } from '../src/obfuscation';
 
 import {
+  MOCK_RAC_RESPONSE_FILE,
   OBFUSCATED_MOCK_RAC_RESPONSE_FILE,
   TEST_DATA_DIR,
   readMockRacResponse,
 } from './testHelpers';
 
 export function generateObfuscatedMockRac() {
-  const rac = readMockRacResponse();
+  const rac = readMockRacResponse(MOCK_RAC_RESPONSE_FILE);
   const keys = Object.keys(rac.flags);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const flagsCopy: Record<string, any> = {};

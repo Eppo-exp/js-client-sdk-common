@@ -28,14 +28,10 @@ export interface IAssignmentTestCase {
   expectedAssignments: IValue[];
 }
 
-export function readMockRacResponse(): { flags: Record<string, IExperimentConfiguration> } {
-  return JSON.parse(fs.readFileSync(TEST_DATA_DIR + MOCK_RAC_RESPONSE_FILE, 'utf-8'));
-}
-
-export function readMockObfuscatedRacResponse(): {
+export function readMockRacResponse(filename: string): {
   flags: Record<string, IExperimentConfiguration>;
 } {
-  return JSON.parse(fs.readFileSync(TEST_DATA_DIR + OBFUSCATED_MOCK_RAC_RESPONSE_FILE, 'utf-8'));
+  return JSON.parse(fs.readFileSync(TEST_DATA_DIR + filename, 'utf-8'));
 }
 
 export function readAssignmentTestData(): IAssignmentTestCase[] {

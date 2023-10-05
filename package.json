@@ -22,7 +22,7 @@
     "typecheck": "tsc",
     "test": "yarn test:unit",
     "test:unit": "NODE_ENV=test jest '.*\\.spec\\.ts'",
-    "obfuscated-mock-rac": "ts-node test/writeObfuscatedMockRac"
+    "obfuscate-mock-rac": "ts-node test/writeObfuscatedMockRac"
   },
   "jsdelivr": "dist/eppo-sdk.js",
   "repository": {
