@@ -36,6 +36,7 @@ test-data:
 	mkdir -p $(tempDir)
 	git clone -b ${branchName} --depth 1 --single-branch ${githubRepoLink} ${gitDataDir}
 	cp ${gitDataDir}rac-experiments-v3.json ${testDataDir}
+	cp ${gitDataDir}rac-experiments-v3-obfuscated.json ${testDataDir}
 	cp -r ${gitDataDir}assignment-v2 ${testDataDir}
 	rm -rf ${tempDir}
 

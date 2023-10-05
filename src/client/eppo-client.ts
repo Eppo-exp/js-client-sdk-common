@@ -7,6 +7,7 @@ import { MAX_EVENT_QUEUE_SIZE } from '../constants';
 import { IAllocation } from '../dto/allocation-dto';
 import { IExperimentConfiguration } from '../dto/experiment-configuration-dto';
 import { EppoValue, ValueType } from '../eppo_value';
+import { getMD5Hash } from '../obfuscation';
 import { findMatchingRule } from '../rule_evaluator';
 import { getShard, isShardInRange } from '../shard';
 import { validateNotBlank } from '../validation';
@@ -100,11 +101,17 @@ export default class EppoClient implements IEppoClient {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subjectAttributes: Record<string, any> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
+    obfuscated = false,
   ): string | null {
     try {
       return (
-        this.getAssignmentVariation(subjectKey, flagKey, subjectAttributes, assignmentHooks)
-          .stringValue ?? null
+        this.getAssignmentVariation(
+          subjectKey,
+          flagKey,
+          subjectAttributes,
+          assignmentHooks,
+          obfuscated,
+        ).stringValue ?? null
       );
     } catch (error) {
       return this.rethrowIfNotGraceful(error);
@@ -117,6 +124,7 @@ export default class EppoClient implements IEppoClient {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subjectAttributes: Record<string, any> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
+    obfuscated = false,
   ): string | null {
     try {
       return (
@@ -125,6 +133,7 @@ export default class EppoClient implements IEppoClient {
           flagKey,
           subjectAttributes,
           assignmentHooks,
+          obfuscated,
           ValueType.StringType,
         ).stringValue ?? null
       );
@@ -139,6 +148,7 @@ export default class EppoClient implements IEppoClient {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subjectAttributes: Record<string, any> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
+    obfuscated = false,
   ): boolean | null {
     try {
       return (
@@ -147,6 +157,7 @@ export default class EppoClient implements IEppoClient {
           flagKey,
           subjectAttributes,
           assignmentHooks,
+          obfuscated,
           ValueType.BoolType,
         ).boolValue ?? null
       );
@@ -160,6 +171,7 @@ export default class EppoClient implements IEppoClient {
     flagKey: string,
     subjectAttributes?: Record<string, EppoValue>,
     assignmentHooks?: IAssignmentHooks | undefined,
+    obfuscated = false,
   ): number | null {
     try {
       return (
@@ -168,6 +180,7 @@ export default class EppoClient implements IEppoClient {
           flagKey,
           subjectAttributes,
           assignmentHooks,
+          obfuscated,
           ValueType.NumericType,
         ).numericValue ?? null
       );
@@ -182,6 +195,7 @@ export default class EppoClient implements IEppoClient {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subjectAttributes: Record<string, any> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
+    obfuscated = false,
   ): string | null {
     try {
       return (
@@ -190,6 +204,7 @@ export default class EppoClient implements IEppoClient {
           flagKey,
           subjectAttributes,
           assignmentHooks,
+          obfuscated,
           ValueType.JSONType,
         ).stringValue ?? null
       );
@@ -204,6 +219,7 @@ export default class EppoClient implements IEppoClient {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subjectAttributes: Record<string, any> = {},
     assignmentHooks?: IAssignmentHooks | undefined,
+    obfuscated = false,
   ): object | null {
     try {
       return (
@@ -212,6 +228,7 @@ export default class EppoClient implements IEppoClient {
           flagKey,
           subjectAttributes,
           assignmentHooks,
+          obfuscated,
           ValueType.JSONType,
         ).objectValue ?? null
       );
@@ -234,6 +251,7 @@ export default class EppoClient implements IEppoClient {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subjectAttributes: Record<string, any> = {},
     assignmentHooks: IAssignmentHooks | undefined,
+    obfuscated: boolean,
     valueType?: ValueType,
   ): EppoValue {
     const { allocationKey, assignment } = this.getAssignmentInternal(
@@ -241,6 +259,7 @@ export default class EppoClient implements IEppoClient {
       flagKey,
       subjectAttributes,
       assignmentHooks,
+      obfuscated,
       valueType,
     );
     assignmentHooks?.onPostAssignment(flagKey, subjectKey, assignment, allocationKey);
@@ -256,6 +275,7 @@ export default class EppoClient implements IEppoClient {
     flagKey: string,
     subjectAttributes = {},
     assignmentHooks: IAssignmentHooks | undefined,
+    obfuscated: boolean,
     expectedValueType?: ValueType,
   ): { allocationKey: string | null; assignment: EppoValue } {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
@@ -263,7 +283,9 @@ export default class EppoClient implements IEppoClient {
 
     const nullAssignment = { allocationKey: null, assignment: EppoValue.Null() };
 
-    const experimentConfig = this.configurationStore.get<IExperimentConfiguration>(flagKey);
+    const experimentConfig = this.configurationStore.get<IExperimentConfiguration>(
+      obfuscated ? getMD5Hash(flagKey) : flagKey,
+    );
     const allowListOverride = this.getSubjectVariationOverride(
       subjectKey,
       experimentConfig,
@@ -288,7 +310,11 @@ export default class EppoClient implements IEppoClient {
     }
 
     // Attempt to match a rule from the list.
-    const matchedRule = findMatchingRule(subjectAttributes || {}, experimentConfig.rules);
+    const matchedRule = findMatchingRule(
+      subjectAttributes || {},
+      experimentConfig.rules,
+      obfuscated,
+    );
     if (!matchedRule) return nullAssignment;
 
     // Check if subject is in allocation sample.

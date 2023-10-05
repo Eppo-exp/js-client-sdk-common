@@ -6,7 +6,9 @@ import { IValue } from '../src/eppo_value';
 
 export const TEST_DATA_DIR = './test/data/';
 export const ASSIGNMENT_TEST_DATA_DIR = TEST_DATA_DIR + 'assignment-v2/';
-export const MOCK_RAC_RESPONSE_FILE = 'rac-experiments-v3.json';
+const MOCK_RAC_FILENAME = 'rac-experiments-v3';
+export const MOCK_RAC_RESPONSE_FILE = `${MOCK_RAC_FILENAME}.json`;
+export const OBFUSCATED_MOCK_RAC_RESPONSE_FILE = `${MOCK_RAC_FILENAME}-obfuscated.json`;
 
 export enum ValueTestType {
   BoolType = 'boolean',
@@ -26,8 +28,10 @@ export interface IAssignmentTestCase {
   expectedAssignments: IValue[];
 }
 
-export function readMockRacResponse(): Record<string, IExperimentConfiguration> {
-  return JSON.parse(fs.readFileSync(TEST_DATA_DIR + MOCK_RAC_RESPONSE_FILE, 'utf-8'));
+export function readMockRacResponse(filename: string): {
+  flags: Record<string, IExperimentConfiguration>;
+} {
+  return JSON.parse(fs.readFileSync(TEST_DATA_DIR + filename, 'utf-8'));
 }
 
 export function readAssignmentTestData(): IAssignmentTestCase[] {
