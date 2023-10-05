@@ -310,7 +310,11 @@ export default class EppoClient implements IEppoClient {
     }
 
     // Attempt to match a rule from the list.
-    const matchedRule = findMatchingRule(subjectAttributes || {}, experimentConfig.rules);
+    const matchedRule = findMatchingRule(
+      subjectAttributes || {},
+      experimentConfig.rules,
+      obfuscated,
+    );
     if (!matchedRule) return nullAssignment;
 
     // Check if subject is in allocation sample.

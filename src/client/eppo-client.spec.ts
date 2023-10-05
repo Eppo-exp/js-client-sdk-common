@@ -577,7 +577,7 @@ describe(' EppoClient getAssignment From Obfuscated RAC', () => {
     }: IAssignmentTestCase) => {
       `---- Test Case for ${experiment} Experiment ----`;
 
-      if (experiment === 'experiment_with_numeric_variations') {
+      if (experiment === 'targeting_rules_experiment') {
         const assignments = getAssignmentsWithSubjectAttributes(
           subjectsWithAttributes
             ? subjectsWithAttributes
@@ -650,6 +650,8 @@ describe(' EppoClient getAssignment From Obfuscated RAC', () => {
             subject.subjectKey,
             experiment,
             subject.subjectAttributes,
+            undefined,
+            true,
           );
           if (sa === null) return null;
           return EppoValue.String(sa);
@@ -659,11 +661,15 @@ describe(' EppoClient getAssignment From Obfuscated RAC', () => {
             subject.subjectKey,
             experiment,
             subject.subjectAttributes,
+            undefined,
+            true,
           );
           const oa = globalClient.getParsedJSONAssignment(
             subject.subjectKey,
             experiment,
             subject.subjectAttributes,
+            undefined,
+            true,
           );
           if (oa == null || sa === null) return null;
           return EppoValue.JSON(sa, oa);
