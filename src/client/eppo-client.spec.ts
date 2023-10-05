@@ -11,7 +11,6 @@ import {
   readAssignmentTestData,
   readMockObfuscatedRacResponse,
   readMockRacResponse,
-  writeObfuscatedMockRacIfNotExists,
 } from '../../test/testHelpers';
 import { IAssignmentHooks } from '../assignment-hooks';
 import { IAssignmentLogger } from '../assignment-logger';
@@ -553,7 +552,6 @@ describe(' EppoClient getAssignment From Obfuscated RAC', () => {
   const globalClient = new EppoClient(storage);
 
   beforeAll(async () => {
-    writeObfuscatedMockRacIfNotExists();
     mock.setup();
     mock.get(/randomized_assignment\/v3\/config*/, (_req, res) => {
       const rac = readMockObfuscatedRacResponse();

@@ -1,7 +1,7 @@
-import { createHash } from 'crypto';
+import * as md5 from 'md5';
 
 export function getMD5Hash(input: string): string {
-  return createHash('md5').update(input).digest('hex');
+  return md5(input);
 }
 
 export function encodeBase64Hash(input: string): string {

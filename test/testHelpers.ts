@@ -7,8 +7,9 @@ import { getMD5Hash, encodeBase64Hash } from '../src/obfuscation';
 
 export const TEST_DATA_DIR = './test/data/';
 export const ASSIGNMENT_TEST_DATA_DIR = TEST_DATA_DIR + 'assignment-v2/';
-export const MOCK_RAC_RESPONSE_FILE = 'rac-experiments-v3.json';
-export const OBFUSCATED_MOCK_RAC_RESPONSE_FILE = `obfuscated-${MOCK_RAC_RESPONSE_FILE}`;
+const MOCK_RAC_FILENAME = 'rac-experiments-v3';
+export const MOCK_RAC_RESPONSE_FILE = `${MOCK_RAC_FILENAME}.json`;
+export const OBFUSCATED_MOCK_RAC_RESPONSE_FILE = `${MOCK_RAC_FILENAME}-obfuscated.json`;
 
 export enum ValueTestType {
   BoolType = 'boolean',
@@ -28,7 +29,7 @@ export interface IAssignmentTestCase {
   expectedAssignments: IValue[];
 }
 
-export function readMockRacResponse(): Record<string, IExperimentConfiguration> {
+export function readMockRacResponse(): { flags: Record<string, IExperimentConfiguration> } {
   return JSON.parse(fs.readFileSync(TEST_DATA_DIR + MOCK_RAC_RESPONSE_FILE, 'utf-8'));
 }
 
@@ -68,14 +69,4 @@ export function generateObfuscatedMockRac() {
     );
   });
   return { flags: flagsCopy };
-}
-
-export function writeObfuscatedMockRacIfNotExists() {
-  const obfuscatedRacFilePath = TEST_DATA_DIR + OBFUSCATED_MOCK_RAC_RESPONSE_FILE;
-  try {
-    fs.readFileSync(obfuscatedRacFilePath, 'utf8');
-  } catch {
-    const obfuscatedRac = generateObfuscatedMockRac();
-    fs.writeFileSync(obfuscatedRacFilePath, JSON.stringify(obfuscatedRac, null, 2));
-  }
 }
