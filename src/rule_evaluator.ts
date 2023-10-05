@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Condition, OperatorType, IRule } from './dto/rule-dto';
-import { decodeBase64Hash, getMD5Hash } from './obfuscation';
+import { decodeBase64, getMD5Hash } from './obfuscation';
 
 export function findMatchingRule(
   subjectAttributes: Record<string, any>,
@@ -81,15 +81,15 @@ function evaluateObfuscatedCondition(
   if (value != null) {
     switch (condition.operator) {
       case getMD5Hash(OperatorType.GTE):
-        return compareNumber(value, Number(decodeBase64Hash(condition.value)), (a, b) => a >= b);
+        return compareNumber(value, Number(decodeBase64(condition.value)), (a, b) => a >= b);
       case getMD5Hash(OperatorType.GT):
-        return compareNumber(value, Number(decodeBase64Hash(condition.value)), (a, b) => a > b);
+        return compareNumber(value, Number(decodeBase64(condition.value)), (a, b) => a > b);
       case getMD5Hash(OperatorType.LTE):
-        return compareNumber(value, Number(decodeBase64Hash(condition.value)), (a, b) => a <= b);
+        return compareNumber(value, Number(decodeBase64(condition.value)), (a, b) => a <= b);
       case getMD5Hash(OperatorType.LT):
-        return compareNumber(value, Number(decodeBase64Hash(condition.value)), (a, b) => a < b);
+        return compareNumber(value, Number(decodeBase64(condition.value)), (a, b) => a < b);
       case getMD5Hash(OperatorType.MATCHES):
-        return new RegExp(decodeBase64Hash(condition.value)).test(value as string);
+        return new RegExp(decodeBase64(condition.value)).test(value as string);
       case getMD5Hash(OperatorType.ONE_OF):
         return isOneOf(getMD5Hash(value.toString().toLowerCase()), condition.value);
       case getMD5Hash(OperatorType.NOT_ONE_OF):

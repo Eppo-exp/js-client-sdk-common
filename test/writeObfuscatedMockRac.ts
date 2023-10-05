@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 
-import { encodeBase64Hash, getMD5Hash } from '../src/obfuscation';
+import { encodeBase64, getMD5Hash } from '../src/obfuscation';
 
 import {
   MOCK_RAC_RESPONSE_FILE,
@@ -22,7 +22,7 @@ export function generateObfuscatedMockRac() {
       rule.conditions.forEach((condition: any) => {
         condition['value'] = ['ONE_OF', 'NOT_ONE_OF'].includes(condition['operator'])
           ? condition['value'].map((value: string) => getMD5Hash(value.toLowerCase()))
-          : encodeBase64Hash(`${condition['value']}`);
+          : encodeBase64(`${condition['value']}`);
         condition['operator'] = getMD5Hash(condition['operator']);
         condition['attribute'] = getMD5Hash(condition['attribute']);
       }),
