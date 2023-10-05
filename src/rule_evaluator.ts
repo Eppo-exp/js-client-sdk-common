@@ -5,7 +5,7 @@ import { decodeBase64Hash, getMD5Hash } from './obfuscation';
 export function findMatchingRule(
   subjectAttributes: Record<string, any>,
   rules: IRule[],
-  obfuscated = false,
+  obfuscated: boolean,
 ): IRule | null {
   for (const rule of rules) {
     if (matchesRule(subjectAttributes, rule, obfuscated)) {
