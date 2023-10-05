@@ -3,7 +3,6 @@ import * as fs from 'fs';
 import { IExperimentConfiguration } from '../src/dto/experiment-configuration-dto';
 import { IVariation } from '../src/dto/variation-dto';
 import { IValue } from '../src/eppo_value';
-import { getMD5Hash, encodeBase64Hash } from '../src/obfuscation';
 
 export const TEST_DATA_DIR = './test/data/';
 export const ASSIGNMENT_TEST_DATA_DIR = TEST_DATA_DIR + 'assignment-v2/';
@@ -47,26 +46,4 @@ export function readAssignmentTestData(): IAssignmentTestCase[] {
     testCaseData.push(testCase);
   });
   return testCaseData;
-}
-
-export function generateObfuscatedMockRac() {
-  const rac = readMockRacResponse();
-  const keys = Object.keys(rac.flags);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const flagsCopy: Record<string, any> = {};
-  keys.forEach((key) => {
-    flagsCopy[getMD5Hash(key)] = rac.flags[key];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    flagsCopy[getMD5Hash(key)].rules?.forEach((rule: any) =>
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      rule.conditions.forEach((condition: any) => {
-        condition['value'] = ['ONE_OF', 'NOT_ONE_OF'].includes(condition['operator'])
-          ? condition['value'].map((value: string) => getMD5Hash(value.toLowerCase()))
-          : encodeBase64Hash(`${condition['value']}`);
-        condition['operator'] = getMD5Hash(condition['operator']);
-        condition['attribute'] = getMD5Hash(condition['attribute']);
-      }),
-    );
-  });
-  return { flags: flagsCopy };
 }
