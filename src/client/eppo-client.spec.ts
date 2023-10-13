@@ -13,6 +13,7 @@ import {
   readAssignmentTestData,
   readMockRacResponse,
 } from '../../test/testHelpers';
+import { LRUAssignmentCache, NonExpiringAssignmentCache } from '../assignment-cache';
 import { IAssignmentHooks } from '../assignment-hooks';
 import { IAssignmentLogger } from '../assignment-logger';
 import { IConfigurationStore } from '../configuration-store';
@@ -367,6 +368,77 @@ describe('EppoClient E2E test', () => {
     const assignment = client.getAssignment('subject-10', flagKey, subjectAttributes);
 
     expect(assignment).toEqual('control');
+  });
+
+  describe('assignment logging deduplication', () => {
+    it('logs duplicate assignments with an assignment cache', () => {
+      const mockLogger = td.object<IAssignmentLogger>();
+
+      storage.setEntries({ [flagKey]: mockExperimentConfig });
+      const client = new EppoClient(storage);
+      client.setLogger(mockLogger);
+      client.setAssignmentCache(undefined);
+
+      client.getAssignment('subject-10', flagKey);
+      client.getAssignment('subject-10', flagKey);
+
+      // call count should be 2 because there is no cache.
+      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(2);
+    });
+
+    it('does not log duplicate assignments', () => {
+      const mockLogger = td.object<IAssignmentLogger>();
+
+      storage.setEntries({ [flagKey]: mockExperimentConfig });
+      const client = new EppoClient(storage);
+      client.setLogger(mockLogger);
+      client.setAssignmentCache(new NonExpiringAssignmentCache());
+
+      client.getAssignment('subject-10', flagKey);
+      client.getAssignment('subject-10', flagKey);
+
+      // call count should be 1 because the second call is a cache hit and not logged.
+      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
+    });
+
+    it('logs assignment again after the cache is full', () => {
+      const mockLogger = td.object<IAssignmentLogger>();
+
+      storage.setEntries({ [flagKey]: mockExperimentConfig });
+      const client = new EppoClient(storage);
+      client.setLogger(mockLogger);
+      client.setAssignmentCache(new LRUAssignmentCache(2));
+
+      client.getAssignment('subject-10', flagKey); // logged
+      client.getAssignment('subject-10', flagKey); // cached
+
+      client.getAssignment('subject-11', flagKey); // logged
+      client.getAssignment('subject-11', flagKey); // cached
+
+      client.getAssignment('subject-12', flagKey); // cache evicted subject-10, logged
+      client.getAssignment('subject-10', flagKey); // previously evicted, logged
+      client.getAssignment('subject-12', flagKey); // cached
+
+      // call count should be 1 because the second call is a cache hit and not logged.
+      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(4);
+    });
+
+    it('does not cache assignments if the logger had an exception', () => {
+      const mockLogger = td.object<IAssignmentLogger>();
+      td.when(mockLogger.logAssignment(td.matchers.anything())).thenThrow(
+        new Error('logging error'),
+      );
+
+      const client = new EppoClient(storage);
+      client.setLogger(mockLogger);
+
+      client.getAssignment('subject-10', flagKey);
+      client.getAssignment('subject-10', flagKey);
+
+      // call count should be 2 because the first call had an exception
+      // therefore we are not sure the logger was successful and try again.
+      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(2);
+    });
   });
 
   it('only returns variation if subject matches rules', () => {

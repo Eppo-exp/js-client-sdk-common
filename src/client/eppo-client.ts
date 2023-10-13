@@ -1,5 +1,6 @@
 import * as md5 from 'md5';
 
+import { AssignmentCache } from '../assignment-cache';
 import { IAssignmentHooks } from '../assignment-hooks';
 import { IAssignmentEvent, IAssignmentLogger } from '../assignment-logger';
 import { IConfigurationStore } from '../configuration-store';
@@ -91,6 +92,7 @@ export default class EppoClient implements IEppoClient {
   private queuedEvents: IAssignmentEvent[] = [];
   private assignmentLogger: IAssignmentLogger | undefined;
   private isGracefulFailureMode = true;
+  private assignmentCache: AssignmentCache | undefined;
 
   constructor(private configurationStore: IConfigurationStore) {}
 
@@ -347,6 +349,10 @@ export default class EppoClient implements IEppoClient {
     this.flushQueuedEvents(); // log any events that may have been queued while initializing
   }
 
+  public setAssignmentCache(assignmentCache: AssignmentCache | undefined) {
+    this.assignmentCache = assignmentCache;
+  }
+
   public setIsGracefulFailureMode(gracefulFailureMode: boolean) {
     this.isGracefulFailureMode = gracefulFailureMode;
   }
@@ -371,6 +377,19 @@ export default class EppoClient implements IEppoClient {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subjectAttributes: Record<string, any> | undefined = {},
   ) {
+    if (
+      this.assignmentCache?.hasAssigned({
+        subjectKey,
+        allocationKey,
+        variationKey: variation.toString(),
+      })
+    ) {
+      console.debug(
+        `[Eppo SDK] Assignment already logged for ${subjectKey}-${allocationKey}-${variation.toString()}; not executing Logger.`,
+      );
+      return;
+    }
+
     const event: IAssignmentEvent = {
       allocation: allocationKey,
       experiment: `${flagKey}-${allocationKey}`,
@@ -387,6 +406,11 @@ export default class EppoClient implements IEppoClient {
     }
     try {
       this.assignmentLogger.logAssignment(event);
+      this.assignmentCache?.logAssignment({
+        subjectKey,
+        allocationKey,
+        variationKey: variation.toString(),
+      });
     } catch (error) {
       console.error(`[Eppo SDK] Error logging assignment event: ${error.message}`);
     }
