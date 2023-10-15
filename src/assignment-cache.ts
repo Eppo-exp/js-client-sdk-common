@@ -2,16 +2,16 @@ import { LRUCache } from 'lru-cache';
 
 export interface AssignmentCacheKey {
   subjectKey: string;
+  flagKey: string;
   allocationKey: string;
-  variationKey: string;
 }
 
 export abstract class AssignmentCache {
   abstract hasAssigned(key: AssignmentCacheKey): boolean;
   abstract logAssignment(key: AssignmentCacheKey): void;
 
-  protected getCacheKey({ subjectKey, allocationKey, variationKey }: AssignmentCacheKey): string {
-    return `${subjectKey}-${allocationKey}-${variationKey}`;
+  protected getCacheKey({ subjectKey, flagKey, allocationKey }: AssignmentCacheKey): string {
+    return `subject:${subjectKey}-flag:${flagKey}-allocation:${allocationKey}`;
   }
 }
 

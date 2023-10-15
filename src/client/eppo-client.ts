@@ -379,9 +379,9 @@ export default class EppoClient implements IEppoClient {
   ) {
     if (
       this.assignmentCache?.hasAssigned({
+        flagKey,
         subjectKey,
         allocationKey,
-        variationKey: variation.toString(),
       })
     ) {
       console.debug(
@@ -407,9 +407,9 @@ export default class EppoClient implements IEppoClient {
     try {
       this.assignmentLogger.logAssignment(event);
       this.assignmentCache?.logAssignment({
+        flagKey,
         subjectKey,
         allocationKey,
-        variationKey: variation.toString(),
       });
     } catch (error) {
       console.error(`[Eppo SDK] Error logging assignment event: ${error.message}`);
