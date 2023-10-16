@@ -7,7 +7,7 @@ export interface AssignmentCacheKey {
 }
 
 export abstract class AssignmentCache {
-  abstract hasAssigned(key: AssignmentCacheKey): boolean;
+  abstract hasLoggedAssignment(key: AssignmentCacheKey): boolean;
   abstract logAssignment(key: AssignmentCacheKey): void;
 
   protected getCacheKey({ subjectKey, flagKey, allocationKey }: AssignmentCacheKey): string {
@@ -29,7 +29,7 @@ export class NonExpiringAssignmentCache extends AssignmentCache {
     this.cache = new Set();
   }
 
-  hasAssigned(key: AssignmentCacheKey): boolean {
+  hasLoggedAssignment(key: AssignmentCacheKey): boolean {
     return this.cache.has(this.getCacheKey(key));
   }
 
@@ -55,7 +55,7 @@ export class LRUAssignmentCache extends AssignmentCache {
     this.cache = new LRUCache<string, boolean>({ max: maxSize });
   }
 
-  hasAssigned(key: AssignmentCacheKey): boolean {
+  hasLoggedAssignment(key: AssignmentCacheKey): boolean {
     return this.cache.has(this.getCacheKey(key));
   }
 

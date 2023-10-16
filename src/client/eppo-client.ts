@@ -378,7 +378,7 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes: Record<string, any> | undefined = {},
   ) {
     if (
-      this.assignmentCache?.hasAssigned({
+      this.assignmentCache?.hasLoggedAssignment({
         flagKey,
         subjectKey,
         allocationKey,
