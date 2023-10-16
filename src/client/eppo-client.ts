@@ -382,6 +382,7 @@ export default class EppoClient implements IEppoClient {
         flagKey,
         subjectKey,
         allocationKey,
+        variationValue: variation,
       })
     ) {
       console.debug(
@@ -410,6 +411,7 @@ export default class EppoClient implements IEppoClient {
         flagKey,
         subjectKey,
         allocationKey,
+        variationValue: variation,
       });
     } catch (error) {
       console.error(`[Eppo SDK] Error logging assignment event: ${error.message}`);

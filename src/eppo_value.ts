@@ -1,3 +1,5 @@
+import { getMD5Hash } from './obfuscation';
+
 export enum ValueType {
   NullType,
   BoolType,
@@ -68,6 +70,17 @@ export class EppoValue {
           return this.stringValue ?? '';
         }
     }
+  }
+
+  /**
+   * Useful when storing or transmitting the entire value,
+   * in particular the JsonType, is not desired.
+   *
+   * @returns MD5 hashed string of the value
+   */
+  toHashedString(): string {
+    const value = this.toString();
+    return getMD5Hash(value);
   }
 
   isExpectedType(): boolean {

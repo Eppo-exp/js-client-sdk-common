@@ -1,17 +1,30 @@
 import { LRUCache } from 'lru-cache';
 
+import { EppoValue } from './eppo_value';
+
 export interface AssignmentCacheKey {
   subjectKey: string;
   flagKey: string;
   allocationKey: string;
+  variationValue: EppoValue;
 }
 
 export abstract class AssignmentCache {
   abstract hasLoggedAssignment(key: AssignmentCacheKey): boolean;
   abstract logAssignment(key: AssignmentCacheKey): void;
 
-  protected getCacheKey({ subjectKey, flagKey, allocationKey }: AssignmentCacheKey): string {
-    return `subject:${subjectKey}-flag:${flagKey}-allocation:${allocationKey}`;
+  protected getCacheKey({
+    subjectKey,
+    flagKey,
+    allocationKey,
+    variationValue,
+  }: AssignmentCacheKey): string {
+    return [
+      `subject:${subjectKey}`,
+      `flag:${flagKey}`,
+      `allocation:${allocationKey}`,
+      `variation:${variationValue.toHashedString()}`,
+    ].join('-');
   }
 }
 

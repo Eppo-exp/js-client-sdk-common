@@ -1,5 +1,17 @@
 import { EppoValue } from './eppo_value';
 
+describe('EppoValue toHashedString function', () => {
+  it('is NullType', () => {
+    const myInstance = EppoValue.Null();
+    expect(myInstance.toHashedString()).toBe('d41d8cd98f00b204e9800998ecf8427e');
+  });
+
+  it('is JsonType', () => {
+    const myInstance = EppoValue.JSON('{"hello":"world"}', { hello: 'world' });
+    expect(myInstance.toHashedString()).toBe('fbc24bcc7a1794758fc1327fcfebdaf6');
+  });
+});
+
 describe('EppoValue toString function', () => {
   it('should return "null" when valueType is NullType', () => {
     const myInstance = EppoValue.Null();
