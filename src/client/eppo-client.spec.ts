@@ -471,7 +471,81 @@ describe('EppoClient E2E test', () => {
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(3);
     });
 
-    it('logs twice for the same flag if assignment changes', () => {
+    it('logs twice for the same flag when rollout increases/flag changes', () => {
+      const mockLogger = td.object<IAssignmentLogger>();
+
+      storage.setEntries({ [flagKey]: mockExperimentConfig });
+      const client = new EppoClient(storage);
+      client.setLogger(mockLogger);
+      client.setAssignmentCache(new NonExpiringAssignmentCache());
+
+      storage.setEntries({
+        [flagKey]: {
+          ...mockExperimentConfig,
+          allocations: {
+            allocation1: {
+              percentExposure: 1,
+              variations: [
+                {
+                  name: 'control',
+                  value: 'control',
+                  typedValue: 'control',
+                  shardRange: {
+                    start: 0,
+                    end: 100,
+                  },
+                },
+                {
+                  name: 'treatment',
+                  value: 'treatment',
+                  typedValue: 'treatment',
+                  shardRange: {
+                    start: 0,
+                    end: 0,
+                  },
+                },
+              ],
+            },
+          },
+        },
+      });
+      client.getAssignment('subject-10', flagKey);
+
+      storage.setEntries({
+        [flagKey]: {
+          ...mockExperimentConfig,
+          allocations: {
+            allocation1: {
+              percentExposure: 1,
+              variations: [
+                {
+                  name: 'control',
+                  value: 'control',
+                  typedValue: 'control',
+                  shardRange: {
+                    start: 0,
+                    end: 0,
+                  },
+                },
+                {
+                  name: 'treatment',
+                  value: 'treatment',
+                  typedValue: 'treatment',
+                  shardRange: {
+                    start: 0,
+                    end: 100,
+                  },
+                },
+              ],
+            },
+          },
+        },
+      });
+      client.getAssignment('subject-10', flagKey);
+      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(2);
+    });
+
+    it('logs the same subject/flag/variation after two changes', () => {
       const mockLogger = td.object<IAssignmentLogger>();
 
       storage.setEntries({ [flagKey]: mockExperimentConfig });
