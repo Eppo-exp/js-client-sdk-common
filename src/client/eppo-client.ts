@@ -386,9 +386,6 @@ export default class EppoClient implements IEppoClient {
         variationValue: variation,
       })
     ) {
-      console.debug(
-        `[Eppo SDK] Assignment already logged for ${subjectKey}-${allocationKey}-${variation.toString()}; not executing Logger.`,
-      );
       return;
     }
 
