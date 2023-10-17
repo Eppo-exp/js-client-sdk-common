@@ -547,14 +547,17 @@ describe('EppoClient E2E test', () => {
 
     it('logs the same subject/flag/variation after two changes', () => {
       const mockLogger = td.object<IAssignmentLogger>();
-
-      storage.setEntries({ [flagKey]: mockExperimentConfig });
       const client = new EppoClient(storage);
       client.setLogger(mockLogger);
       client.setAssignmentCache(new NonExpiringAssignmentCache());
 
-      client.getAssignment('subject-10', flagKey);
+      // original configuration version
+      storage.setEntries({ [flagKey]: mockExperimentConfig });
 
+      client.getAssignment('subject-10', flagKey); // log this assignment
+      client.getAssignment('subject-10', flagKey); // cache hit, don't log
+
+      // change the flag
       storage.setEntries({
         [flagKey]: {
           ...mockExperimentConfig,
@@ -576,10 +579,16 @@ describe('EppoClient E2E test', () => {
           },
         },
       });
-      client.getAssignment('subject-10', flagKey);
 
+      client.getAssignment('subject-10', flagKey); // log this assignment
+      client.getAssignment('subject-10', flagKey); // cache hit, don't log
+
+      // change the flag again, back to the original
       storage.setEntries({ [flagKey]: mockExperimentConfig });
-      client.getAssignment('subject-10', flagKey);
+
+      client.getAssignment('subject-10', flagKey); // important: log this assignment
+      client.getAssignment('subject-10', flagKey); // cache hit, don't log
+
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(3);
     });
   });
