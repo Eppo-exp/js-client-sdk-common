@@ -404,7 +404,7 @@ export default class EppoClient implements IEppoClient {
     }
     try {
       this.assignmentLogger.logAssignment(event);
-      this.assignmentCache?.logAssignment({
+      this.assignmentCache?.setLastLoggedAssignment({
         flagKey,
         subjectKey,
         allocationKey,

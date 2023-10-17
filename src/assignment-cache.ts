@@ -41,7 +41,7 @@ export abstract class AssignmentCache<T extends Cacheable> {
     return true;
   }
 
-  logAssignment(key: AssignmentCacheKey): void {
+  setLastLoggedAssignment(key: AssignmentCacheKey): void {
     this.cache.set(this.getCacheKey(key), key.variationValue.toHashedString());
   }
 
