@@ -41,8 +41,7 @@ export class NonExpiringAssignmentCache extends AssignmentCache {
 
     // the subject has been assigned to a different variation
     // than was previously logged.
-    // in this case we need to log the assignment again;
-    // clear the cache and return false
+    // in this case we need to log the assignment again.
     if (this.cache.get(this.getCacheKey(key)) !== key.variationValue.toHashedString()) {
       return false;
     }
@@ -80,8 +79,7 @@ export class LRUAssignmentCache extends AssignmentCache {
 
     // the subject has been assigned to a different variation
     // than was previously logged.
-    // in this case we need to log the assignment again;
-    // clear the cache and return false
+    // in this case we need to log the assignment again.
     if (this.cache.get(this.getCacheKey(key)) !== key.variationValue.toHashedString()) {
       return false;
     }
