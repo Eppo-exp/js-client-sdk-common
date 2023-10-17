@@ -1,4 +1,3 @@
-import { LRUCache } from 'lru-cache';
 import * as md5 from 'md5';
 
 import { AssignmentCache, AvailableCacheTypes } from '../assignment-cache';
