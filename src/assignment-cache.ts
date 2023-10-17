@@ -13,18 +13,8 @@ export abstract class AssignmentCache {
   abstract hasLoggedAssignment(key: AssignmentCacheKey): boolean;
   abstract logAssignment(key: AssignmentCacheKey): void;
 
-  protected getCacheKey({
-    subjectKey,
-    flagKey,
-    allocationKey,
-    variationValue,
-  }: AssignmentCacheKey): string {
-    return [
-      `subject:${subjectKey}`,
-      `flag:${flagKey}`,
-      `allocation:${allocationKey}`,
-      `variation:${variationValue.toHashedString()}`,
-    ].join('-');
+  protected getCacheKey({ subjectKey, flagKey, allocationKey }: AssignmentCacheKey): string {
+    return [`subject:${subjectKey}`, `flag:${flagKey}`, `allocation:${allocationKey}`].join(';');
   }
 }
 
@@ -35,19 +25,33 @@ export abstract class AssignmentCache {
  * for a single user.
  */
 export class NonExpiringAssignmentCache extends AssignmentCache {
-  private cache: Set<string>;
+  // key -> variation value hash
+  private cache: Map<string, string>;
 
   constructor() {
     super();
-    this.cache = new Set();
+    this.cache = new Map<string, string>();
   }
 
   hasLoggedAssignment(key: AssignmentCacheKey): boolean {
-    return this.cache.has(this.getCacheKey(key));
+    // no cache key present
+    if (!this.cache.has(this.getCacheKey(key))) {
+      return false;
+    }
+
+    // the subject has been assigned to a different variation
+    // than was previously logged.
+    // in this case we need to log the assignment again;
+    // clear the cache and return false
+    if (this.cache.get(this.getCacheKey(key)) !== key.variationValue.toHashedString()) {
+      return false;
+    }
+
+    return true;
   }
 
   logAssignment(key: AssignmentCacheKey): void {
-    this.cache.add(this.getCacheKey(key));
+    this.cache.set(this.getCacheKey(key), key.variationValue.toHashedString());
   }
 }
 
@@ -61,18 +65,31 @@ export class NonExpiringAssignmentCache extends AssignmentCache {
  * of users that can be active at the same time.
  */
 export class LRUAssignmentCache extends AssignmentCache {
-  private cache: LRUCache<string, boolean>;
+  private cache: LRUCache<string, string>;
 
   constructor(maxSize: number) {
     super();
-    this.cache = new LRUCache<string, boolean>({ max: maxSize });
+    this.cache = new LRUCache<string, string>({ max: maxSize });
   }
 
   hasLoggedAssignment(key: AssignmentCacheKey): boolean {
-    return this.cache.has(this.getCacheKey(key));
+    // no cache key present
+    if (!this.cache.has(this.getCacheKey(key))) {
+      return false;
+    }
+
+    // the subject has been assigned to a different variation
+    // than was previously logged.
+    // in this case we need to log the assignment again;
+    // clear the cache and return false
+    if (this.cache.get(this.getCacheKey(key)) !== key.variationValue.toHashedString()) {
+      return false;
+    }
+
+    return true;
   }
 
   logAssignment(key: AssignmentCacheKey): void {
-    this.cache.set(this.getCacheKey(key), true);
+    this.cache.set(this.getCacheKey(key), key.variationValue.toHashedString());
   }
 }
