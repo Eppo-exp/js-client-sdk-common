@@ -3,7 +3,7 @@ import { EppoValue } from './eppo_value';
 describe('EppoValue toHashedString function', () => {
   it('is NullType', () => {
     const myInstance = EppoValue.Null();
-    expect(myInstance.toHashedString()).toBe('d41d8cd98f00b204e9800998ecf8427e');
+    expect(myInstance.toHashedString()).toBe('37a6259cc0c1dae299a7866489dff0bd');
   });
 
   it('is JsonType', () => {

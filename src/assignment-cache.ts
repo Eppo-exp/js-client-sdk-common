@@ -15,6 +15,8 @@ interface Cacheable {
   has(key: string): boolean;
 }
 
+export type AvailableCacheTypes = Map<string, string> | LRUCache<string, string>;
+
 export abstract class AssignmentCache<T extends Cacheable> {
   // key -> variation value hash
   protected cache: T;

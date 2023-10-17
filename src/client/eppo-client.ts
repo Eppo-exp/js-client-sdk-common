@@ -1,6 +1,7 @@
+import { LRUCache } from 'lru-cache';
 import * as md5 from 'md5';
 
-import { AssignmentCache } from '../assignment-cache';
+import { AssignmentCache, AvailableCacheTypes } from '../assignment-cache';
 import { IAssignmentHooks } from '../assignment-hooks';
 import { IAssignmentEvent, IAssignmentLogger } from '../assignment-logger';
 import { IConfigurationStore } from '../configuration-store';
@@ -92,7 +93,7 @@ export default class EppoClient implements IEppoClient {
   private queuedEvents: IAssignmentEvent[] = [];
   private assignmentLogger: IAssignmentLogger | undefined;
   private isGracefulFailureMode = true;
-  private assignmentCache: AssignmentCache | undefined;
+  private assignmentCache: AssignmentCache<AvailableCacheTypes> | undefined;
 
   constructor(private configurationStore: IConfigurationStore) {}
 
@@ -349,7 +350,7 @@ export default class EppoClient implements IEppoClient {
     this.flushQueuedEvents(); // log any events that may have been queued while initializing
   }
 
-  public setAssignmentCache(assignmentCache: AssignmentCache | undefined) {
+  public setAssignmentCache(assignmentCache: AssignmentCache<AvailableCacheTypes> | undefined) {
     this.assignmentCache = assignmentCache;
   }
 
