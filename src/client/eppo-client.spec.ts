@@ -369,6 +369,212 @@ describe('EppoClient E2E test', () => {
     expect(assignment).toEqual('control');
   });
 
+  describe('assignment logging deduplication', () => {
+    let client: EppoClient;
+    let mockLogger: IAssignmentLogger;
+
+    beforeEach(() => {
+      mockLogger = td.object<IAssignmentLogger>();
+
+      storage.setEntries({ [flagKey]: mockExperimentConfig });
+      client = new EppoClient(storage);
+      client.setLogger(mockLogger);
+    });
+
+    it('logs duplicate assignments without an assignment cache', () => {
+      client.disableAssignmentCache();
+
+      client.getAssignment('subject-10', flagKey);
+      client.getAssignment('subject-10', flagKey);
+
+      // call count should be 2 because there is no cache.
+      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(2);
+    });
+
+    it('does not log duplicate assignments', () => {
+      client.useNonExpiringAssignmentCache();
+
+      client.getAssignment('subject-10', flagKey);
+      client.getAssignment('subject-10', flagKey);
+
+      // call count should be 1 because the second call is a cache hit and not logged.
+      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
+    });
+
+    it('logs assignment again after the lru cache is full', () => {
+      client.useLRUAssignmentCache(2);
+
+      client.getAssignment('subject-10', flagKey); // logged
+      client.getAssignment('subject-10', flagKey); // cached
+
+      client.getAssignment('subject-11', flagKey); // logged
+      client.getAssignment('subject-11', flagKey); // cached
+
+      client.getAssignment('subject-12', flagKey); // cache evicted subject-10, logged
+      client.getAssignment('subject-10', flagKey); // previously evicted, logged
+      client.getAssignment('subject-12', flagKey); // cached
+
+      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(4);
+    });
+
+    it('does not cache assignments if the logger had an exception', () => {
+      td.when(mockLogger.logAssignment(td.matchers.anything())).thenThrow(
+        new Error('logging error'),
+      );
+
+      const client = new EppoClient(storage);
+      client.setLogger(mockLogger);
+
+      client.getAssignment('subject-10', flagKey);
+      client.getAssignment('subject-10', flagKey);
+
+      // call count should be 2 because the first call had an exception
+      // therefore we are not sure the logger was successful and try again.
+      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(2);
+    });
+
+    it('logs for each unique flag', () => {
+      storage.setEntries({
+        [flagKey]: mockExperimentConfig,
+        'flag-2': {
+          ...mockExperimentConfig,
+          name: 'flag-2',
+        },
+        'flag-3': {
+          ...mockExperimentConfig,
+          name: 'flag-3',
+        },
+      });
+
+      client.useNonExpiringAssignmentCache();
+
+      client.getAssignment('subject-10', flagKey);
+      client.getAssignment('subject-10', flagKey);
+      client.getAssignment('subject-10', 'flag-2');
+      client.getAssignment('subject-10', 'flag-2');
+      client.getAssignment('subject-10', 'flag-3');
+      client.getAssignment('subject-10', 'flag-3');
+      client.getAssignment('subject-10', flagKey);
+      client.getAssignment('subject-10', 'flag-2');
+      client.getAssignment('subject-10', 'flag-3');
+
+      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(3);
+    });
+
+    it('logs twice for the same flag when rollout increases/flag changes', () => {
+      client.useNonExpiringAssignmentCache();
+
+      storage.setEntries({
+        [flagKey]: {
+          ...mockExperimentConfig,
+          allocations: {
+            allocation1: {
+              percentExposure: 1,
+              variations: [
+                {
+                  name: 'control',
+                  value: 'control',
+                  typedValue: 'control',
+                  shardRange: {
+                    start: 0,
+                    end: 100,
+                  },
+                },
+                {
+                  name: 'treatment',
+                  value: 'treatment',
+                  typedValue: 'treatment',
+                  shardRange: {
+                    start: 0,
+                    end: 0,
+                  },
+                },
+              ],
+            },
+          },
+        },
+      });
+      client.getAssignment('subject-10', flagKey);
+
+      storage.setEntries({
+        [flagKey]: {
+          ...mockExperimentConfig,
+          allocations: {
+            allocation1: {
+              percentExposure: 1,
+              variations: [
+                {
+                  name: 'control',
+                  value: 'control',
+                  typedValue: 'control',
+                  shardRange: {
+                    start: 0,
+                    end: 0,
+                  },
+                },
+                {
+                  name: 'treatment',
+                  value: 'treatment',
+                  typedValue: 'treatment',
+                  shardRange: {
+                    start: 0,
+                    end: 100,
+                  },
+                },
+              ],
+            },
+          },
+        },
+      });
+      client.getAssignment('subject-10', flagKey);
+      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(2);
+    });
+
+    it('logs the same subject/flag/variation after two changes', () => {
+      client.useNonExpiringAssignmentCache();
+
+      // original configuration version
+      storage.setEntries({ [flagKey]: mockExperimentConfig });
+
+      client.getAssignment('subject-10', flagKey); // log this assignment
+      client.getAssignment('subject-10', flagKey); // cache hit, don't log
+
+      // change the flag
+      storage.setEntries({
+        [flagKey]: {
+          ...mockExperimentConfig,
+          allocations: {
+            allocation1: {
+              percentExposure: 1,
+              variations: [
+                {
+                  name: 'some-new-treatment',
+                  value: 'some-new-treatment',
+                  typedValue: 'some-new-treatment',
+                  shardRange: {
+                    start: 0,
+                    end: 100,
+                  },
+                },
+              ],
+            },
+          },
+        },
+      });
+
+      client.getAssignment('subject-10', flagKey); // log this assignment
+      client.getAssignment('subject-10', flagKey); // cache hit, don't log
+
+      // change the flag again, back to the original
+      storage.setEntries({ [flagKey]: mockExperimentConfig });
+
+      client.getAssignment('subject-10', flagKey); // important: log this assignment
+      client.getAssignment('subject-10', flagKey); // cache hit, don't log
+
+      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(3);
+    });
+  });
+
   it('only returns variation if subject matches rules', () => {
     const entry = {
       ...mockExperimentConfig,

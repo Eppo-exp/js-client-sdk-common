@@ -1,5 +1,11 @@
 import * as md5 from 'md5';
 
+import {
+  AssignmentCache,
+  Cacheable,
+  LRUAssignmentCache,
+  NonExpiringAssignmentCache,
+} from '../assignment-cache';
 import { IAssignmentHooks } from '../assignment-hooks';
 import { IAssignmentEvent, IAssignmentLogger } from '../assignment-logger';
 import { IConfigurationStore } from '../configuration-store';
@@ -91,6 +97,7 @@ export default class EppoClient implements IEppoClient {
   private queuedEvents: IAssignmentEvent[] = [];
   private assignmentLogger: IAssignmentLogger | undefined;
   private isGracefulFailureMode = true;
+  private assignmentCache: AssignmentCache<Cacheable> | undefined;
 
   constructor(private configurationStore: IConfigurationStore) {}
 
@@ -347,6 +354,21 @@ export default class EppoClient implements IEppoClient {
     this.flushQueuedEvents(); // log any events that may have been queued while initializing
   }
 
+  /**
+   * Assignment cache methods.
+   */
+  public disableAssignmentCache() {
+    this.assignmentCache = undefined;
+  }
+
+  public useNonExpiringAssignmentCache() {
+    this.assignmentCache = new NonExpiringAssignmentCache();
+  }
+
+  public useLRUAssignmentCache(maxSize: number) {
+    this.assignmentCache = new LRUAssignmentCache(maxSize);
+  }
+
   public setIsGracefulFailureMode(gracefulFailureMode: boolean) {
     this.isGracefulFailureMode = gracefulFailureMode;
   }
@@ -371,6 +393,17 @@ export default class EppoClient implements IEppoClient {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subjectAttributes: Record<string, any> | undefined = {},
   ) {
+    if (
+      this.assignmentCache?.hasLoggedAssignment({
+        flagKey,
+        subjectKey,
+        allocationKey,
+        variationValue: variation,
+      })
+    ) {
+      return;
+    }
+
     const event: IAssignmentEvent = {
       allocation: allocationKey,
       experiment: `${flagKey}-${allocationKey}`,
@@ -387,6 +420,12 @@ export default class EppoClient implements IEppoClient {
     }
     try {
       this.assignmentLogger.logAssignment(event);
+      this.assignmentCache?.setLastLoggedAssignment({
+        flagKey,
+        subjectKey,
+        allocationKey,
+        variationValue: variation,
+      });
     } catch (error) {
       console.error(`[Eppo SDK] Error logging assignment event: ${error.message}`);
     }
