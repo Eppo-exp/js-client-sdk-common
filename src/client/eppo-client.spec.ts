@@ -418,7 +418,6 @@ describe('EppoClient E2E test', () => {
       client.getAssignment('subject-10', flagKey); // previously evicted, logged
       client.getAssignment('subject-12', flagKey); // cached
 
-      // call count should be 1 because the second call is a cache hit and not logged.
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(4);
     });
 
