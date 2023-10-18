@@ -370,12 +370,18 @@ describe('EppoClient E2E test', () => {
   });
 
   describe('assignment logging deduplication', () => {
-    it('logs duplicate assignments without an assignment cache', () => {
-      const mockLogger = td.object<IAssignmentLogger>();
+    let client: EppoClient;
+    let mockLogger: IAssignmentLogger;
+
+    beforeEach(() => {
+      mockLogger = td.object<IAssignmentLogger>();
 
       storage.setEntries({ [flagKey]: mockExperimentConfig });
-      const client = new EppoClient(storage);
+      client = new EppoClient(storage);
       client.setLogger(mockLogger);
+    });
+
+    it('logs duplicate assignments without an assignment cache', () => {
       client.disableAssignmentCache();
 
       client.getAssignment('subject-10', flagKey);
@@ -386,11 +392,6 @@ describe('EppoClient E2E test', () => {
     });
 
     it('does not log duplicate assignments', () => {
-      const mockLogger = td.object<IAssignmentLogger>();
-
-      storage.setEntries({ [flagKey]: mockExperimentConfig });
-      const client = new EppoClient(storage);
-      client.setLogger(mockLogger);
       client.useNonExpiringAssignmentCache();
 
       client.getAssignment('subject-10', flagKey);
@@ -401,11 +402,6 @@ describe('EppoClient E2E test', () => {
     });
 
     it('logs assignment again after the lru cache is full', () => {
-      const mockLogger = td.object<IAssignmentLogger>();
-
-      storage.setEntries({ [flagKey]: mockExperimentConfig });
-      const client = new EppoClient(storage);
-      client.setLogger(mockLogger);
       client.useLRUAssignmentCache(2);
 
       client.getAssignment('subject-10', flagKey); // logged
@@ -422,7 +418,6 @@ describe('EppoClient E2E test', () => {
     });
 
     it('does not cache assignments if the logger had an exception', () => {
-      const mockLogger = td.object<IAssignmentLogger>();
       td.when(mockLogger.logAssignment(td.matchers.anything())).thenThrow(
         new Error('logging error'),
       );
@@ -439,8 +434,6 @@ describe('EppoClient E2E test', () => {
     });
 
     it('logs for each unique flag', () => {
-      const mockLogger = td.object<IAssignmentLogger>();
-
       storage.setEntries({
         [flagKey]: mockExperimentConfig,
         'flag-2': {
@@ -452,8 +445,7 @@ describe('EppoClient E2E test', () => {
           name: 'flag-3',
         },
       });
-      const client = new EppoClient(storage);
-      client.setLogger(mockLogger);
+
       client.useNonExpiringAssignmentCache();
 
       client.getAssignment('subject-10', flagKey);
@@ -470,11 +462,6 @@ describe('EppoClient E2E test', () => {
     });
 
     it('logs twice for the same flag when rollout increases/flag changes', () => {
-      const mockLogger = td.object<IAssignmentLogger>();
-
-      storage.setEntries({ [flagKey]: mockExperimentConfig });
-      const client = new EppoClient(storage);
-      client.setLogger(mockLogger);
       client.useNonExpiringAssignmentCache();
 
       storage.setEntries({
@@ -544,9 +531,6 @@ describe('EppoClient E2E test', () => {
     });
 
     it('logs the same subject/flag/variation after two changes', () => {
-      const mockLogger = td.object<IAssignmentLogger>();
-      const client = new EppoClient(storage);
-      client.setLogger(mockLogger);
       client.useNonExpiringAssignmentCache();
 
       // original configuration version
