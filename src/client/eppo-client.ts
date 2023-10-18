@@ -1,6 +1,11 @@
 import * as md5 from 'md5';
 
-import { AssignmentCache, AvailableCacheTypes } from '../assignment-cache';
+import {
+  AssignmentCache,
+  AvailableCacheTypes,
+  LRUAssignmentCache,
+  NonExpiringAssignmentCache,
+} from '../assignment-cache';
 import { IAssignmentHooks } from '../assignment-hooks';
 import { IAssignmentEvent, IAssignmentLogger } from '../assignment-logger';
 import { IConfigurationStore } from '../configuration-store';
@@ -349,8 +354,19 @@ export default class EppoClient implements IEppoClient {
     this.flushQueuedEvents(); // log any events that may have been queued while initializing
   }
 
-  public setAssignmentCache(assignmentCache: AssignmentCache<AvailableCacheTypes> | undefined) {
-    this.assignmentCache = assignmentCache;
+  /**
+   * Assignment cache methods.
+   */
+  public disableAssignmentCache() {
+    this.assignmentCache = undefined;
+  }
+
+  public useNonExpiringAssignmentCache() {
+    this.assignmentCache = new NonExpiringAssignmentCache();
+  }
+
+  public useLRUAssignmentCache(maxSize: number) {
+    this.assignmentCache = new LRUAssignmentCache(maxSize);
   }
 
   public setIsGracefulFailureMode(gracefulFailureMode: boolean) {

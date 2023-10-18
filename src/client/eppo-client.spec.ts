@@ -13,7 +13,6 @@ import {
   readAssignmentTestData,
   readMockRacResponse,
 } from '../../test/testHelpers';
-import { LRUAssignmentCache, NonExpiringAssignmentCache } from '../assignment-cache';
 import { IAssignmentHooks } from '../assignment-hooks';
 import { IAssignmentLogger } from '../assignment-logger';
 import { IConfigurationStore } from '../configuration-store';
@@ -377,7 +376,7 @@ describe('EppoClient E2E test', () => {
       storage.setEntries({ [flagKey]: mockExperimentConfig });
       const client = new EppoClient(storage);
       client.setLogger(mockLogger);
-      client.setAssignmentCache(undefined);
+      client.disableAssignmentCache();
 
       client.getAssignment('subject-10', flagKey);
       client.getAssignment('subject-10', flagKey);
@@ -392,7 +391,7 @@ describe('EppoClient E2E test', () => {
       storage.setEntries({ [flagKey]: mockExperimentConfig });
       const client = new EppoClient(storage);
       client.setLogger(mockLogger);
-      client.setAssignmentCache(new NonExpiringAssignmentCache());
+      client.useNonExpiringAssignmentCache();
 
       client.getAssignment('subject-10', flagKey);
       client.getAssignment('subject-10', flagKey);
@@ -407,7 +406,7 @@ describe('EppoClient E2E test', () => {
       storage.setEntries({ [flagKey]: mockExperimentConfig });
       const client = new EppoClient(storage);
       client.setLogger(mockLogger);
-      client.setAssignmentCache(new LRUAssignmentCache(2));
+      client.useLRUAssignmentCache(2);
 
       client.getAssignment('subject-10', flagKey); // logged
       client.getAssignment('subject-10', flagKey); // cached
@@ -456,7 +455,7 @@ describe('EppoClient E2E test', () => {
       });
       const client = new EppoClient(storage);
       client.setLogger(mockLogger);
-      client.setAssignmentCache(new NonExpiringAssignmentCache());
+      client.useNonExpiringAssignmentCache();
 
       client.getAssignment('subject-10', flagKey);
       client.getAssignment('subject-10', flagKey);
@@ -477,7 +476,7 @@ describe('EppoClient E2E test', () => {
       storage.setEntries({ [flagKey]: mockExperimentConfig });
       const client = new EppoClient(storage);
       client.setLogger(mockLogger);
-      client.setAssignmentCache(new NonExpiringAssignmentCache());
+      client.useNonExpiringAssignmentCache();
 
       storage.setEntries({
         [flagKey]: {
@@ -549,7 +548,7 @@ describe('EppoClient E2E test', () => {
       const mockLogger = td.object<IAssignmentLogger>();
       const client = new EppoClient(storage);
       client.setLogger(mockLogger);
-      client.setAssignmentCache(new NonExpiringAssignmentCache());
+      client.useNonExpiringAssignmentCache();
 
       // original configuration version
       storage.setEntries({ [flagKey]: mockExperimentConfig });
