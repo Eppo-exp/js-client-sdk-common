@@ -370,7 +370,7 @@ describe('EppoClient E2E test', () => {
   });
 
   describe('assignment logging deduplication', () => {
-    it('logs duplicate assignments with an assignment cache', () => {
+    it('logs duplicate assignments without an assignment cache', () => {
       const mockLogger = td.object<IAssignmentLogger>();
 
       storage.setEntries({ [flagKey]: mockExperimentConfig });
@@ -400,7 +400,7 @@ describe('EppoClient E2E test', () => {
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
     });
 
-    it('logs assignment again after the cache is full', () => {
+    it('logs assignment again after the lru cache is full', () => {
       const mockLogger = td.object<IAssignmentLogger>();
 
       storage.setEntries({ [flagKey]: mockExperimentConfig });
