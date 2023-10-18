@@ -9,13 +9,11 @@ export interface AssignmentCacheKey {
   variationValue: EppoValue;
 }
 
-interface Cacheable {
+export interface Cacheable {
   get(key: string): string | undefined;
   set(key: string, value: string): void;
   has(key: string): boolean;
 }
-
-export type AvailableCacheTypes = Map<string, string> | LRUCache<string, string>;
 
 export abstract class AssignmentCache<T extends Cacheable> {
   // key -> variation value hash

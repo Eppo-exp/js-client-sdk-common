@@ -2,7 +2,7 @@ import * as md5 from 'md5';
 
 import {
   AssignmentCache,
-  AvailableCacheTypes,
+  Cacheable,
   LRUAssignmentCache,
   NonExpiringAssignmentCache,
 } from '../assignment-cache';
@@ -97,7 +97,7 @@ export default class EppoClient implements IEppoClient {
   private queuedEvents: IAssignmentEvent[] = [];
   private assignmentLogger: IAssignmentLogger | undefined;
   private isGracefulFailureMode = true;
-  private assignmentCache: AssignmentCache<AvailableCacheTypes> | undefined;
+  private assignmentCache: AssignmentCache<Cacheable> | undefined;
 
   constructor(private configurationStore: IConfigurationStore) {}
 
