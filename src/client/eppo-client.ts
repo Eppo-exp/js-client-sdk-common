@@ -12,6 +12,7 @@ import { IConfigurationStore } from '../configuration-store';
 import { MAX_EVENT_QUEUE_SIZE } from '../constants';
 import { IAllocation } from '../dto/allocation-dto';
 import { IExperimentConfiguration } from '../dto/experiment-configuration-dto';
+import { IHoldout } from '../dto/holdout-dto';
 import { EppoValue, ValueType } from '../eppo_value';
 import { getMD5Hash } from '../obfuscation';
 import { findMatchingRule } from '../rule_evaluator';
@@ -331,14 +332,40 @@ export default class EppoClient implements IEppoClient {
 
     // Compute variation for subject.
     const { subjectShards } = experimentConfig;
-    const { variations } = allocation;
+    const { variations, holdout } = allocation;
 
-    const shard = getShard(`assignment-${subjectKey}-${flagKey}`, subjectShards);
-    const assignedVariation = variations.find((variation) =>
-      isShardInRange(shard, variation.shardRange),
-    );
+    let assignedVariation, holdoutKey, holdoutVariation;
+
+    if (this.isInHoldoutSample(subjectKey, flagKey, experimentConfig, holdout)) {
+      const { statusQuo, shipped, keys } = holdout;
+      const holdoutShard = getShard(`holdout-${subjectKey}-${flagKey}`, subjectShards);
+      const matchingHoldout = keys.find((key) =>
+        isShardInRange(holdoutShard, key.statusQuoShardRange),
+      );
+      if (matchingHoldout) {
+        // The holdout serves status quo before rollout or within rollout split
+        holdoutKey = matchingHoldout?.holdoutKey;
+        assignedVariation = variations.find((variation) => variation.variationKey === statusQuo);
+        holdoutVariation = 'status_quo';
+      } else {
+        // To serve shipped, shipped and shippedShardRange are both defined
+        holdoutKey = keys.find(
+          (key) =>
+            key.shippedShardRange != null && isShardInRange(holdoutShard, key.shippedShardRange),
+        )?.holdoutKey;
+        assignedVariation = variations.find((variation) => variation.variationKey === shipped);
+        holdoutVariation = 'shipped';
+      }
+    } else {
+      const shard = getShard(`assignment-${subjectKey}-${flagKey}`, subjectShards);
+      assignedVariation = variations.find((variation) =>
+        isShardInRange(shard, variation.shardRange),
+      );
+    }
 
     const internalAssignment = {
+      holdoutKey,
+      holdoutVariation,
       allocationKey: matchedRule.allocationKey,
       assignment: EppoValue.generateEppoValue(
         expectedValueType,
@@ -457,6 +484,18 @@ export default class EppoClient implements IEppoClient {
     const { subjectShards } = experimentConfig;
     const { percentExposure } = allocation;
     const shard = getShard(`exposure-${subjectKey}-${flagKey}`, subjectShards);
+    return shard <= percentExposure * subjectShards;
+  }
+
+  private isInHoldoutSample(
+    subjectKey: string,
+    flagKey: string,
+    experimentConfig: IExperimentConfiguration,
+    holdout: IHoldout,
+  ): boolean {
+    const { subjectShards } = experimentConfig;
+    const { percentExposure } = holdout;
+    const shard = getShard(`holdout-${subjectKey}-${flagKey}`, subjectShards);
     return shard <= percentExposure * subjectShards;
   }
 }

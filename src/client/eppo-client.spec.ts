@@ -603,6 +603,78 @@ describe('EppoClient E2E test', () => {
     expect(assignment).toEqual('control');
   });
 
+  it('returns variation in holdout and logs holdout key if subject is held out', () => {
+    const entry = {
+      ...mockExperimentConfig,
+      allocations: {
+        allocation1: {
+          percentExposure: 1,
+          holdout: [
+            {
+              statusQuoVariationKey: 'variation-7',
+              shippedVariationKey: null,
+              totalHoldoutExposure: 0.2,
+              keyRanges: [
+                {
+                  key: 'holdout-2',
+                  statusQuoShardRange: {
+                    start: 0,
+                    end: 50,
+                  },
+                },
+                {
+                  key: 'holdout-3',
+                  statusQuoShardRange: {
+                    start: 51,
+                    end: 100,
+                  },
+                },
+              ],
+            },
+          ],
+          variations: [
+            {
+              name: 'control',
+              value: 'control',
+              typedValue: 'control',
+              shardRange: {
+                start: 0,
+                end: 34,
+              },
+              variationKey: 'variation-7',
+            },
+            {
+              name: 'variant-1',
+              value: 'variant-1',
+              typedValue: 'variant-1',
+              shardRange: {
+                start: 34,
+                end: 67,
+              },
+              variationKey: 'variation-8',
+            },
+            {
+              name: 'variant-2',
+              value: 'variant-2',
+              typedValue: 'variant-2',
+              shardRange: {
+                start: 67,
+                end: 100,
+              },
+              variationKey: 'variation-9',
+            },
+          ],
+        },
+      },
+    };
+
+    storage.setEntries({ [flagKey]: entry });
+
+    const client = new EppoClient(storage);
+    const assignment = client.getAssignment('subject-10', flagKey);
+    expect(assignment).toEqual('control');
+  });
+
   function getAssignmentsWithSubjectAttributes(
     subjectsWithAttributes: {
       subjectKey: string;
