@@ -696,6 +696,123 @@ describe('EppoClient E2E test', () => {
     expect(td.explain(mockLogger.logAssignment).calls[2].args[0].holdout).toEqual(null);
   });
 
+  it('returns the shipped variation and logs all_shipped_variants if subject is in holdout', () => {
+    const entry = {
+      ...mockExperimentConfig,
+      allocations: {
+        allocation1: {
+          percentExposure: 1,
+          holdout: {
+            statusQuo: 'variation-7',
+            shipped: 'variation-8',
+            percentExposure: 0.2,
+            keys: [
+              {
+                holdoutKey: 'holdout-2',
+                statusQuoShardRange: {
+                  start: 0,
+                  end: 25,
+                },
+                shippedShardRange: {
+                  start: 26,
+                  end: 50,
+                },
+              },
+              {
+                holdoutKey: 'holdout-3',
+                statusQuoShardRange: {
+                  start: 51,
+                  end: 75,
+                },
+                shippedShardRange: {
+                  start: 76,
+                  end: 100,
+                },
+              },
+            ],
+          },
+          variations: [
+            {
+              name: 'control',
+              value: 'control',
+              typedValue: 'control',
+              shardRange: {
+                start: 0,
+                end: 34,
+              },
+              variationKey: 'variation-7',
+            },
+            {
+              name: 'variant-1',
+              value: 'variant-1',
+              typedValue: 'variant-1',
+              shardRange: {
+                start: 34,
+                end: 67,
+              },
+              variationKey: 'variation-8',
+            },
+            {
+              name: 'variant-2',
+              value: 'variant-2',
+              typedValue: 'variant-2',
+              shardRange: {
+                start: 67,
+                end: 100,
+              },
+              variationKey: 'variation-9',
+            },
+          ],
+        },
+      },
+    };
+
+    storage.setEntries({ [flagKey]: entry });
+
+    const mockLogger = td.object<IAssignmentLogger>();
+    const client = new EppoClient(storage);
+    client.setLogger(mockLogger);
+    td.reset();
+
+    // subject-3 --> holdout exposure shard is 2, holdout assignment shard is 20
+    let assignment = client.getAssignment('subject-3', flagKey);
+    expect(assignment).toEqual('control');
+    expect(td.explain(mockLogger.logAssignment).calls[0].args[0].holdoutVariation).toEqual(
+      'status_quo',
+    );
+    expect(td.explain(mockLogger.logAssignment).calls[0].args[0].holdout).toEqual('holdout-2');
+
+    // subject-10 --> holdout exposure shard is 10, holdout assignment shard is 38
+    assignment = client.getAssignment('subject-10', flagKey);
+    expect(assignment).toEqual('variant-1');
+    expect(td.explain(mockLogger.logAssignment).calls[1].args[0].holdoutVariation).toEqual(
+      'all_shipped_variants',
+    );
+    expect(td.explain(mockLogger.logAssignment).calls[1].args[0].holdout).toEqual('holdout-2');
+
+    // subject-15 --> holdout exposure shard is 3, holdout assignment shard is 62
+    assignment = client.getAssignment('subject-15', flagKey);
+    expect(assignment).toEqual('control');
+    expect(td.explain(mockLogger.logAssignment).calls[2].args[0].holdoutVariation).toEqual(
+      'status_quo',
+    );
+    expect(td.explain(mockLogger.logAssignment).calls[2].args[0].holdout).toEqual('holdout-3');
+
+    // subject-97 --> holdout exposure shard is 5, holdout assignment shard is 98
+    assignment = client.getAssignment('subject-97', flagKey);
+    expect(assignment).toEqual('variant-1');
+    expect(td.explain(mockLogger.logAssignment).calls[3].args[0].holdoutVariation).toEqual(
+      'all_shipped_variants',
+    );
+    expect(td.explain(mockLogger.logAssignment).calls[3].args[0].holdout).toEqual('holdout-3');
+
+    // subject-80 --> holdout exposure shard is 27 (outside holdout), non-holdout assignment shard is 85
+    assignment = client.getAssignment('subject-80', flagKey);
+    expect(assignment).toEqual('variant-2');
+    expect(td.explain(mockLogger.logAssignment).calls[4].args[0].holdoutVariation).toEqual(null);
+    expect(td.explain(mockLogger.logAssignment).calls[4].args[0].holdout).toEqual(null);
+  });
+
   function getAssignmentsWithSubjectAttributes(
     subjectsWithAttributes: {
       subjectKey: string;
