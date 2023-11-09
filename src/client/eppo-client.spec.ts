@@ -99,6 +99,7 @@ describe('EppoClient E2E test', () => {
     allocations: {
       allocation1: {
         percentExposure: 1,
+        holdout: null,
         variations: [
           {
             name: 'control',
@@ -470,6 +471,7 @@ describe('EppoClient E2E test', () => {
           allocations: {
             allocation1: {
               percentExposure: 1,
+              holdout: null,
               variations: [
                 {
                   name: 'control',
@@ -502,6 +504,7 @@ describe('EppoClient E2E test', () => {
           allocations: {
             allocation1: {
               percentExposure: 1,
+              holdout: null,
               variations: [
                 {
                   name: 'control',
@@ -546,6 +549,7 @@ describe('EppoClient E2E test', () => {
           allocations: {
             allocation1: {
               percentExposure: 1,
+              holdout: null,
               variations: [
                 {
                   name: 'some-new-treatment',

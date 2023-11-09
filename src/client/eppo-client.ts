@@ -356,7 +356,7 @@ export default class EppoClient implements IEppoClient {
     let holdoutKey = null;
     let holdoutVariation = null;
 
-    if (this.isInHoldoutSample(subjectKey, flagKey, experimentConfig, holdout)) {
+    if (holdout && this.isInHoldoutSample(subjectKey, flagKey, experimentConfig, holdout)) {
       const { statusQuo, shipped, keys } = holdout;
       const holdoutShard = getShard(`holdout-assignment-${subjectKey}-${flagKey}`, subjectShards);
       let matchingHoldout = keys.find((key) =>
