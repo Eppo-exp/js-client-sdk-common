@@ -600,9 +600,9 @@ describe('EppoClient E2E test', () => {
 
     const client = new EppoClient(storage);
     let assignment = client.getAssignment('subject-10', flagKey, { appVersion: 9 });
-    expect(assignment).toEqual(null);
+    expect(assignment).toBeNull();
     assignment = client.getAssignment('subject-10', flagKey);
-    expect(assignment).toEqual(null);
+    expect(assignment).toBeNull();
     assignment = client.getAssignment('subject-10', flagKey, { appVersion: 11 });
     expect(assignment).toEqual('control');
   });
@@ -696,8 +696,8 @@ describe('EppoClient E2E test', () => {
     // subject-80 --> holdout exposure shard is 27 (outside holdout), non-holdout assignment shard is 85
     assignment = client.getAssignment('subject-80', flagKey);
     expect(assignment).toEqual('variant-2');
-    expect(td.explain(mockLogger.logAssignment).calls[2].args[0].holdoutVariation).toEqual(null);
-    expect(td.explain(mockLogger.logAssignment).calls[2].args[0].holdout).toEqual(null);
+    expect(td.explain(mockLogger.logAssignment).calls[2].args[0].holdoutVariation).toBeNull();
+    expect(td.explain(mockLogger.logAssignment).calls[2].args[0].holdout).toBeNull();
   });
 
   it('returns the shipped variation and logs all_shipped_variants if subject is in holdout', () => {
@@ -813,8 +813,8 @@ describe('EppoClient E2E test', () => {
     // subject-80 --> holdout exposure shard is 27 (outside holdout), non-holdout assignment shard is 85
     assignment = client.getAssignment('subject-80', flagKey);
     expect(assignment).toEqual('variant-2');
-    expect(td.explain(mockLogger.logAssignment).calls[4].args[0].holdoutVariation).toEqual(null);
-    expect(td.explain(mockLogger.logAssignment).calls[4].args[0].holdout).toEqual(null);
+    expect(td.explain(mockLogger.logAssignment).calls[4].args[0].holdoutVariation).toBeNull();
+    expect(td.explain(mockLogger.logAssignment).calls[4].args[0].holdout).toBeNull();
   });
 
   function getAssignmentsWithSubjectAttributes(
@@ -946,7 +946,7 @@ describe('EppoClient E2E test', () => {
           },
         );
 
-        expect(variation).not.toEqual(null);
+        expect(variation).not.toBeNull();
         expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
       });
     });
