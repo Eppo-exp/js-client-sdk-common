@@ -613,27 +613,24 @@ describe('EppoClient E2E test', () => {
       allocations: {
         allocation1: {
           percentExposure: 1,
-          holdout: {
-            statusQuo: 'variation-7',
-            shipped: null,
-            percentExposure: 0.2,
-            keys: [
-              {
-                holdoutKey: 'holdout-2',
-                statusQuoShardRange: {
-                  start: 0,
-                  end: 50,
-                },
+          statusQuoVariationKey: 'variation-7',
+          shippedVariationKey: null,
+          holdouts: [
+            {
+              holdoutKey: 'holdout-2',
+              statusQuoShardRange: {
+                start: 0,
+                end: 50,
               },
-              {
-                holdoutKey: 'holdout-3',
-                statusQuoShardRange: {
-                  start: 51,
-                  end: 100,
-                },
+            },
+            {
+              holdoutKey: 'holdout-3',
+              statusQuoShardRange: {
+                start: 51,
+                end: 100,
               },
-            ],
-          },
+            },
+          ],
           variations: [
             {
               name: 'control',
@@ -706,35 +703,32 @@ describe('EppoClient E2E test', () => {
       allocations: {
         allocation1: {
           percentExposure: 1,
-          holdout: {
-            statusQuo: 'variation-7',
-            shipped: 'variation-8',
-            percentExposure: 0.2,
-            keys: [
-              {
-                holdoutKey: 'holdout-2',
-                statusQuoShardRange: {
-                  start: 0,
-                  end: 25,
-                },
-                shippedShardRange: {
-                  start: 26,
-                  end: 50,
-                },
+          statusQuoVariationKey: 'variation-7',
+          shippedVariationKey: 'variation-8',
+          holdouts: [
+            {
+              holdoutKey: 'holdout-2',
+              statusQuoShardRange: {
+                start: 0,
+                end: 25,
               },
-              {
-                holdoutKey: 'holdout-3',
-                statusQuoShardRange: {
-                  start: 51,
-                  end: 75,
-                },
-                shippedShardRange: {
-                  start: 76,
-                  end: 100,
-                },
+              shippedShardRange: {
+                start: 26,
+                end: 50,
               },
-            ],
-          },
+            },
+            {
+              holdoutKey: 'holdout-3',
+              statusQuoShardRange: {
+                start: 51,
+                end: 75,
+              },
+              shippedShardRange: {
+                start: 76,
+                end: 100,
+              },
+            },
+          ],
           variations: [
             {
               name: 'control',
@@ -1003,6 +997,11 @@ describe(' EppoClient getAssignment From Obfuscated RAC', () => {
         experiment,
         valueType,
       );
+
+      // if (experiment == 'experiment_with_holdout') {
+      //   const res = assignments.map((a) => (a == null ? a : a.stringValue));
+      //   console.log(res);
+      // }
 
       switch (valueType) {
         case ValueTestType.BoolType: {
