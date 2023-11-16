@@ -13,6 +13,7 @@ import { MAX_EVENT_QUEUE_SIZE } from '../constants';
 import { IAllocation } from '../dto/allocation-dto';
 import { IExperimentConfiguration } from '../dto/experiment-configuration-dto';
 import { IHoldout } from '../dto/holdout-dto';
+import { IVariation } from '../dto/variation-dto';
 import { EppoValue, ValueType } from '../eppo_value';
 import { getMD5Hash } from '../obfuscation';
 import { findMatchingRule } from '../rule_evaluator';
@@ -350,37 +351,34 @@ export default class EppoClient implements IEppoClient {
 
     // Compute variation for subject.
     const { subjectShards } = experimentConfig;
-    const { variations, holdout } = allocation;
+    const { variations, holdouts, statusQuoVariationKey, shippedVariationKey } = allocation;
 
-    let assignedVariation;
-    let holdoutKey = null;
+    let assignedVariation: IVariation | undefined;
     let holdoutVariation = null;
 
-    if (holdout && this.isInHoldoutSample(subjectKey, flagKey, experimentConfig, holdout)) {
-      const { statusQuo, shipped, keys } = holdout;
-      const holdoutShard = getShard(`holdout-assignment-${subjectKey}-${flagKey}`, subjectShards);
-      let matchingHoldout = keys.find((key) =>
-        isShardInRange(holdoutShard, key.statusQuoShardRange),
-      );
-      if (matchingHoldout) {
-        // The holdout serves status quo before rollout or within rollout split
-        holdoutKey = matchingHoldout?.holdoutKey;
-        assignedVariation = variations.find((variation) => variation.variationKey === statusQuo);
-        holdoutVariation = 'status_quo';
-      } else {
-        // If holdout is serving shipped, shipped and shippedShardRange are both defined
-        matchingHoldout = keys.find(
-          (key) =>
-            key.shippedShardRange != null && isShardInRange(holdoutShard, key.shippedShardRange),
+    const holdoutShard = getShard(`holdout-${subjectKey}`, subjectShards);
+    const matchingHoldout = holdouts.find((holdout) => {
+      const { statusQuoShardRange, shippedShardRange } = holdout;
+      if (isShardInRange(holdoutShard, statusQuoShardRange)) {
+        assignedVariation = variations.find(
+          (variation) => variation.variationKey === statusQuoVariationKey,
         );
-        if (matchingHoldout) holdoutKey = matchingHoldout.holdoutKey;
-        assignedVariation = variations.find((variation) => variation.variationKey === shipped);
+        holdoutVariation = 'status_quo';
+      } else if (shippedShardRange && isShardInRange(holdoutShard, shippedShardRange)) {
+        assignedVariation = variations.find(
+          (variation) => variation.variationKey === shippedVariationKey,
+        );
         holdoutVariation = 'all_shipped_variants';
       }
+      return assignedVariation;
+    });
+    let holdoutKey = null;
+    if (matchingHoldout) {
+      holdoutKey = matchingHoldout.holdoutKey;
     } else {
-      const shard = getShard(`assignment-${subjectKey}-${flagKey}`, subjectShards);
+      const assignmentShard = getShard(`assignment-${subjectKey}-${flagKey}`, subjectShards);
       assignedVariation = variations.find((variation) =>
-        isShardInRange(shard, variation.shardRange),
+        isShardInRange(assignmentShard, variation.shardRange),
       );
     }
 
@@ -514,18 +512,6 @@ export default class EppoClient implements IEppoClient {
     const { subjectShards } = experimentConfig;
     const { percentExposure } = allocation;
     const shard = getShard(`exposure-${subjectKey}-${flagKey}`, subjectShards);
-    return shard <= percentExposure * subjectShards;
-  }
-
-  private isInHoldoutSample(
-    subjectKey: string,
-    flagKey: string,
-    experimentConfig: IExperimentConfiguration,
-    holdout: IHoldout,
-  ): boolean {
-    const { subjectShards } = experimentConfig;
-    const { percentExposure } = holdout;
-    const shard = getShard(`holdout-exposure-${subjectKey}-${flagKey}`, subjectShards);
     return shard <= percentExposure * subjectShards;
   }
 }
