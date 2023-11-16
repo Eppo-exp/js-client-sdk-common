@@ -363,7 +363,11 @@ export default class EppoClient implements IEppoClient {
         assignedVariation = variations.find(
           (variation) => variation.variationKey === statusQuoVariationKey,
         );
-        holdoutVariation = 'status_quo';
+        // Only log the holdout variation if this is a rollout allocation
+        // Only rollout allocations have shippedShardRange specified
+        if (shippedShardRange) {
+          holdoutVariation = 'status_quo';
+        }
       } else if (shippedShardRange && isShardInRange(holdoutShard, shippedShardRange)) {
         assignedVariation = variations.find(
           (variation) => variation.variationKey === shippedVariationKey,
