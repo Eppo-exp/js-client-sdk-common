@@ -1,4 +1,9 @@
-export type HoldoutVariationType = 'status_quo' | 'all_shipped_variants' | null;
+export enum HoldoutVariationEnum {
+  STATUS_QUO = 'status_quo',
+  ALL_SHIPPED = 'all_shipped_variants',
+}
+
+export type NullableHoldoutVariationType = HoldoutVariationEnum | null;
 
 /**
  * Holds data about the variation a subject was assigned to.
@@ -43,7 +48,7 @@ export interface IAssignmentEvent {
   /**
    * The Eppo holdout variation for the assigned variation
    */
-  holdoutVariation: HoldoutVariationType;
+  holdoutVariation: NullableHoldoutVariationType;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   subjectAttributes: Record<string, any>;

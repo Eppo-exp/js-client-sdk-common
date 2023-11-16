@@ -7,12 +7,16 @@ import {
   NonExpiringAssignmentCache,
 } from '../assignment-cache';
 import { IAssignmentHooks } from '../assignment-hooks';
-import { IAssignmentEvent, IAssignmentLogger, HoldoutVariationType } from '../assignment-logger';
+import {
+  IAssignmentEvent,
+  IAssignmentLogger,
+  HoldoutVariationEnum,
+  NullableHoldoutVariationType,
+} from '../assignment-logger';
 import { IConfigurationStore } from '../configuration-store';
 import { MAX_EVENT_QUEUE_SIZE } from '../constants';
 import { IAllocation } from '../dto/allocation-dto';
 import { IExperimentConfiguration } from '../dto/experiment-configuration-dto';
-import { IHoldout } from '../dto/holdout-dto';
 import { IVariation } from '../dto/variation-dto';
 import { EppoValue, ValueType } from '../eppo_value';
 import { getMD5Hash } from '../obfuscation';
@@ -298,7 +302,7 @@ export default class EppoClient implements IEppoClient {
     allocationKey: string | null;
     assignment: EppoValue;
     holdoutKey: string | null;
-    holdoutVariation: HoldoutVariationType;
+    holdoutVariation: NullableHoldoutVariationType;
   } {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
     validateNotBlank(flagKey, 'Invalid argument: flagKey cannot be blank');
@@ -366,13 +370,13 @@ export default class EppoClient implements IEppoClient {
         // Only log the holdout variation if this is a rollout allocation
         // Only rollout allocations have shippedShardRange specified
         if (shippedShardRange) {
-          holdoutVariation = 'status_quo';
+          holdoutVariation = HoldoutVariationEnum.STATUS_QUO;
         }
       } else if (shippedShardRange && isShardInRange(holdoutShard, shippedShardRange)) {
         assignedVariation = variations.find(
           (variation) => variation.variationKey === shippedVariationKey,
         );
-        holdoutVariation = 'all_shipped_variants';
+        holdoutVariation = HoldoutVariationEnum.ALL_SHIPPED;
       }
       return assignedVariation;
     });
@@ -390,7 +394,7 @@ export default class EppoClient implements IEppoClient {
       allocationKey: string;
       assignment: EppoValue;
       holdoutKey: string | null;
-      holdoutVariation: HoldoutVariationType;
+      holdoutVariation: NullableHoldoutVariationType;
     } = {
       allocationKey: matchedRule.allocationKey,
       assignment: EppoValue.generateEppoValue(
@@ -399,7 +403,7 @@ export default class EppoClient implements IEppoClient {
         assignedVariation?.typedValue,
       ),
       holdoutKey,
-      holdoutVariation: holdoutVariation as HoldoutVariationType,
+      holdoutVariation: holdoutVariation as NullableHoldoutVariationType,
     };
     return internalAssignment.assignment.isExpectedType() ? internalAssignment : nullAssignment;
   }
@@ -446,7 +450,7 @@ export default class EppoClient implements IEppoClient {
     variation: EppoValue,
     subjectKey: string,
     holdout: string | null,
-    holdoutVariation: HoldoutVariationType,
+    holdoutVariation: NullableHoldoutVariationType,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subjectAttributes: Record<string, any> | undefined = {},
   ) {
