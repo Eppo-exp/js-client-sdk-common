@@ -38,7 +38,7 @@ test-data:
 	cp ${gitDataDir}rac-experiments-v3.json ${testDataDir}
 	cp ${gitDataDir}rac-experiments-v3-obfuscated.json ${testDataDir}
 	cp -r ${gitDataDir}assignment-v2 ${testDataDir}
-	cp -r ${gitDataDir}assignment-v2-holdout/ ${testDataDir}assignment-v2
+	cp -r ${gitDataDir}assignment-v2-holdouts/. ${testDataDir}assignment-v2
 	rm -rf ${tempDir}
 
 ## prepare
