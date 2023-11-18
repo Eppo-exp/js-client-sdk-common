@@ -380,10 +380,8 @@ export default class EppoClient implements IEppoClient {
       }
       return assignedVariation;
     });
-    let holdoutKey = null;
-    if (matchingHoldout) {
-      holdoutKey = matchingHoldout.holdoutKey;
-    } else {
+    const holdoutKey = matchingHoldout?.holdoutKey ?? null;
+    if (!matchingHoldout) {
       const assignmentShard = getShard(`assignment-${subjectKey}-${flagKey}`, subjectShards);
       assignedVariation = variations.find((variation) =>
         isShardInRange(assignmentShard, variation.shardRange),
