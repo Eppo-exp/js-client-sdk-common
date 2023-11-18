@@ -109,7 +109,7 @@ describe('EppoClient E2E test', () => {
             typedValue: 'control',
             shardRange: {
               start: 0,
-              end: 3400,
+              end: 3333,
             },
           },
           {
@@ -117,8 +117,8 @@ describe('EppoClient E2E test', () => {
             value: 'variant-1',
             typedValue: 'variant-1',
             shardRange: {
-              start: 3400,
-              end: 6700,
+              start: 3333,
+              end: 6667,
             },
           },
           {
@@ -126,7 +126,7 @@ describe('EppoClient E2E test', () => {
             value: 'variant-2',
             typedValue: 'variant-2',
             shardRange: {
-              start: 6700,
+              start: 6667,
               end: 10000,
             },
           },
