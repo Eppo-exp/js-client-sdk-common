@@ -6,6 +6,7 @@ export interface IShardRange {
 }
 
 export interface IVariation {
+  variationKey: string;
   name: string;
   value: string;
   typedValue: IValue;

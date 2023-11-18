@@ -87,7 +87,7 @@ describe('EppoClient E2E test', () => {
   const mockExperimentConfig = {
     name: flagKey,
     enabled: true,
-    subjectShards: 100,
+    subjectShards: 10000,
     overrides: {},
     typedOverrides: {},
     rules: [
@@ -99,6 +99,9 @@ describe('EppoClient E2E test', () => {
     allocations: {
       allocation1: {
         percentExposure: 1,
+        statusQuoVariationKey: null,
+        shippedVariationKey: null,
+        holdouts: [],
         variations: [
           {
             name: 'control',
@@ -106,7 +109,7 @@ describe('EppoClient E2E test', () => {
             typedValue: 'control',
             shardRange: {
               start: 0,
-              end: 34,
+              end: 3333,
             },
           },
           {
@@ -114,8 +117,8 @@ describe('EppoClient E2E test', () => {
             value: 'variant-1',
             typedValue: 'variant-1',
             shardRange: {
-              start: 34,
-              end: 67,
+              start: 3333,
+              end: 6667,
             },
           },
           {
@@ -123,8 +126,8 @@ describe('EppoClient E2E test', () => {
             value: 'variant-2',
             typedValue: 'variant-2',
             shardRange: {
-              start: 67,
-              end: 100,
+              start: 6667,
+              end: 10000,
             },
           },
         ],
@@ -470,6 +473,9 @@ describe('EppoClient E2E test', () => {
           allocations: {
             allocation1: {
               percentExposure: 1,
+              statusQuoVariationKey: null,
+              shippedVariationKey: null,
+              holdouts: [],
               variations: [
                 {
                   name: 'control',
@@ -477,7 +483,7 @@ describe('EppoClient E2E test', () => {
                   typedValue: 'control',
                   shardRange: {
                     start: 0,
-                    end: 100,
+                    end: 10000,
                   },
                 },
                 {
@@ -502,6 +508,9 @@ describe('EppoClient E2E test', () => {
           allocations: {
             allocation1: {
               percentExposure: 1,
+              statusQuoVariationKey: null,
+              shippedVariationKey: null,
+              holdouts: [],
               variations: [
                 {
                   name: 'control',
@@ -518,7 +527,7 @@ describe('EppoClient E2E test', () => {
                   typedValue: 'treatment',
                   shardRange: {
                     start: 0,
-                    end: 100,
+                    end: 10000,
                   },
                 },
               ],
@@ -546,6 +555,9 @@ describe('EppoClient E2E test', () => {
           allocations: {
             allocation1: {
               percentExposure: 1,
+              statusQuoVariationKey: null,
+              shippedVariationKey: null,
+              holdouts: [],
               variations: [
                 {
                   name: 'some-new-treatment',
@@ -553,7 +565,7 @@ describe('EppoClient E2E test', () => {
                   typedValue: 'some-new-treatment',
                   shardRange: {
                     start: 0,
-                    end: 100,
+                    end: 10000,
                   },
                 },
               ],
@@ -596,11 +608,219 @@ describe('EppoClient E2E test', () => {
 
     const client = new EppoClient(storage);
     let assignment = client.getAssignment('subject-10', flagKey, { appVersion: 9 });
-    expect(assignment).toEqual(null);
+    expect(assignment).toBeNull();
     assignment = client.getAssignment('subject-10', flagKey);
-    expect(assignment).toEqual(null);
+    expect(assignment).toBeNull();
     assignment = client.getAssignment('subject-10', flagKey, { appVersion: 11 });
     expect(assignment).toEqual('control');
+  });
+
+  it('returns control variation and logs holdout key if subject is in holdout in an experiment allocation', () => {
+    const entry = {
+      ...mockExperimentConfig,
+      allocations: {
+        allocation1: {
+          percentExposure: 1,
+          statusQuoVariationKey: 'variation-7',
+          shippedVariationKey: null,
+          holdouts: [
+            {
+              holdoutKey: 'holdout-2',
+              statusQuoShardRange: {
+                start: 0,
+                end: 200,
+              },
+              shippedShardRange: null, // this is an experiment allocation because shippedShardRange is null
+            },
+            {
+              holdoutKey: 'holdout-3',
+              statusQuoShardRange: {
+                start: 200,
+                end: 400,
+              },
+              shippedShardRange: null,
+            },
+          ],
+          variations: [
+            {
+              name: 'control',
+              value: 'control',
+              typedValue: 'control',
+              shardRange: {
+                start: 0,
+                end: 3333,
+              },
+              variationKey: 'variation-7',
+            },
+            {
+              name: 'variant-1',
+              value: 'variant-1',
+              typedValue: 'variant-1',
+              shardRange: {
+                start: 3333,
+                end: 6667,
+              },
+              variationKey: 'variation-8',
+            },
+            {
+              name: 'variant-2',
+              value: 'variant-2',
+              typedValue: 'variant-2',
+              shardRange: {
+                start: 6667,
+                end: 10000,
+              },
+              variationKey: 'variation-9',
+            },
+          ],
+        },
+      },
+    };
+
+    storage.setEntries({ [flagKey]: entry });
+
+    const mockLogger = td.object<IAssignmentLogger>();
+    const client = new EppoClient(storage);
+    client.setLogger(mockLogger);
+    td.reset();
+
+    // subject-79 --> holdout shard is 186
+    let assignment = client.getAssignment('subject-79', flagKey);
+    expect(assignment).toEqual('control');
+    // Only log holdout key (not variation) if this is an experiment allocation
+    expect(td.explain(mockLogger.logAssignment).calls[0].args[0].holdoutVariation).toBeNull();
+    expect(td.explain(mockLogger.logAssignment).calls[0].args[0].holdout).toEqual('holdout-2');
+
+    // subject-8 --> holdout shard is 201
+    assignment = client.getAssignment('subject-8', flagKey);
+    expect(assignment).toEqual('control');
+    // Only log holdout key (not variation) if this is an experiment allocation
+    expect(td.explain(mockLogger.logAssignment).calls[1].args[0].holdoutVariation).toBeNull();
+    expect(td.explain(mockLogger.logAssignment).calls[1].args[0].holdout).toEqual('holdout-3');
+
+    // subject-11 --> holdout shard is 9137 (outside holdout), non-holdout assignment shard is 8414
+    assignment = client.getAssignment('subject-11', flagKey);
+    expect(assignment).toEqual('variant-2');
+    expect(td.explain(mockLogger.logAssignment).calls[2].args[0].holdoutVariation).toBeNull();
+    expect(td.explain(mockLogger.logAssignment).calls[2].args[0].holdout).toBeNull();
+  });
+
+  it('returns the shipped variation and logs holdout key and variation if subject is in holdout in a rollout allocation', () => {
+    const entry = {
+      ...mockExperimentConfig,
+      allocations: {
+        allocation1: {
+          percentExposure: 1,
+          statusQuoVariationKey: 'variation-7',
+          shippedVariationKey: 'variation-8',
+          holdouts: [
+            {
+              holdoutKey: 'holdout-2',
+              statusQuoShardRange: {
+                start: 0,
+                end: 100,
+              },
+              shippedShardRange: {
+                start: 100,
+                end: 200,
+              },
+            },
+            {
+              holdoutKey: 'holdout-3',
+              statusQuoShardRange: {
+                start: 200,
+                end: 300,
+              },
+              shippedShardRange: {
+                start: 300,
+                end: 400,
+              },
+            },
+          ],
+          variations: [
+            {
+              name: 'control',
+              value: 'control',
+              typedValue: 'control',
+              shardRange: {
+                start: 0,
+                end: 0,
+              },
+              variationKey: 'variation-7',
+            },
+            {
+              name: 'variant-1',
+              value: 'variant-1',
+              typedValue: 'variant-1',
+              shardRange: {
+                start: 0,
+                end: 0,
+              },
+              variationKey: 'variation-8',
+            },
+            {
+              name: 'variant-2',
+              value: 'variant-2',
+              typedValue: 'variant-2',
+              shardRange: {
+                start: 0,
+                end: 10000,
+              },
+              variationKey: 'variation-9',
+            },
+          ],
+        },
+      },
+    };
+
+    storage.setEntries({ [flagKey]: entry });
+
+    const mockLogger = td.object<IAssignmentLogger>();
+    const client = new EppoClient(storage);
+    client.setLogger(mockLogger);
+    td.reset();
+
+    // subject-227 --> holdout shard is 57
+    let assignment = client.getAssignment('subject-227', flagKey);
+    expect(assignment).toEqual('control');
+    // Log both holdout key and variation if this is a rollout allocation
+    expect(td.explain(mockLogger.logAssignment).calls[0].args[0].holdoutVariation).toEqual(
+      'status_quo',
+    );
+    expect(td.explain(mockLogger.logAssignment).calls[0].args[0].holdout).toEqual('holdout-2');
+
+    // subject-79 --> holdout shard is 186
+    assignment = client.getAssignment('subject-79', flagKey);
+    expect(assignment).toEqual('variant-1');
+    // Log both holdout key and variation if this is a rollout allocation
+    expect(td.explain(mockLogger.logAssignment).calls[1].args[0].holdoutVariation).toEqual(
+      'all_shipped_variants',
+    );
+    expect(td.explain(mockLogger.logAssignment).calls[1].args[0].holdout).toEqual('holdout-2');
+
+    // subject-8 --> holdout shard is 201
+    assignment = client.getAssignment('subject-8', flagKey);
+    expect(assignment).toEqual('control');
+    // Log both holdout key and variation if this is a rollout allocation
+    expect(td.explain(mockLogger.logAssignment).calls[2].args[0].holdoutVariation).toEqual(
+      'status_quo',
+    );
+    expect(td.explain(mockLogger.logAssignment).calls[2].args[0].holdout).toEqual('holdout-3');
+
+    // subject-50 --> holdout shard is 347
+    assignment = client.getAssignment('subject-50', flagKey);
+    expect(assignment).toEqual('variant-1');
+    // Log both holdout key and variation if this is a rollout allocation
+    expect(td.explain(mockLogger.logAssignment).calls[3].args[0].holdoutVariation).toEqual(
+      'all_shipped_variants',
+    );
+    expect(td.explain(mockLogger.logAssignment).calls[3].args[0].holdout).toEqual('holdout-3');
+
+    // subject-7 --> holdout shard is 9483 (outside holdout), non-holdout assignment shard is 8673
+    assignment = client.getAssignment('subject-7', flagKey);
+    expect(assignment).toEqual('variant-2');
+    expect(td.explain(mockLogger.logAssignment).calls[4].args[0].holdoutVariation).toBeNull();
+    expect(td.explain(mockLogger.logAssignment).calls[4].args[0].holdout).toBeNull();
   });
 
   function getAssignmentsWithSubjectAttributes(
@@ -732,7 +952,7 @@ describe('EppoClient E2E test', () => {
           },
         );
 
-        expect(variation).not.toEqual(null);
+        expect(variation).not.toBeNull();
         expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
       });
     });
