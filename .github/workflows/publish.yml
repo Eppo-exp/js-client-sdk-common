@@ -17,3 +17,9 @@ jobs:
         with:
           token: ${{ secrets.NPM_TOKEN }}
           access: public
+      - name: Upload npm debug log
+        if: failure()  # This step will run only if the previous steps failed
+        uses: actions/upload-artifact@v2
+        with:
+          name: npm-debug-logs
+          path: /home/runner/.npm/_logs/*.log
