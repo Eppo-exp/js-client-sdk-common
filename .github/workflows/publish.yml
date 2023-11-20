@@ -13,6 +13,7 @@ jobs:
           node-version: '16.x'
       - run: yarn install
       - run: yarn test
-      - run: yarn publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - uses: JS-DevTools/npm-publish@v3
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          access: public
