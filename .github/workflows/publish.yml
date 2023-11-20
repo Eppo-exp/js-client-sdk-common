@@ -2,9 +2,6 @@ name: Publish to NPM
 on:
   release:
     types: [published]
-  pull_request: # Remove before merge
-    paths:
-      - '**/*'
 
 jobs:
   publish:
@@ -18,7 +15,7 @@ jobs:
       - run: yarn test
       - uses: JS-DevTools/npm-publish@v3
         with:
-          token: ${{ secrets.NPM_CI_TOKEN }}
+          token: ${{ secrets.NPM_TOKEN }}
           access: public
       - name: Upload npm debug log
         if: failure()  # This step will run only if the previous steps failed
