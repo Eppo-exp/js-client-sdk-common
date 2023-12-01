@@ -361,7 +361,7 @@ export default class EppoClient implements IEppoClient {
     let holdoutVariation = null;
 
     const holdoutShard = getShard(`holdout-${subjectKey}`, subjectShards);
-    const matchingHoldout = holdouts.find((holdout) => {
+    const matchingHoldout = holdouts?.find((holdout) => {
       const { statusQuoShardRange, shippedShardRange } = holdout;
       if (isShardInRange(holdoutShard, statusQuoShardRange)) {
         assignedVariation = variations.find(
