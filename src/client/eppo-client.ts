@@ -3,8 +3,8 @@ import * as md5 from 'md5';
 import {
   AssignmentCache,
   Cacheable,
-  LRUAssignmentCache,
-  NonExpiringAssignmentCache,
+  LRUInMemoryAssignmentCache,
+  NonExpiringInMemoryAssignmentCache,
 } from '../assignment-cache';
 import { IAssignmentHooks } from '../assignment-hooks';
 import {
@@ -418,12 +418,16 @@ export default class EppoClient implements IEppoClient {
     this.assignmentCache = undefined;
   }
 
-  public useNonExpiringAssignmentCache() {
-    this.assignmentCache = new NonExpiringAssignmentCache();
+  public useNonExpiringInMemoryAssignmentCache() {
+    this.assignmentCache = new NonExpiringInMemoryAssignmentCache();
   }
 
-  public useLRUAssignmentCache(maxSize: number) {
-    this.assignmentCache = new LRUAssignmentCache(maxSize);
+  public useLRUInMemoryAssignmentCache(maxSize: number) {
+    this.assignmentCache = new LRUInMemoryAssignmentCache(maxSize);
+  }
+
+  public useCustomAssignmentCache(cache: AssignmentCache<Cacheable>) {
+    this.assignmentCache = cache;
   }
 
   public setIsGracefulFailureMode(gracefulFailureMode: boolean) {
