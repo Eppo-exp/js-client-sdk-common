@@ -395,7 +395,7 @@ describe('EppoClient E2E test', () => {
     });
 
     it('does not log duplicate assignments', () => {
-      client.useNonExpiringAssignmentCache();
+      client.useNonExpiringInMemoryAssignmentCache();
 
       client.getAssignment('subject-10', flagKey);
       client.getAssignment('subject-10', flagKey);
@@ -405,7 +405,7 @@ describe('EppoClient E2E test', () => {
     });
 
     it('logs assignment again after the lru cache is full', () => {
-      client.useLRUAssignmentCache(2);
+      client.useLRUInMemoryAssignmentCache(2);
 
       client.getAssignment('subject-10', flagKey); // logged
       client.getAssignment('subject-10', flagKey); // cached
@@ -449,7 +449,7 @@ describe('EppoClient E2E test', () => {
         },
       });
 
-      client.useNonExpiringAssignmentCache();
+      client.useNonExpiringInMemoryAssignmentCache();
 
       client.getAssignment('subject-10', flagKey);
       client.getAssignment('subject-10', flagKey);
@@ -465,7 +465,7 @@ describe('EppoClient E2E test', () => {
     });
 
     it('logs twice for the same flag when rollout increases/flag changes', () => {
-      client.useNonExpiringAssignmentCache();
+      client.useNonExpiringInMemoryAssignmentCache();
 
       storage.setEntries({
         [flagKey]: {
@@ -540,7 +540,7 @@ describe('EppoClient E2E test', () => {
     });
 
     it('logs the same subject/flag/variation after two changes', () => {
-      client.useNonExpiringAssignmentCache();
+      client.useNonExpiringInMemoryAssignmentCache();
 
       // original configuration version
       storage.setEntries({ [flagKey]: mockExperimentConfig });

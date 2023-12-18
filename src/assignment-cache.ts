@@ -54,7 +54,7 @@ export abstract class AssignmentCache<T extends Cacheable> {
  * The primary use case is for client-side SDKs, where the cache is only used
  * for a single user.
  */
-export class NonExpiringAssignmentCache extends AssignmentCache<Map<string, string>> {
+export class NonExpiringInMemoryAssignmentCache extends AssignmentCache<Map<string, string>> {
   constructor() {
     super(new Map<string, string>());
   }
@@ -69,7 +69,7 @@ export class NonExpiringAssignmentCache extends AssignmentCache<Map<string, stri
  * multiple users. In this case, the cache size should be set to the maximum number
  * of users that can be active at the same time.
  */
-export class LRUAssignmentCache extends AssignmentCache<LRUCache<string, string>> {
+export class LRUInMemoryAssignmentCache extends AssignmentCache<LRUCache<string, string>> {
   constructor(maxSize: number) {
     super(new LRUCache<string, string>({ max: maxSize }));
   }

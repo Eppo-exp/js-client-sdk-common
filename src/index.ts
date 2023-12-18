@@ -1,3 +1,4 @@
+import { AssignmentCache } from './assignment-cache';
 import { IAssignmentHooks } from './assignment-hooks';
 import { IAssignmentLogger, IAssignmentEvent } from './assignment-logger';
 import EppoClient, { IEppoClient } from './client/eppo-client';
@@ -18,4 +19,5 @@ export {
   HttpClient,
   validation,
   IConfigurationStore,
+  AssignmentCache,
 };
