@@ -65,7 +65,10 @@ export default function initPoller(
       }
     }
 
-    const startRegularPolling = !stopped && options?.pollAfterSuccessfulStart;
+    const startRegularPolling =
+      !stopped &&
+      ((!startErrorToThrow && options?.pollAfterSuccessfulStart) ||
+        (startErrorToThrow && options?.pollAfterFailedStart));
     if (startRegularPolling) {
       console.log(`Eppo SDK starting regularly polling every ${intervalMs} ms`, { stopped });
       setTimeout(poll, intervalMs);

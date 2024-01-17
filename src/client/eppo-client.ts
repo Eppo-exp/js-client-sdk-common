@@ -140,7 +140,6 @@ export default class EppoClient implements IEppoClient {
     this.configurationRequestConfig = configurationRequestConfig;
   }
 
-  // TODO: unit test
   public async fetchFlagConfigurations() {
     if (!this.configurationRequestConfig) {
       throw new Error(

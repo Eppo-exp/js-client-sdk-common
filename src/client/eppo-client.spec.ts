@@ -16,7 +16,12 @@ import {
 import { IAssignmentHooks } from '../assignment-hooks';
 import { IAssignmentLogger } from '../assignment-logger';
 import { IConfigurationStore } from '../configuration-store';
-import { MAX_EVENT_QUEUE_SIZE, POLL_INTERVAL_MS, POLL_JITTER_PCT } from '../constants';
+import {
+  DEFAULT_INITIAL_CONFIG_REQUEST_RETRIES,
+  MAX_EVENT_QUEUE_SIZE,
+  POLL_INTERVAL_MS,
+  POLL_JITTER_PCT,
+} from '../constants';
 import { OperatorType } from '../dto/rule-dto';
 import { EppoValue } from '../eppo_value';
 import ExperimentConfigurationRequestor from '../experiment-configuration-requestor';
@@ -1129,12 +1134,35 @@ describe('Eppo Client constructed with configuration request parameters can fetc
       sdkVersion: packageJson.version,
     };
     mockServerResponseFunc = (res) => res.status(200).body(racBody);
+
+    // We only want to fake setTimeout() and clearTimeout()
+    jest.useFakeTimers({
+      advanceTimers: true,
+      doNotFake: [
+        'Date',
+        'hrtime',
+        'nextTick',
+        'performance',
+        'queueMicrotask',
+        'requestAnimationFrame',
+        'cancelAnimationFrame',
+        'requestIdleCallback',
+        'cancelIdleCallback',
+        'setImmediate',
+        'clearImmediate',
+        'setInterval',
+        'clearInterval',
+      ],
+    });
+  });
+
+  afterEach(() => {
+    jest.clearAllTimers();
+    jest.useRealTimers();
   });
 
   afterAll(() => {
     mock.teardown();
-    jest.clearAllTimers();
-    jest.useRealTimers();
   });
 
   it('Fetches initial configuration', async () => {
@@ -1149,7 +1177,10 @@ describe('Eppo Client constructed with configuration request parameters can fetc
     expect(variation).toBe('green');
   });
 
-  it('retries initial configuration request before resolving', async () => {
+  it.each([
+    { pollAfterSuccessfulInitialization: true },
+    { pollAfterSuccessfulInitialization: false },
+  ])('retries initial configuration request with config %p', async (configModification) => {
     let callCount = 0;
     mockServerResponseFunc = (res) => {
       if (++callCount === 1) {
@@ -1161,7 +1192,11 @@ describe('Eppo Client constructed with configuration request parameters can fetc
       }
     };
 
-    jest.useFakeTimers();
+    const { pollAfterSuccessfulInitialization } = configModification;
+    requestConfiguration = {
+      ...requestConfiguration,
+      pollAfterSuccessfulInitialization,
+    };
     client = new EppoClient(storage, requestConfiguration);
     client.setIsGracefulFailureMode(false);
     // no configuration loaded
@@ -1183,8 +1218,59 @@ describe('Eppo Client constructed with configuration request parameters can fetc
 
     await jest.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
     // By default, no more polling
-    expect(callCount).toBe(2);
+    expect(callCount).toBe(pollAfterSuccessfulInitialization ? 3 : 2);
   });
+
+  it.each([{ pollAfterFailedInitialization: true }, { pollAfterFailedInitialization: false }])(
+    'initial configuration request fails with config %p',
+    async (configModification) => {
+      let callCount = 0;
+      mockServerResponseFunc = (res) => {
+        if (++callCount <= DEFAULT_INITIAL_CONFIG_REQUEST_RETRIES) {
+          // Throw an error for initialization calls
+          console.log('>>>> mock server 500');
+          return res.status(500);
+        } else {
+          // Return a mock object for subsequent calls
+          console.log('>>>> mock server 200');
+          return res.status(200).body(racBody);
+        }
+      };
+
+      const { pollAfterFailedInitialization } = configModification;
+
+      // Note: fake time does not play well with errors bubbled up after setTimeout (event loop,
+      // timeout queue, message queue stuff) so we don't allow retries when rethrowing.
+      const throwOnFailedInitialization = true;
+      const numInitialRequestRetries = 0;
+
+      requestConfiguration = {
+        ...requestConfiguration,
+        numInitialRequestRetries,
+        throwOnFailedInitialization,
+        pollAfterFailedInitialization,
+      };
+      client = new EppoClient(storage, requestConfiguration);
+      client.setIsGracefulFailureMode(false);
+      // no configuration loaded
+      expect(client.getAssignment(subjectForGreenVariation, flagKey)).toBeNull();
+
+      // By not awaiting (yet) only the first attempt should be fired off before test execution below resumes
+      await expect(client.fetchFlagConfigurations()).rejects.toThrow();
+      expect(callCount).toBe(1);
+      // still no configuration loaded
+      expect(client.getAssignment(subjectForGreenVariation, flagKey)).toBeNull();
+
+      // Advance timers mid-init to allow retrying
+      await jest.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+
+      // if pollAfterFailedInitialization = true, we will poll later and get a config, otherwise not
+      expect(callCount).toBe(pollAfterFailedInitialization ? 2 : 1);
+      expect(client.getAssignment(subjectForGreenVariation, flagKey)).toBe(
+        pollAfterFailedInitialization ? 'green' : null,
+      );
+    },
+  );
 
   /*
   it('gives up initial request and throws error after hitting max retries', async () => {
@@ -1195,8 +1281,7 @@ describe('Eppo Client constructed with configuration request parameters can fetc
       throw new Error('Intentional Thrown Error For Test');
     });
 
-    // Note: fake time does not play well with errors bubbled up after setTimeout (event loop,
-    // timeout queue, message queue stuff) so we don't allow retries when rethrowing.
+    
     await expect(
       init({
         apiKey: 'dummy',
