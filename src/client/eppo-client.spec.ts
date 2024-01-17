@@ -3,7 +3,7 @@
  */
 import axios from 'axios';
 import * as td from 'testdouble';
-import mock from 'xhr-mock';
+import mock, { MockResponse } from 'xhr-mock';
 
 import {
   IAssignmentTestCase,
@@ -22,7 +22,7 @@ import { EppoValue } from '../eppo_value';
 import ExperimentConfigurationRequestor from '../experiment-configuration-requestor';
 import HttpClient from '../http-client';
 
-import EppoClient from './eppo-client';
+import EppoClient, { ConfigurationRequestConfig } from './eppo-client';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const packageJson = require('../../package.json');
@@ -1100,4 +1100,44 @@ describe(' EppoClient getAssignment From Obfuscated RAC', () => {
       }
     });
   }
+});
+
+describe('Eppo Client constructed with configuration request parameters can fetch configurations', () => {
+  let client: EppoClient;
+  let storage: IConfigurationStore;
+  let requestConfiguration: ConfigurationRequestConfig;
+  let mockServerResponseFunc: (res: MockResponse) => MockResponse;
+
+  const flagKey = 'randomization_algo';
+  const subjectForGreenVariation = 'subject-identiferA';
+
+  beforeAll(() => {
+    mock.setup();
+    mock.get(/randomized_assignment\/v3\/config*/, (_req, res) => {
+      return mockServerResponseFunc(res);
+    });
+  });
+
+  beforeEach(() => {
+    storage = new TestConfigurationStore();
+    requestConfiguration = {
+      apiKey: 'dummy key',
+      sdkName: 'js-client-sdk-common',
+      sdkVersion: packageJson.version,
+    };
+    const rac = readMockRacResponse(MOCK_RAC_RESPONSE_FILE);
+    mockServerResponseFunc = (res) => res.status(200).body(JSON.stringify(rac));
+  });
+
+  it('Fetches initial configuration', async () => {
+    client = new EppoClient(storage, requestConfiguration);
+    client.setIsGracefulFailureMode(false);
+    // no configuration loaded
+    let variation = client.getAssignment(subjectForGreenVariation, flagKey);
+    expect(variation).toBeNull();
+    // have client fetch configurations
+    await client.fetchFlagConfigurations();
+    variation = client.getAssignment(subjectForGreenVariation, flagKey);
+    expect(variation).toBe('green');
+  });
 });

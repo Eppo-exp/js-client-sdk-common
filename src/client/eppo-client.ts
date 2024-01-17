@@ -134,7 +134,7 @@ export default class EppoClient implements IEppoClient {
 
   constructor(
     configurationStore: IConfigurationStore,
-    configurationRequestConfig: ConfigurationRequestConfig | undefined,
+    configurationRequestConfig?: ConfigurationRequestConfig,
   ) {
     this.configurationStore = configurationStore;
     this.configurationRequestConfig = configurationRequestConfig;
