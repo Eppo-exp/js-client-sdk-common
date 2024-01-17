@@ -1,4 +1,4 @@
-module.exports = {
+const jestConfig = {
   moduleFileExtensions: ['js', 'json', 'ts'],
   rootDir: './',
   moduleNameMapper: {
@@ -12,9 +12,6 @@ module.exports = {
   collectCoverageFrom: ['**/*.(t|j)s'],
   coverageDirectory: 'coverage/',
   testEnvironment: 'node',
-  globals: {
-    'ts-jest': {
-      isolatedModules: true,
-    },
-  },
 };
+
+export default jestConfig;
