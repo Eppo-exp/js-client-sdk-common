@@ -33,6 +33,7 @@ describe('poller', () => {
 
       const poller = initPoller(testIntervalMs, errorThrowingThenSuccessCallback, {
         maxStartRetries: pollerRetries,
+        pollAfterSuccessfulStart: true,
       });
 
       // By not awaiting (yet) only the first call should be fired off before execution below resumes
@@ -125,6 +126,7 @@ describe('poller', () => {
       const poller = initPoller(testIntervalMs, errorThrowingCallback, {
         maxStartRetries: pollerRetries,
         errorOnFailedStart: false,
+        pollAfterSuccessfulStart: true,
         pollAfterFailedStart: true,
       });
 
@@ -152,7 +154,7 @@ describe('poller', () => {
 
   describe('polling after startup', () => {
     it('starts polling at interval', async () => {
-      const poller = initPoller(testIntervalMs, noOpCallback);
+      const poller = initPoller(testIntervalMs, noOpCallback, { pollAfterSuccessfulStart: true });
       await poller.start();
       td.verify(noOpCallback(), { times: 1 });
       await jest.advanceTimersByTimeAsync(testIntervalMs);
@@ -162,7 +164,7 @@ describe('poller', () => {
     });
 
     it('stops polling', async () => {
-      const poller = initPoller(testIntervalMs, noOpCallback);
+      const poller = initPoller(testIntervalMs, noOpCallback, { pollAfterSuccessfulStart: true });
       await poller.start();
       td.verify(noOpCallback(), { times: 1 });
       poller.stop();
@@ -188,6 +190,7 @@ describe('poller', () => {
       };
 
       const poller = initPoller(testIntervalMs, mostlyErrorThrowingCallback, {
+        pollAfterSuccessfulStart: true,
         maxPollRetries: pollerRetries,
       });
       await poller.start();
@@ -236,6 +239,7 @@ describe('poller', () => {
       };
 
       const poller = initPoller(testIntervalMs, alwaysErrorAfterFirstCallback, {
+        pollAfterSuccessfulStart: true,
         maxPollRetries: pollerRetries,
       });
       await poller.start();

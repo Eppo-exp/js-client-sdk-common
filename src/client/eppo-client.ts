@@ -1,3 +1,4 @@
+import axios from 'axios';
 import * as md5 from 'md5';
 
 import {
@@ -14,12 +15,22 @@ import {
   NullableHoldoutVariationType,
 } from '../assignment-logger';
 import { IConfigurationStore } from '../configuration-store';
-import { MAX_EVENT_QUEUE_SIZE } from '../constants';
+import {
+  BASE_URL as DEFAULT_BASE_URL,
+  DEFAULT_INITIAL_CONFIG_REQUEST_RETRIES,
+  DEFAULT_POLL_CONFIG_REQUEST_RETRIES,
+  DEFAULT_REQUEST_TIMEOUT_MILLIS,
+  MAX_EVENT_QUEUE_SIZE,
+  POLL_INTERVAL_MS,
+} from '../constants';
 import { IAllocation } from '../dto/allocation-dto';
 import { IExperimentConfiguration } from '../dto/experiment-configuration-dto';
 import { IVariation } from '../dto/variation-dto';
 import { EppoValue, ValueType } from '../eppo_value';
+import ExperimentConfigurationRequestor from '../experiment-configuration-requestor';
+import HttpClient from '../http-client';
 import { getMD5Hash } from '../obfuscation';
+import initPoller, { IPoller } from '../poller';
 import { findMatchingRule } from '../rule_evaluator';
 import { getShard, isShardInRange } from '../shard';
 import { validateNotBlank } from '../validation';
@@ -99,13 +110,83 @@ export interface IEppoClient {
   ): object | null;
 }
 
+export type ConfigurationRequestConfig = {
+  apiKey: string;
+  sdkVersion: string;
+  sdkName: string;
+  baseUrl?: string;
+  requestTimeoutMs?: number;
+  numInitialRequestRetries?: number;
+  numPollRequestRetries?: number;
+  pollAfterSuccessfulInitialization?: boolean;
+  pollAfterFailedInitialization?: boolean;
+  throwOnFailedInitialization?: boolean;
+};
+
 export default class EppoClient implements IEppoClient {
   private queuedEvents: IAssignmentEvent[] = [];
   private assignmentLogger: IAssignmentLogger | undefined;
   private isGracefulFailureMode = true;
   private assignmentCache: AssignmentCache<Cacheable> | undefined;
+  private configurationStore: IConfigurationStore;
+  private configurationRequestConfig: ConfigurationRequestConfig | undefined;
+  private poller: IPoller | undefined;
 
-  constructor(private configurationStore: IConfigurationStore) {}
+  constructor(
+    configurationStore: IConfigurationStore,
+    configurationRequestConfig: ConfigurationRequestConfig | undefined,
+  ) {
+    this.configurationStore = configurationStore;
+    this.configurationRequestConfig = configurationRequestConfig;
+  }
+
+  // TODO: unit test
+  public async fetchFlagConfigurations() {
+    if (!this.configurationRequestConfig) {
+      throw new Error(
+        'Eppo SDK unable to fetch flag configurations without a request configuration',
+      );
+    }
+
+    if (this.poller) {
+      // if fetchFlagConfigurations() was previously called, stop any polling process from that call
+      this.poller.stop();
+    }
+
+    const axiosInstance = axios.create({
+      baseURL: this.configurationRequestConfig.baseUrl || DEFAULT_BASE_URL,
+      timeout: this.configurationRequestConfig.requestTimeoutMs || DEFAULT_REQUEST_TIMEOUT_MILLIS,
+    });
+    const httpClient = new HttpClient(axiosInstance, {
+      apiKey: this.configurationRequestConfig.apiKey,
+      sdkName: this.configurationRequestConfig.sdkName,
+      sdkVersion: this.configurationRequestConfig.sdkVersion,
+    });
+    const configurationRequestor = new ExperimentConfigurationRequestor(
+      this.configurationStore,
+      httpClient,
+    );
+
+    this.poller = initPoller(
+      POLL_INTERVAL_MS,
+      configurationRequestor.fetchAndStoreConfigurations.bind(configurationRequestor),
+      {
+        maxStartRetries:
+          this.configurationRequestConfig.numInitialRequestRetries ??
+          DEFAULT_INITIAL_CONFIG_REQUEST_RETRIES,
+        maxPollRetries:
+          this.configurationRequestConfig.numPollRequestRetries ??
+          DEFAULT_POLL_CONFIG_REQUEST_RETRIES,
+        pollAfterSuccessfulStart:
+          this.configurationRequestConfig.pollAfterSuccessfulInitialization ?? false,
+        pollAfterFailedStart:
+          this.configurationRequestConfig.pollAfterFailedInitialization ?? false,
+        errorOnFailedStart: this.configurationRequestConfig.throwOnFailedInitialization ?? false,
+      },
+    );
+
+    await this.poller.start();
+  }
 
   // @deprecated getAssignment is deprecated in favor of the typed get<Type>Assignment methods
   public getAssignment(

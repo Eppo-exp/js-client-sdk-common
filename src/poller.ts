@@ -9,6 +9,8 @@ export interface IPoller {
   stop: () => void;
 }
 
+// TODO: change this to a class with methods instead of something that returns a function
+
 export default function initPoller(
   intervalMs: number,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -16,6 +18,8 @@ export default function initPoller(
   options?: {
     maxPollRetries?: number;
     maxStartRetries?: number;
+    // TODO: consider enum for polling behavior (NONE, SUCCESS, ALWAYS)
+    pollAfterSuccessfulStart?: boolean;
     errorOnFailedStart?: boolean;
     pollAfterFailedStart?: boolean;
   },
@@ -61,7 +65,8 @@ export default function initPoller(
       }
     }
 
-    if (!stopped) {
+    const startRegularPolling = !stopped && options?.pollAfterSuccessfulStart;
+    if (startRegularPolling) {
       console.log(`Eppo SDK starting regularly polling every ${intervalMs} ms`, { stopped });
       setTimeout(poll, intervalMs);
     }
