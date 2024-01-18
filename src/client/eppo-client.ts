@@ -130,7 +130,7 @@ export default class EppoClient implements IEppoClient {
   private assignmentCache: AssignmentCache<Cacheable> | undefined;
   private configurationStore: IConfigurationStore;
   private configurationRequestConfig: ConfigurationRequestConfig | undefined;
-  private poller: IPoller | undefined;
+  private requestPoller: IPoller | undefined;
 
   constructor(
     configurationStore: IConfigurationStore,
@@ -147,9 +147,9 @@ export default class EppoClient implements IEppoClient {
       );
     }
 
-    if (this.poller) {
+    if (this.requestPoller) {
       // if fetchFlagConfigurations() was previously called, stop any polling process from that call
-      this.poller.stop();
+      this.requestPoller.stop();
     }
 
     const axiosInstance = axios.create({
@@ -166,7 +166,7 @@ export default class EppoClient implements IEppoClient {
       httpClient,
     );
 
-    this.poller = initPoller(
+    this.requestPoller = initPoller(
       POLL_INTERVAL_MS,
       configurationRequestor.fetchAndStoreConfigurations.bind(configurationRequestor),
       {
@@ -184,7 +184,7 @@ export default class EppoClient implements IEppoClient {
       },
     );
 
-    await this.poller.start();
+    await this.requestPoller.start();
   }
 
   // @deprecated getAssignment is deprecated in favor of the typed get<Type>Assignment methods
