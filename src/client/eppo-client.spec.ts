@@ -1178,8 +1178,8 @@ describe('Eppo Client constructed with configuration request parameters can fetc
   });
 
   it.each([
-    { pollAfterSuccessfulInitialization: true },
     { pollAfterSuccessfulInitialization: false },
+    { pollAfterSuccessfulInitialization: true },
   ])('retries initial configuration request with config %p', async (configModification) => {
     let callCount = 0;
     mockServerResponseFunc = (res) => {
@@ -1221,56 +1221,59 @@ describe('Eppo Client constructed with configuration request parameters can fetc
     expect(callCount).toBe(pollAfterSuccessfulInitialization ? 3 : 2);
   });
 
-  it.each([{ pollAfterFailedInitialization: true }, { pollAfterFailedInitialization: false }])(
-    'initial configuration request fails with config %p',
-    async (configModification) => {
-      let callCount = 0;
-      mockServerResponseFunc = (res) => {
-        if (++callCount <= DEFAULT_INITIAL_CONFIG_REQUEST_RETRIES) {
-          // Throw an error for initialization calls
-          console.log('>>>> mock server 500');
-          return res.status(500);
-        } else {
-          // Return a mock object for subsequent calls
-          console.log('>>>> mock server 200');
-          return res.status(200).body(racBody);
-        }
-      };
+  it.each([
+    { pollAfterFailedInitialization: false, throwOnFailedInitialization: false },
+    { pollAfterFailedInitialization: false, throwOnFailedInitialization: true },
+    { pollAfterFailedInitialization: true, throwOnFailedInitialization: false },
+    { pollAfterFailedInitialization: true, throwOnFailedInitialization: true },
+  ])('initial configuration request fails with config %p', async (configModification) => {
+    let callCount = 0;
+    mockServerResponseFunc = (res) => {
+      if (++callCount === 1) {
+        // Throw an error for initialization call
+        return res.status(500);
+      } else {
+        // Return a mock object for subsequent calls
+        return res.status(200).body(racBody);
+      }
+    };
 
-      const { pollAfterFailedInitialization } = configModification;
+    const { pollAfterFailedInitialization, throwOnFailedInitialization } = configModification;
 
-      // Note: fake time does not play well with errors bubbled up after setTimeout (event loop,
-      // timeout queue, message queue stuff) so we don't allow retries when rethrowing.
-      const throwOnFailedInitialization = true;
-      const numInitialRequestRetries = 0;
+    // Note: fake time does not play well with errors bubbled up after setTimeout (event loop,
+    // timeout queue, message queue stuff) so we don't allow retries when rethrowing.
+    const numInitialRequestRetries = 0;
 
-      requestConfiguration = {
-        ...requestConfiguration,
-        numInitialRequestRetries,
-        throwOnFailedInitialization,
-        pollAfterFailedInitialization,
-      };
-      client = new EppoClient(storage, requestConfiguration);
-      client.setIsGracefulFailureMode(false);
-      // no configuration loaded
-      expect(client.getAssignment(subjectForGreenVariation, flagKey)).toBeNull();
+    requestConfiguration = {
+      ...requestConfiguration,
+      numInitialRequestRetries,
+      throwOnFailedInitialization,
+      pollAfterFailedInitialization,
+    };
+    client = new EppoClient(storage, requestConfiguration);
+    client.setIsGracefulFailureMode(false);
+    // no configuration loaded
+    expect(client.getAssignment(subjectForGreenVariation, flagKey)).toBeNull();
 
-      // By not awaiting (yet) only the first attempt should be fired off before test execution below resumes
+    // By not awaiting (yet) only the first attempt should be fired off before test execution below resumes
+    if (throwOnFailedInitialization) {
       await expect(client.fetchFlagConfigurations()).rejects.toThrow();
-      expect(callCount).toBe(1);
-      // still no configuration loaded
-      expect(client.getAssignment(subjectForGreenVariation, flagKey)).toBeNull();
+    } else {
+      await expect(client.fetchFlagConfigurations()).resolves.toBeUndefined();
+    }
+    expect(callCount).toBe(1);
+    // still no configuration loaded
+    expect(client.getAssignment(subjectForGreenVariation, flagKey)).toBeNull();
 
-      // Advance timers mid-init to allow retrying
-      await jest.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+    // Advance timers so a post-init poll can take place
+    await jest.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 1.5);
 
-      // if pollAfterFailedInitialization = true, we will poll later and get a config, otherwise not
-      expect(callCount).toBe(pollAfterFailedInitialization ? 2 : 1);
-      expect(client.getAssignment(subjectForGreenVariation, flagKey)).toBe(
-        pollAfterFailedInitialization ? 'green' : null,
-      );
-    },
-  );
+    // if pollAfterFailedInitialization = true, we will poll later and get a config, otherwise not
+    expect(callCount).toBe(pollAfterFailedInitialization ? 2 : 1);
+    expect(client.getAssignment(subjectForGreenVariation, flagKey)).toBe(
+      pollAfterFailedInitialization ? 'green' : null,
+    );
+  });
 
   /*
   it('gives up initial request and throws error after hitting max retries', async () => {
