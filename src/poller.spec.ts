@@ -119,8 +119,9 @@ describe('poller', () => {
       const pollerRetries = 1;
       let callCount = 0;
       const errorThrowingCallback = async () => {
-        ++callCount;
-        throw new Error('Intentional Error For Test');
+        if (++callCount <= 3) {
+          throw new Error('Intentional Error For Test');
+        }
       };
 
       const poller = initPoller(testIntervalMs, errorThrowingCallback, {
@@ -138,7 +139,7 @@ describe('poller', () => {
       expect(callCount).toBe(2); // retry 1 fails and stops
 
       await jest.advanceTimersByTimeAsync(maxRetryDelay);
-      expect(callCount).toBe(2); // no more retries
+      expect(callCount).toBe(2); // no more initialization retries
 
       // Await poller.start() so it can finish its execution before this test proceeds
       await startPromise;
@@ -147,8 +148,16 @@ describe('poller', () => {
 
       // Advance time enough for regular polling to have begun (as configured)
       await jest.advanceTimersByTimeAsync(testIntervalMs);
-      // There should have been a regular poll done
+      // First regular poll fails
       expect(callCount).toBe(3);
+      // Advance time for exponential backoff
+      await jest.advanceTimersByTimeAsync(testIntervalMs * 2 + maxRetryDelay);
+      // Second regular poll succeeds
+      expect(callCount).toBe(4);
+      // Advance time normal interval
+      await jest.advanceTimersByTimeAsync(testIntervalMs);
+      // Third regular poll also succeeds
+      expect(callCount).toBe(5);
     });
   });
 

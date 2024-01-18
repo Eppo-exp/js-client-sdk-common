@@ -1107,7 +1107,7 @@ describe(' EppoClient getAssignment From Obfuscated RAC', () => {
   }
 });
 
-describe('Eppo Client constructed with configuration request parameters can fetch configurations', () => {
+describe('Eppo Client constructed with configuration request parameters', () => {
   let client: EppoClient;
   let storage: IConfigurationStore;
   let requestConfiguration: ConfigurationRequestConfig;
@@ -1274,77 +1274,4 @@ describe('Eppo Client constructed with configuration request parameters can fetc
       pollAfterFailedInitialization ? 'green' : null,
     );
   });
-
-  /*
-  it('gives up initial request and throws error after hitting max retries', async () => {
-    td.replace(HttpClient.prototype, 'get');
-    let callCount = 0;
-    td.when(HttpClient.prototype.get(td.matchers.anything())).thenDo(async () => {
-      callCount += 1;
-      throw new Error('Intentional Thrown Error For Test');
-    });
-
-    
-    await expect(
-      init({
-        apiKey: 'dummy',
-        baseUrl: `http://127.0.0.1:${TEST_SERVER_PORT}`,
-        assignmentLogger: mockLogger,
-        numInitialRequestRetries: 0,
-      }),
-    ).rejects.toThrow();
-
-    expect(callCount).toBe(1);
-
-    // Assignments resolve to null
-    const client = getInstance();
-    expect(client.getStringAssignment('subject', flagKey)).toBeNull();
-
-    // Expect no further configuration requests
-    await jest.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
-    expect(callCount).toBe(1);
-  });
-
-  it('gives up initial request but still polls later if configured to do so', async () => {
-    td.replace(HttpClient.prototype, 'get');
-    let callCount = 0;
-    td.when(HttpClient.prototype.get(td.matchers.anything())).thenDo(() => {
-      if (++callCount <= 2) {
-        // Throw an error for the first call
-        throw new Error('Intentional Thrown Error For Test');
-      } else {
-        // Return a mock object for subsequent calls
-        return mockConfigResponse;
-      }
-    });
-
-    // By not awaiting (yet) only the first attempt should be fired off before test execution below resumes
-    const initPromise = init({
-      apiKey: 'dummy',
-      baseUrl: `http://127.0.0.1:${TEST_SERVER_PORT}`,
-      assignmentLogger: mockLogger,
-      throwOnFailedInitialization: false,
-      pollAfterFailedInitialization: true,
-    });
-
-    // Advance timers mid-init to allow retrying
-    await jest.advanceTimersByTimeAsync(maxRetryDelay);
-
-    // Initialization configured to not throw error
-    await initPromise;
-    expect(callCount).toBe(2);
-
-    // Initial assignments resolve to null
-    const client = getInstance();
-    expect(client.getStringAssignment('subject', flagKey)).toBeNull();
-
-    await jest.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
-
-    // Expect a new call from poller
-    expect(callCount).toBe(3);
-
-    // Assignments now working
-    expect(client.getStringAssignment('subject', flagKey)).toBe('control');
-  });
-  */
 });

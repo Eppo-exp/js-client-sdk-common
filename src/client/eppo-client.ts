@@ -19,7 +19,7 @@ import {
   BASE_URL as DEFAULT_BASE_URL,
   DEFAULT_INITIAL_CONFIG_REQUEST_RETRIES,
   DEFAULT_POLL_CONFIG_REQUEST_RETRIES,
-  DEFAULT_REQUEST_TIMEOUT_MILLIS,
+  DEFAULT_REQUEST_TIMEOUT_MS as DEFAULT_REQUEST_TIMEOUT_MS,
   MAX_EVENT_QUEUE_SIZE,
   POLL_INTERVAL_MS,
 } from '../constants';
@@ -154,7 +154,7 @@ export default class EppoClient implements IEppoClient {
 
     const axiosInstance = axios.create({
       baseURL: this.configurationRequestConfig.baseUrl || DEFAULT_BASE_URL,
-      timeout: this.configurationRequestConfig.requestTimeoutMs || DEFAULT_REQUEST_TIMEOUT_MILLIS,
+      timeout: this.configurationRequestConfig.requestTimeoutMs || DEFAULT_REQUEST_TIMEOUT_MS,
     });
     const httpClient = new HttpClient(axiosInstance, {
       apiKey: this.configurationRequestConfig.apiKey,
