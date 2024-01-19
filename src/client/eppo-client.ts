@@ -117,6 +117,8 @@ export interface IEppoClient {
 
   fetchFlagConfigurations(): void;
 
+  stopPolling(): void;
+
   setIsGracefulFailureMode(gracefulFailureMode: boolean): void;
 }
 
@@ -195,6 +197,12 @@ export default class EppoClient implements IEppoClient {
     );
 
     await this.requestPoller.start();
+  }
+
+  public stopPolling() {
+    if (this.requestPoller) {
+      this.requestPoller.stop();
+    }
   }
 
   // @deprecated getAssignment is deprecated in favor of the typed get<Type>Assignment methods

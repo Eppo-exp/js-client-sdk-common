@@ -28,6 +28,7 @@ export default function initPoller(
   let failedAttempts = 0;
   let nextPollMs = intervalMs;
   let previousPollFailed = false;
+  let nextTimer: NodeJS.Timeout | undefined = undefined;
 
   const start = async () => {
     stopped = false;
@@ -76,7 +77,7 @@ export default function initPoller(
 
     if (startRegularPolling) {
       console.log(`Eppo SDK starting regularly polling every ${intervalMs} ms`);
-      setTimeout(poll, intervalMs);
+      nextTimer = setTimeout(poll, intervalMs);
     } else {
       console.log(`Eppo SDK will not poll for configuration updates`);
     }
@@ -90,6 +91,9 @@ export default function initPoller(
   const stop = () => {
     if (!stopped) {
       stopped = true;
+      if (nextTimer) {
+        clearTimeout(nextTimer);
+      }
       console.log('Eppo SDK polling stopped');
     }
   };
