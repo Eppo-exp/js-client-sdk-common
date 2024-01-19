@@ -27,7 +27,7 @@ import { EppoValue } from '../eppo_value';
 import ExperimentConfigurationRequestor from '../experiment-configuration-requestor';
 import HttpClient from '../http-client';
 
-import EppoClient, { ConfigurationRequestConfig } from './eppo-client';
+import EppoClient, { ExperimentConfigurationRequestParameters } from './eppo-client';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const packageJson = require('../../package.json');
@@ -1110,7 +1110,7 @@ describe(' EppoClient getAssignment From Obfuscated RAC', () => {
 describe('Eppo Client constructed with configuration request parameters', () => {
   let client: EppoClient;
   let storage: IConfigurationStore;
-  let requestConfiguration: ConfigurationRequestConfig;
+  let requestConfiguration: ExperimentConfigurationRequestParameters;
   let mockServerResponseFunc: (res: MockResponse) => MockResponse;
 
   const racBody = JSON.stringify(readMockRacResponse(MOCK_RAC_RESPONSE_FILE));

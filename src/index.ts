@@ -1,7 +1,10 @@
 import { AssignmentCache } from './assignment-cache';
 import { IAssignmentHooks } from './assignment-hooks';
 import { IAssignmentLogger, IAssignmentEvent } from './assignment-logger';
-import EppoClient, { IEppoClient } from './client/eppo-client';
+import EppoClient, {
+  ExperimentConfigurationRequestParameters,
+  IEppoClient,
+} from './client/eppo-client';
 import { IConfigurationStore } from './configuration-store';
 import * as constants from './constants';
 import ExperimentConfigurationRequestor from './experiment-configuration-requestor';
@@ -20,4 +23,5 @@ export {
   validation,
   IConfigurationStore,
   AssignmentCache,
+  ExperimentConfigurationRequestParameters,
 };

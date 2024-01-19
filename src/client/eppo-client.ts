@@ -108,9 +108,19 @@ export interface IEppoClient {
     subjectAttributes?: Record<string, any>,
     assignmentHooks?: IAssignmentHooks,
   ): object | null;
+
+  setLogger(logger: IAssignmentLogger): void;
+
+  useLRUInMemoryAssignmentCache(maxSize: number): void;
+
+  useCustomAssignmentCache(cache: AssignmentCache<Cacheable>): void;
+
+  fetchFlagConfigurations(): void;
+
+  setIsGracefulFailureMode(gracefulFailureMode: boolean): void;
 }
 
-export type ConfigurationRequestConfig = {
+export type ExperimentConfigurationRequestParameters = {
   apiKey: string;
   sdkVersion: string;
   sdkName: string;
@@ -129,12 +139,12 @@ export default class EppoClient implements IEppoClient {
   private isGracefulFailureMode = true;
   private assignmentCache: AssignmentCache<Cacheable> | undefined;
   private configurationStore: IConfigurationStore;
-  private configurationRequestConfig: ConfigurationRequestConfig | undefined;
+  private configurationRequestConfig: ExperimentConfigurationRequestParameters | undefined;
   private requestPoller: IPoller | undefined;
 
   constructor(
     configurationStore: IConfigurationStore,
-    configurationRequestConfig?: ConfigurationRequestConfig,
+    configurationRequestConfig?: ExperimentConfigurationRequestParameters,
   ) {
     this.configurationStore = configurationStore;
     this.configurationRequestConfig = configurationRequestConfig;
