@@ -16,12 +16,7 @@ import {
 import { IAssignmentHooks } from '../assignment-hooks';
 import { IAssignmentLogger } from '../assignment-logger';
 import { IConfigurationStore } from '../configuration-store';
-import {
-  DEFAULT_INITIAL_CONFIG_REQUEST_RETRIES,
-  MAX_EVENT_QUEUE_SIZE,
-  POLL_INTERVAL_MS,
-  POLL_JITTER_PCT,
-} from '../constants';
+import { MAX_EVENT_QUEUE_SIZE, POLL_INTERVAL_MS, POLL_JITTER_PCT } from '../constants';
 import { OperatorType } from '../dto/rule-dto';
 import { EppoValue } from '../eppo_value';
 import ExperimentConfigurationRequestor from '../experiment-configuration-requestor';
