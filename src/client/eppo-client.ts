@@ -1,3 +1,4 @@
+import axios from 'axios';
 import * as md5 from 'md5';
 
 import {
@@ -14,12 +15,22 @@ import {
   NullableHoldoutVariationType,
 } from '../assignment-logger';
 import { IConfigurationStore } from '../configuration-store';
-import { MAX_EVENT_QUEUE_SIZE } from '../constants';
+import {
+  BASE_URL as DEFAULT_BASE_URL,
+  DEFAULT_INITIAL_CONFIG_REQUEST_RETRIES,
+  DEFAULT_POLL_CONFIG_REQUEST_RETRIES,
+  DEFAULT_REQUEST_TIMEOUT_MS as DEFAULT_REQUEST_TIMEOUT_MS,
+  MAX_EVENT_QUEUE_SIZE,
+  POLL_INTERVAL_MS,
+} from '../constants';
 import { IAllocation } from '../dto/allocation-dto';
 import { IExperimentConfiguration } from '../dto/experiment-configuration-dto';
 import { IVariation } from '../dto/variation-dto';
 import { EppoValue, ValueType } from '../eppo_value';
+import ExperimentConfigurationRequestor from '../experiment-configuration-requestor';
+import HttpClient from '../http-client';
 import { getMD5Hash } from '../obfuscation';
+import initPoller, { IPoller } from '../poller';
 import { findMatchingRule } from '../rule_evaluator';
 import { getShard, isShardInRange } from '../shard';
 import { validateNotBlank } from '../validation';
@@ -97,15 +108,102 @@ export interface IEppoClient {
     subjectAttributes?: Record<string, any>,
     assignmentHooks?: IAssignmentHooks,
   ): object | null;
+
+  setLogger(logger: IAssignmentLogger): void;
+
+  useLRUInMemoryAssignmentCache(maxSize: number): void;
+
+  useCustomAssignmentCache(cache: AssignmentCache<Cacheable>): void;
+
+  fetchFlagConfigurations(): void;
+
+  stopPolling(): void;
+
+  setIsGracefulFailureMode(gracefulFailureMode: boolean): void;
 }
+
+export type ExperimentConfigurationRequestParameters = {
+  apiKey: string;
+  sdkVersion: string;
+  sdkName: string;
+  baseUrl?: string;
+  requestTimeoutMs?: number;
+  numInitialRequestRetries?: number;
+  numPollRequestRetries?: number;
+  pollAfterSuccessfulInitialization?: boolean;
+  pollAfterFailedInitialization?: boolean;
+  throwOnFailedInitialization?: boolean;
+};
 
 export default class EppoClient implements IEppoClient {
   private queuedEvents: IAssignmentEvent[] = [];
   private assignmentLogger: IAssignmentLogger | undefined;
   private isGracefulFailureMode = true;
   private assignmentCache: AssignmentCache<Cacheable> | undefined;
+  private configurationStore: IConfigurationStore;
+  private configurationRequestConfig: ExperimentConfigurationRequestParameters | undefined;
+  private requestPoller: IPoller | undefined;
 
-  constructor(private configurationStore: IConfigurationStore) {}
+  constructor(
+    configurationStore: IConfigurationStore,
+    configurationRequestConfig?: ExperimentConfigurationRequestParameters,
+  ) {
+    this.configurationStore = configurationStore;
+    this.configurationRequestConfig = configurationRequestConfig;
+  }
+
+  public async fetchFlagConfigurations() {
+    if (!this.configurationRequestConfig) {
+      throw new Error(
+        'Eppo SDK unable to fetch flag configurations without a request configuration',
+      );
+    }
+
+    if (this.requestPoller) {
+      // if fetchFlagConfigurations() was previously called, stop any polling process from that call
+      this.requestPoller.stop();
+    }
+
+    const axiosInstance = axios.create({
+      baseURL: this.configurationRequestConfig.baseUrl || DEFAULT_BASE_URL,
+      timeout: this.configurationRequestConfig.requestTimeoutMs || DEFAULT_REQUEST_TIMEOUT_MS,
+    });
+    const httpClient = new HttpClient(axiosInstance, {
+      apiKey: this.configurationRequestConfig.apiKey,
+      sdkName: this.configurationRequestConfig.sdkName,
+      sdkVersion: this.configurationRequestConfig.sdkVersion,
+    });
+    const configurationRequestor = new ExperimentConfigurationRequestor(
+      this.configurationStore,
+      httpClient,
+    );
+
+    this.requestPoller = initPoller(
+      POLL_INTERVAL_MS,
+      configurationRequestor.fetchAndStoreConfigurations.bind(configurationRequestor),
+      {
+        maxStartRetries:
+          this.configurationRequestConfig.numInitialRequestRetries ??
+          DEFAULT_INITIAL_CONFIG_REQUEST_RETRIES,
+        maxPollRetries:
+          this.configurationRequestConfig.numPollRequestRetries ??
+          DEFAULT_POLL_CONFIG_REQUEST_RETRIES,
+        pollAfterSuccessfulStart:
+          this.configurationRequestConfig.pollAfterSuccessfulInitialization ?? false,
+        pollAfterFailedStart:
+          this.configurationRequestConfig.pollAfterFailedInitialization ?? false,
+        errorOnFailedStart: this.configurationRequestConfig.throwOnFailedInitialization ?? false,
+      },
+    );
+
+    await this.requestPoller.start();
+  }
+
+  public stopPolling() {
+    if (this.requestPoller) {
+      this.requestPoller.stop();
+    }
+  }
 
   // @deprecated getAssignment is deprecated in favor of the typed get<Type>Assignment methods
   public getAssignment(

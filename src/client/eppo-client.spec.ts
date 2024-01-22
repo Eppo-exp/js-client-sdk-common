@@ -3,7 +3,7 @@
  */
 import axios from 'axios';
 import * as td from 'testdouble';
-import mock from 'xhr-mock';
+import mock, { MockResponse } from 'xhr-mock';
 
 import {
   IAssignmentTestCase,
@@ -16,19 +16,19 @@ import {
 import { IAssignmentHooks } from '../assignment-hooks';
 import { IAssignmentLogger } from '../assignment-logger';
 import { IConfigurationStore } from '../configuration-store';
-import { MAX_EVENT_QUEUE_SIZE } from '../constants';
+import { MAX_EVENT_QUEUE_SIZE, POLL_INTERVAL_MS, POLL_JITTER_PCT } from '../constants';
 import { OperatorType } from '../dto/rule-dto';
 import { EppoValue } from '../eppo_value';
 import ExperimentConfigurationRequestor from '../experiment-configuration-requestor';
 import HttpClient from '../http-client';
 
-import EppoClient from './eppo-client';
+import EppoClient, { ExperimentConfigurationRequestParameters } from './eppo-client';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const packageJson = require('../../package.json');
 
 class TestConfigurationStore implements IConfigurationStore {
-  private store = {};
+  private store: Record<string, string> = {};
 
   public get<T>(key: string): T {
     const rval = this.store[key];
@@ -1100,4 +1100,173 @@ describe(' EppoClient getAssignment From Obfuscated RAC', () => {
       }
     });
   }
+});
+
+describe('Eppo Client constructed with configuration request parameters', () => {
+  let client: EppoClient;
+  let storage: IConfigurationStore;
+  let requestConfiguration: ExperimentConfigurationRequestParameters;
+  let mockServerResponseFunc: (res: MockResponse) => MockResponse;
+
+  const racBody = JSON.stringify(readMockRacResponse(MOCK_RAC_RESPONSE_FILE));
+  const flagKey = 'randomization_algo';
+  const subjectForGreenVariation = 'subject-identiferA';
+
+  const maxRetryDelay = POLL_INTERVAL_MS * POLL_JITTER_PCT;
+
+  beforeAll(() => {
+    mock.setup();
+    mock.get(/randomized_assignment\/v3\/config*/, (_req, res) => {
+      return mockServerResponseFunc(res);
+    });
+  });
+
+  beforeEach(() => {
+    storage = new TestConfigurationStore();
+    requestConfiguration = {
+      apiKey: 'dummy key',
+      sdkName: 'js-client-sdk-common',
+      sdkVersion: packageJson.version,
+    };
+    mockServerResponseFunc = (res) => res.status(200).body(racBody);
+
+    // We only want to fake setTimeout() and clearTimeout()
+    jest.useFakeTimers({
+      advanceTimers: true,
+      doNotFake: [
+        'Date',
+        'hrtime',
+        'nextTick',
+        'performance',
+        'queueMicrotask',
+        'requestAnimationFrame',
+        'cancelAnimationFrame',
+        'requestIdleCallback',
+        'cancelIdleCallback',
+        'setImmediate',
+        'clearImmediate',
+        'setInterval',
+        'clearInterval',
+      ],
+    });
+  });
+
+  afterEach(() => {
+    jest.clearAllTimers();
+    jest.useRealTimers();
+  });
+
+  afterAll(() => {
+    mock.teardown();
+  });
+
+  it('Fetches initial configuration', async () => {
+    client = new EppoClient(storage, requestConfiguration);
+    client.setIsGracefulFailureMode(false);
+    // no configuration loaded
+    let variation = client.getAssignment(subjectForGreenVariation, flagKey);
+    expect(variation).toBeNull();
+    // have client fetch configurations
+    await client.fetchFlagConfigurations();
+    variation = client.getAssignment(subjectForGreenVariation, flagKey);
+    expect(variation).toBe('green');
+  });
+
+  it.each([
+    { pollAfterSuccessfulInitialization: false },
+    { pollAfterSuccessfulInitialization: true },
+  ])('retries initial configuration request with config %p', async (configModification) => {
+    let callCount = 0;
+    mockServerResponseFunc = (res) => {
+      if (++callCount === 1) {
+        // Throw an error for the first call
+        return res.status(500);
+      } else {
+        // Return a mock object for subsequent calls
+        return res.status(200).body(racBody);
+      }
+    };
+
+    const { pollAfterSuccessfulInitialization } = configModification;
+    requestConfiguration = {
+      ...requestConfiguration,
+      pollAfterSuccessfulInitialization,
+    };
+    client = new EppoClient(storage, requestConfiguration);
+    client.setIsGracefulFailureMode(false);
+    // no configuration loaded
+    let variation = client.getAssignment(subjectForGreenVariation, flagKey);
+    expect(variation).toBeNull();
+
+    // By not awaiting (yet) only the first attempt should be fired off before test execution below resumes
+    const fetchPromise = client.fetchFlagConfigurations();
+
+    // Advance timers mid-init to allow retrying
+    await jest.advanceTimersByTimeAsync(maxRetryDelay);
+
+    // Await so it can finish its initialization before this test proceeds
+    await fetchPromise;
+
+    variation = client.getAssignment(subjectForGreenVariation, flagKey);
+    expect(variation).toBe('green');
+    expect(callCount).toBe(2);
+
+    await jest.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+    // By default, no more polling
+    expect(callCount).toBe(pollAfterSuccessfulInitialization ? 3 : 2);
+  });
+
+  it.each([
+    { pollAfterFailedInitialization: false, throwOnFailedInitialization: false },
+    { pollAfterFailedInitialization: false, throwOnFailedInitialization: true },
+    { pollAfterFailedInitialization: true, throwOnFailedInitialization: false },
+    { pollAfterFailedInitialization: true, throwOnFailedInitialization: true },
+  ])('initial configuration request fails with config %p', async (configModification) => {
+    let callCount = 0;
+    mockServerResponseFunc = (res) => {
+      if (++callCount === 1) {
+        // Throw an error for initialization call
+        return res.status(500);
+      } else {
+        // Return a mock object for subsequent calls
+        return res.status(200).body(racBody);
+      }
+    };
+
+    const { pollAfterFailedInitialization, throwOnFailedInitialization } = configModification;
+
+    // Note: fake time does not play well with errors bubbled up after setTimeout (event loop,
+    // timeout queue, message queue stuff) so we don't allow retries when rethrowing.
+    const numInitialRequestRetries = 0;
+
+    requestConfiguration = {
+      ...requestConfiguration,
+      numInitialRequestRetries,
+      throwOnFailedInitialization,
+      pollAfterFailedInitialization,
+    };
+    client = new EppoClient(storage, requestConfiguration);
+    client.setIsGracefulFailureMode(false);
+    // no configuration loaded
+    expect(client.getAssignment(subjectForGreenVariation, flagKey)).toBeNull();
+
+    // By not awaiting (yet) only the first attempt should be fired off before test execution below resumes
+    if (throwOnFailedInitialization) {
+      await expect(client.fetchFlagConfigurations()).rejects.toThrow();
+    } else {
+      await expect(client.fetchFlagConfigurations()).resolves.toBeUndefined();
+    }
+    expect(callCount).toBe(1);
+    // still no configuration loaded
+    expect(client.getAssignment(subjectForGreenVariation, flagKey)).toBeNull();
+
+    // Advance timers so a post-init poll can take place
+    await jest.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 1.5);
+
+    // if pollAfterFailedInitialization = true, we will poll later and get a config, otherwise not
+    expect(callCount).toBe(pollAfterFailedInitialization ? 2 : 1);
+    expect(client.getAssignment(subjectForGreenVariation, flagKey)).toBe(
+      pollAfterFailedInitialization ? 'green' : null,
+    );
+  });
 });
