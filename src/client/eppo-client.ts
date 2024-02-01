@@ -30,7 +30,7 @@ import { EppoValue, ValueType } from '../eppo_value';
 import ExperimentConfigurationRequestor from '../experiment-configuration-requestor';
 import HttpClient from '../http-client';
 import { getMD5Hash } from '../obfuscation';
-import initPoller, { IPoller } from '../poller';
+import initPoller, { IPoller, _pollerStats } from '../poller';
 import { findMatchingRule } from '../rule_evaluator';
 import { getShard, isShardInRange } from '../shard';
 import { validateNotBlank } from '../validation';
@@ -58,6 +58,18 @@ export interface IEppoClient {
     subjectAttributes?: Record<string, any>,
     assignmentHooks?: IAssignmentHooks,
   ): string | null;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  _pollerStats(): any;
+
+  _getStringAssignmentWithReason(
+    subjectKey: string,
+    flagKey: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    subjectAttributes?: Record<string, any>,
+    assignmentHooks?: IAssignmentHooks,
+    obfuscated?: boolean,
+  ): { assignment: string | null; reason: string };
 
   /**
    * Maps a subject to a variation for a given experiment.
@@ -150,6 +162,13 @@ export default class EppoClient implements IEppoClient {
   ) {
     this.configurationStore = configurationStore;
     this.configurationRequestConfig = configurationRequestConfig;
+  }
+
+  /**
+   * @deprecated added for temporary debugging
+   */
+  public _pollerStats() {
+    return _pollerStats();
   }
 
   public async fetchFlagConfigurations() {
@@ -251,6 +270,43 @@ export default class EppoClient implements IEppoClient {
     } catch (error) {
       return this.rethrowIfNotGraceful(error);
     }
+  }
+
+  /**
+   * @deprecated added for temporary debugging
+   */
+  public _getStringAssignmentWithReason(
+    subjectKey: string,
+    flagKey: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    subjectAttributes: Record<string, any> = {},
+    assignmentHooks?: IAssignmentHooks | undefined,
+    obfuscated = false,
+  ): { assignment: string | null; reason: string } {
+    let assignment: string | null = null;
+    let reason = 'Unknown; pre-getAssignmentVariation';
+    try {
+      const eppoValue = this.getAssignmentVariation(
+        subjectKey,
+        flagKey,
+        subjectAttributes,
+        assignmentHooks,
+        obfuscated,
+        ValueType.StringType,
+      );
+      const eppoValueAssignment = eppoValue.stringValue;
+      reason = eppoValue.reason ?? 'Unknown; post-getAssignmentVariation';
+      if (eppoValueAssignment === undefined) {
+        assignment = null;
+        reason += '; coalesced to null';
+      } else {
+        assignment = eppoValueAssignment;
+      }
+    } catch (error) {
+      reason = 'Caught error: ' + error.message + '\n' + error.stack;
+      this.rethrowIfNotGraceful(error);
+    }
+    return { assignment, reason };
   }
 
   getBoolAssignment(
@@ -420,21 +476,30 @@ export default class EppoClient implements IEppoClient {
       experimentConfig,
       expectedValueType,
     );
+    allowListOverride.reason = 'In override list';
 
     if (!allowListOverride.isNullType()) {
       if (!allowListOverride.isExpectedType()) {
+        nullAssignment.assignment.reason = 'Allow list override is not the expected type';
         return nullAssignment;
       }
       return { ...nullAssignment, assignment: allowListOverride };
     }
 
     // Check for disabled flag.
-    if (!experimentConfig?.enabled) return nullAssignment;
+    if (!experimentConfig?.enabled) {
+      nullAssignment.assignment.reason = 'Experiment is not enabled';
+      return nullAssignment;
+    }
 
     // check for overridden assignment via hook
     const overriddenAssignment = assignmentHooks?.onPreAssignment(flagKey, subjectKey);
     if (overriddenAssignment !== null && overriddenAssignment !== undefined) {
-      if (!overriddenAssignment.isExpectedType()) return nullAssignment;
+      if (!overriddenAssignment.isExpectedType()) {
+        nullAssignment.assignment.reason = 'Override via hook is wrong type';
+        return nullAssignment;
+      }
+      overriddenAssignment.reason = 'Overriden via hook';
       return { ...nullAssignment, assignment: overriddenAssignment };
     }
 
@@ -444,12 +509,17 @@ export default class EppoClient implements IEppoClient {
       experimentConfig.rules,
       obfuscated,
     );
-    if (!matchedRule) return nullAssignment;
+    if (!matchedRule) {
+      nullAssignment.assignment.reason = 'No matching targeting rule';
+      return nullAssignment;
+    }
 
     // Check if subject is in allocation sample.
     const allocation = experimentConfig.allocations[matchedRule.allocationKey];
-    if (!this.isInExperimentSample(subjectKey, flagKey, experimentConfig, allocation))
+    if (!this.isInExperimentSample(subjectKey, flagKey, experimentConfig, allocation)) {
+      nullAssignment.assignment.reason = 'Not in experiment sample';
       return nullAssignment;
+    }
 
     // Compute variation for subject.
     const { subjectShards } = experimentConfig;
@@ -458,6 +528,7 @@ export default class EppoClient implements IEppoClient {
     let assignedVariation: IVariation | undefined;
     let holdoutVariation = null;
 
+    let variationReason = '';
     const holdoutShard = getShard(`holdout-${subjectKey}`, subjectShards);
     const matchingHoldout = holdouts?.find((holdout) => {
       const { statusQuoShardRange, shippedShardRange } = holdout;
@@ -465,16 +536,19 @@ export default class EppoClient implements IEppoClient {
         assignedVariation = variations.find(
           (variation) => variation.variationKey === statusQuoVariationKey,
         );
+        variationReason = 'Holdout during in-flight experiment, status quo variation';
         // Only log the holdout variation if this is a rollout allocation
         // Only rollout allocations have shippedShardRange specified
         if (shippedShardRange) {
           holdoutVariation = HoldoutVariationEnum.STATUS_QUO;
+          variationReason = 'Holdout after rollout, status quo variation';
         }
       } else if (shippedShardRange && isShardInRange(holdoutShard, shippedShardRange)) {
         assignedVariation = variations.find(
           (variation) => variation.variationKey === shippedVariationKey,
         );
         holdoutVariation = HoldoutVariationEnum.ALL_SHIPPED;
+        variationReason = 'Holdout after rollout, shipped variation';
       }
       return assignedVariation;
     });
@@ -484,7 +558,18 @@ export default class EppoClient implements IEppoClient {
       assignedVariation = variations.find((variation) =>
         isShardInRange(assignmentShard, variation.shardRange),
       );
+      variationReason = 'Normal assignment randomization';
     }
+
+    const variationEppoValue = EppoValue.generateEppoValue(
+      expectedValueType,
+      assignedVariation?.value,
+      assignedVariation?.typedValue,
+    );
+    variationEppoValue.reason = variationReason;
+
+    const typeMismatchAssignment = nullAssignment;
+    typeMismatchAssignment.assignment.reason = 'Uexpected variation assignment type';
 
     const internalAssignment: {
       allocationKey: string;
@@ -493,15 +578,13 @@ export default class EppoClient implements IEppoClient {
       holdoutVariation: NullableHoldoutVariationType;
     } = {
       allocationKey: matchedRule.allocationKey,
-      assignment: EppoValue.generateEppoValue(
-        expectedValueType,
-        assignedVariation?.value,
-        assignedVariation?.typedValue,
-      ),
+      assignment: variationEppoValue,
       holdoutKey,
       holdoutVariation: holdoutVariation as NullableHoldoutVariationType,
     };
-    return internalAssignment.assignment.isExpectedType() ? internalAssignment : nullAssignment;
+    return internalAssignment.assignment.isExpectedType()
+      ? internalAssignment
+      : typeMismatchAssignment;
   }
 
   public setLogger(logger: IAssignmentLogger) {

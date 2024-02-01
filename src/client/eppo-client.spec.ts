@@ -164,7 +164,14 @@ describe('EppoClient E2E test', () => {
       expect(
         client.getParsedJSONAssignment('subject-identifer', flagKey, {}, mockHooks),
       ).toBeNull();
-      expect(client.getStringAssignment('subject-identifer', flagKey, {}, mockHooks)).toBeNull();
+      const assignmentWithReason = client._getStringAssignmentWithReason(
+        'subject-identifer',
+        flagKey,
+        {},
+        mockHooks,
+      );
+      expect(assignmentWithReason.reason).toContain('Error');
+      expect(assignmentWithReason.assignment).toBeNull();
     });
 
     it('throws error when graceful failure is false', async () => {
@@ -191,7 +198,7 @@ describe('EppoClient E2E test', () => {
       }).toThrow();
 
       expect(() => {
-        client.getStringAssignment('subject-identifer', flagKey, {}, mockHooks);
+        client._getStringAssignmentWithReason('subject-identifer', flagKey, {}, mockHooks);
       }).toThrow();
     });
   });
@@ -856,11 +863,13 @@ describe('EppoClient E2E test', () => {
           return EppoValue.Numeric(na);
         }
         case ValueTestType.StringType: {
-          const sa = globalClient.getStringAssignment(
+          const assignmentWithReason = globalClient._getStringAssignmentWithReason(
             subject.subjectKey,
             experiment,
             subject.subjectAttributes,
           );
+          const sa = assignmentWithReason.assignment;
+          console.log('Assigned ' + sa + ' because ' + assignmentWithReason.reason);
           if (sa === null) return null;
           return EppoValue.String(sa);
         }
@@ -966,9 +975,9 @@ describe('EppoClient E2E test', () => {
         expect(td.explain(mockHooks.onPostAssignment).callCount).toEqual(1);
         expect(td.explain(mockHooks.onPostAssignment).calls[0].args[0]).toEqual(flagKey);
         expect(td.explain(mockHooks.onPostAssignment).calls[0].args[1]).toEqual(subject);
-        expect(td.explain(mockHooks.onPostAssignment).calls[0].args[2]).toEqual(
-          EppoValue.String(variation ?? ''),
-        );
+        const eppoValue = EppoValue.String(variation ?? '');
+        eppoValue.reason = 'Normal assignment randomization';
+        expect(td.explain(mockHooks.onPostAssignment).calls[0].args[2]).toEqual(eppoValue);
       });
     });
   });
@@ -1069,13 +1078,15 @@ describe(' EppoClient getAssignment From Obfuscated RAC', () => {
           return EppoValue.Numeric(na);
         }
         case ValueTestType.StringType: {
-          const sa = globalClient.getStringAssignment(
+          const assignmentWithReason = globalClient._getStringAssignmentWithReason(
             subject.subjectKey,
             experiment,
             subject.subjectAttributes,
             undefined,
             true,
           );
+          const sa = assignmentWithReason.assignment;
+          console.log('Assigned ' + sa + ' because ' + assignmentWithReason.reason);
           if (sa === null) return null;
           return EppoValue.String(sa);
         }

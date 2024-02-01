@@ -9,6 +9,28 @@ export interface IPoller {
   stop: () => void;
 }
 
+// Basic stats
+let initializations = 0;
+let attemptedPolls = 0;
+let failedPolls = 0;
+let succeededPolls = 0;
+const pollDurations: number[] = [];
+const failureMessages: string[] = [];
+
+/**
+ * @deprecated added for temporary debugging
+ */
+export function _pollerStats() {
+  return {
+    initializations,
+    attemptedPolls,
+    failedPolls,
+    succeededPolls,
+    pollDurations,
+    failureMessages,
+  };
+}
+
 // TODO: change this to a class with methods instead of something that returns a function
 
 export default function initPoller(
@@ -24,6 +46,7 @@ export default function initPoller(
     pollAfterFailedStart?: boolean;
   },
 ): IPoller {
+  initializations += 1;
   let stopped = false;
   let failedAttempts = 0;
   let nextPollMs = intervalMs;
@@ -40,11 +63,17 @@ export default function initPoller(
 
     while (!startRequestSuccess && startAttemptsRemaining > 0) {
       try {
+        attemptedPolls += 1;
+        const timerStart = Date.now();
         await callback();
+        pollDurations.push(Date.now() - timerStart);
+        succeededPolls += 1;
         startRequestSuccess = true;
         previousPollFailed = false;
         console.log('Eppo SDK successfully requested initial configuration');
       } catch (pollingError) {
+        failedPolls += 1;
+        failureMessages.push(pollingError.message);
         previousPollFailed = true;
         console.warn(
           `Eppo SDK encountered an error with initial poll of configurations: ${pollingError.message}`,
@@ -104,8 +133,12 @@ export default function initPoller(
     }
 
     try {
+      attemptedPolls += 1;
+      const timerStart = Date.now();
       await callback();
+      pollDurations.push(Date.now() - timerStart);
       // If no error, reset any retrying
+      succeededPolls += 1;
       failedAttempts = 0;
       nextPollMs = intervalMs;
       if (previousPollFailed) {
@@ -113,6 +146,9 @@ export default function initPoller(
         console.log('Eppo SDK poll successful; resuming normal polling');
       }
     } catch (error) {
+      failedPolls += 1;
+      failureMessages.push(error.message);
+
       previousPollFailed = true;
       console.warn(`Eppo SDK encountered an error polling configurations: ${error.message}`);
       const maxTries = 1 + (options?.maxPollRetries ?? DEFAULT_POLL_CONFIG_REQUEST_RETRIES);
