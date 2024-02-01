@@ -1,7 +1,7 @@
 import * as td from 'testdouble';
 
 import { POLL_INTERVAL_MS, POLL_JITTER_PCT } from './constants';
-import initPoller from './poller';
+import initPoller, { pollerStats } from './poller';
 
 describe('poller', () => {
   const testIntervalMs = POLL_INTERVAL_MS;
@@ -15,6 +15,7 @@ describe('poller', () => {
   afterEach(() => {
     td.reset();
     jest.clearAllTimers();
+    console.log('>>>> POLLER STATS', pollerStats());
   });
 
   afterAll(() => {

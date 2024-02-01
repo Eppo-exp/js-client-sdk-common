@@ -17,6 +17,8 @@ export class EppoValue {
   public stringValue: string | undefined;
   public objectValue: object | undefined;
 
+  public reason: string | undefined;
+
   private constructor(
     valueType: ValueType,
     boolValue: boolean | undefined,
