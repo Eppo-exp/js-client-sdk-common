@@ -869,7 +869,6 @@ describe('EppoClient E2E test', () => {
             subject.subjectAttributes,
           );
           const sa = assignmentWithReason.assignment;
-          console.log('Assigned ' + sa + ' because ' + assignmentWithReason.reason);
           if (sa === null) return null;
           return EppoValue.String(sa);
         }
@@ -1086,7 +1085,6 @@ describe(' EppoClient getAssignment From Obfuscated RAC', () => {
             true,
           );
           const sa = assignmentWithReason.assignment;
-          console.log('Assigned ' + sa + ' because ' + assignmentWithReason.reason);
           if (sa === null) return null;
           return EppoValue.String(sa);
         }
