@@ -115,6 +115,10 @@ export interface IEppoClient {
 
   useCustomAssignmentCache(cache: AssignmentCache<Cacheable>): void;
 
+  setConfigurationRequestParameters(
+    configurationRequestParameters: ExperimentConfigurationRequestParameters,
+  ): void;
+
   fetchFlagConfigurations(): void;
 
   stopPolling(): void;
@@ -141,21 +145,27 @@ export default class EppoClient implements IEppoClient {
   private isGracefulFailureMode = true;
   private assignmentCache: AssignmentCache<Cacheable> | undefined;
   private configurationStore: IConfigurationStore;
-  private configurationRequestConfig: ExperimentConfigurationRequestParameters | undefined;
+  private configurationRequestParameters: ExperimentConfigurationRequestParameters | undefined;
   private requestPoller: IPoller | undefined;
 
   constructor(
     configurationStore: IConfigurationStore,
-    configurationRequestConfig?: ExperimentConfigurationRequestParameters,
+    configurationRequestParameters?: ExperimentConfigurationRequestParameters,
   ) {
     this.configurationStore = configurationStore;
-    this.configurationRequestConfig = configurationRequestConfig;
+    this.configurationRequestParameters = configurationRequestParameters;
+  }
+
+  public setConfigurationRequestParameters(
+    configurationRequestParameters: ExperimentConfigurationRequestParameters,
+  ) {
+    this.configurationRequestParameters = configurationRequestParameters;
   }
 
   public async fetchFlagConfigurations() {
-    if (!this.configurationRequestConfig) {
+    if (!this.configurationRequestParameters) {
       throw new Error(
-        'Eppo SDK unable to fetch flag configurations without a request configuration',
+        'Eppo SDK unable to fetch flag configurations without a configuration request parameters',
       );
     }
 
@@ -165,13 +175,13 @@ export default class EppoClient implements IEppoClient {
     }
 
     const axiosInstance = axios.create({
-      baseURL: this.configurationRequestConfig.baseUrl || DEFAULT_BASE_URL,
-      timeout: this.configurationRequestConfig.requestTimeoutMs || DEFAULT_REQUEST_TIMEOUT_MS,
+      baseURL: this.configurationRequestParameters.baseUrl || DEFAULT_BASE_URL,
+      timeout: this.configurationRequestParameters.requestTimeoutMs || DEFAULT_REQUEST_TIMEOUT_MS,
     });
     const httpClient = new HttpClient(axiosInstance, {
-      apiKey: this.configurationRequestConfig.apiKey,
-      sdkName: this.configurationRequestConfig.sdkName,
-      sdkVersion: this.configurationRequestConfig.sdkVersion,
+      apiKey: this.configurationRequestParameters.apiKey,
+      sdkName: this.configurationRequestParameters.sdkName,
+      sdkVersion: this.configurationRequestParameters.sdkVersion,
     });
     const configurationRequestor = new ExperimentConfigurationRequestor(
       this.configurationStore,
@@ -183,16 +193,17 @@ export default class EppoClient implements IEppoClient {
       configurationRequestor.fetchAndStoreConfigurations.bind(configurationRequestor),
       {
         maxStartRetries:
-          this.configurationRequestConfig.numInitialRequestRetries ??
+          this.configurationRequestParameters.numInitialRequestRetries ??
           DEFAULT_INITIAL_CONFIG_REQUEST_RETRIES,
         maxPollRetries:
-          this.configurationRequestConfig.numPollRequestRetries ??
+          this.configurationRequestParameters.numPollRequestRetries ??
           DEFAULT_POLL_CONFIG_REQUEST_RETRIES,
         pollAfterSuccessfulStart:
-          this.configurationRequestConfig.pollAfterSuccessfulInitialization ?? false,
+          this.configurationRequestParameters.pollAfterSuccessfulInitialization ?? false,
         pollAfterFailedStart:
-          this.configurationRequestConfig.pollAfterFailedInitialization ?? false,
-        errorOnFailedStart: this.configurationRequestConfig.throwOnFailedInitialization ?? false,
+          this.configurationRequestParameters.pollAfterFailedInitialization ?? false,
+        errorOnFailedStart:
+          this.configurationRequestParameters.throwOnFailedInitialization ?? false,
       },
     );
 
