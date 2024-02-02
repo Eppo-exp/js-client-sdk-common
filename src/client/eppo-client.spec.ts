@@ -164,7 +164,7 @@ describe('EppoClient E2E test', () => {
       expect(
         client.getParsedJSONAssignment('subject-identifer', flagKey, {}, mockHooks),
       ).toBeNull();
-      const assignmentWithReason = client._getStringAssignmentWithReason(
+      const assignmentWithReason = client.getStringAssignmentWithReason(
         'subject-identifer',
         flagKey,
         {},
@@ -198,7 +198,7 @@ describe('EppoClient E2E test', () => {
       }).toThrow();
 
       expect(() => {
-        client._getStringAssignmentWithReason('subject-identifer', flagKey, {}, mockHooks);
+        client.getStringAssignmentWithReason('subject-identifer', flagKey, {}, mockHooks);
       }).toThrow();
     });
   });
@@ -863,7 +863,7 @@ describe('EppoClient E2E test', () => {
           return EppoValue.Numeric(na);
         }
         case ValueTestType.StringType: {
-          const assignmentWithReason = globalClient._getStringAssignmentWithReason(
+          const assignmentWithReason = globalClient.getStringAssignmentWithReason(
             subject.subjectKey,
             experiment,
             subject.subjectAttributes,
@@ -1077,7 +1077,7 @@ describe(' EppoClient getAssignment From Obfuscated RAC', () => {
           return EppoValue.Numeric(na);
         }
         case ValueTestType.StringType: {
-          const assignmentWithReason = globalClient._getStringAssignmentWithReason(
+          const assignmentWithReason = globalClient.getStringAssignmentWithReason(
             subject.subjectKey,
             experiment,
             subject.subjectAttributes,
