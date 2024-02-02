@@ -30,7 +30,7 @@ import { EppoValue, ValueType } from '../eppo_value';
 import ExperimentConfigurationRequestor from '../experiment-configuration-requestor';
 import HttpClient from '../http-client';
 import { getMD5Hash } from '../obfuscation';
-import initPoller, { IPoller, _pollerStats } from '../poller';
+import initPoller, { IPoller, pollerStats } from '../poller';
 import { findMatchingRule } from '../rule_evaluator';
 import { getShard, isShardInRange } from '../shard';
 import { validateNotBlank } from '../validation';
@@ -60,9 +60,9 @@ export interface IEppoClient {
   ): string | null;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  _pollerStats(): any;
+  pollerStats(): any;
 
-  _getStringAssignmentWithReason(
+  getStringAssignmentWithReason(
     subjectKey: string,
     flagKey: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -174,11 +174,8 @@ export default class EppoClient implements IEppoClient {
     this.configurationRequestParameters = configurationRequestParameters;
   }
 
-  /**
-   * @deprecated added for temporary debugging
-   */
-  public _pollerStats() {
-    return _pollerStats();
+  public pollerStats() {
+    return pollerStats();
   }
 
   public async fetchFlagConfigurations() {
@@ -283,10 +280,7 @@ export default class EppoClient implements IEppoClient {
     }
   }
 
-  /**
-   * @deprecated added for temporary debugging
-   */
-  public _getStringAssignmentWithReason(
+  public getStringAssignmentWithReason(
     subjectKey: string,
     flagKey: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

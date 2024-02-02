@@ -17,10 +17,7 @@ let succeededPolls = 0;
 const pollDurations: number[] = [];
 const failureMessages: string[] = [];
 
-/**
- * @deprecated added for temporary debugging
- */
-export function _pollerStats() {
+export function pollerStats() {
   return {
     initializations,
     attemptedPolls,
