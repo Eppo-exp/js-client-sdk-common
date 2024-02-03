@@ -165,7 +165,7 @@ export default class EppoClient implements IEppoClient {
   public async fetchFlagConfigurations() {
     if (!this.configurationRequestParameters) {
       throw new Error(
-        'Eppo SDK unable to fetch flag configurations without a configuration request parameters',
+        'Eppo SDK unable to fetch flag configurations without configuration request parameters',
       );
     }
 
