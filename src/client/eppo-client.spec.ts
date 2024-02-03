@@ -1160,9 +1160,22 @@ describe('Eppo Client constructed with configuration request parameters', () => 
     mock.teardown();
   });
 
-  it('Fetches initial configuration', async () => {
+  it('Fetches initial configuration with parameters in constructor', async () => {
     client = new EppoClient(storage, requestConfiguration);
     client.setIsGracefulFailureMode(false);
+    // no configuration loaded
+    let variation = client.getAssignment(subjectForGreenVariation, flagKey);
+    expect(variation).toBeNull();
+    // have client fetch configurations
+    await client.fetchFlagConfigurations();
+    variation = client.getAssignment(subjectForGreenVariation, flagKey);
+    expect(variation).toBe('green');
+  });
+
+  it('Fetches initial configuration with parameters provided later', async () => {
+    client = new EppoClient(storage);
+    client.setIsGracefulFailureMode(false);
+    client.setConfigurationRequestParameters(requestConfiguration);
     // no configuration loaded
     let variation = client.getAssignment(subjectForGreenVariation, flagKey);
     expect(variation).toBeNull();
