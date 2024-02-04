@@ -1,5 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Condition, OperatorType, IRule } from './dto/rule-dto';
+import {
+  valid as validSemver,
+  gt as semverGt,
+  lt as semverLt,
+  gte as semverGte,
+  lte as semverLte,
+} from 'semver';
+
+import { Condition, OperatorType, IRule, OperatorValueType } from './dto/rule-dto';
 import { decodeBase64, getMD5Hash } from './obfuscation';
 
 export function findMatchingRule(
@@ -42,15 +50,34 @@ function evaluateRuleConditions(
 
 function evaluateCondition(subjectAttributes: Record<string, any>, condition: Condition): boolean {
   const value = subjectAttributes[condition.attribute];
+
+  const conditionValueType = targetingRuleConditionValuesTypesFromValues(condition.value);
+
+  // think: old clients will receive a string value for
+  // gt, gte, lt, lte when they are expecting a numeric.
+  // what will their behavior be?
+
   if (value != null) {
     switch (condition.operator) {
       case OperatorType.GTE:
+        if (conditionValueType === OperatorValueType.SEM_VER) {
+          return compareSemVer(value, condition.value, (a, b) => semverGte(a, b));
+        }
         return compareNumber(value, condition.value, (a, b) => a >= b);
       case OperatorType.GT:
+        if (conditionValueType === OperatorValueType.SEM_VER) {
+          return compareSemVer(value, condition.value, (a, b) => semverGt(a, b));
+        }
         return compareNumber(value, condition.value, (a, b) => a > b);
       case OperatorType.LTE:
+        if (conditionValueType === OperatorValueType.SEM_VER) {
+          return compareSemVer(value, condition.value, (a, b) => semverLte(a, b));
+        }
         return compareNumber(value, condition.value, (a, b) => a <= b);
       case OperatorType.LT:
+        if (conditionValueType === OperatorValueType.SEM_VER) {
+          return compareSemVer(value, condition.value, (a, b) => semverLt(a, b));
+        }
         return compareNumber(value, condition.value, (a, b) => a < b);
       case OperatorType.MATCHES:
         return new RegExp(condition.value as string).test(value as string);
@@ -78,15 +105,29 @@ function evaluateObfuscatedCondition(
     {},
   );
   const value = hashedSubjectAttributes[condition.attribute];
+  const conditionValueType = targetingRuleConditionValuesTypesFromValues(value);
+
   if (value != null) {
     switch (condition.operator) {
       case getMD5Hash(OperatorType.GTE):
+        if (conditionValueType === OperatorValueType.SEM_VER) {
+          return compareSemVer(value, decodeBase64(condition.value), (a, b) => semverGte(a, b));
+        }
         return compareNumber(value, Number(decodeBase64(condition.value)), (a, b) => a >= b);
       case getMD5Hash(OperatorType.GT):
+        if (conditionValueType === OperatorValueType.SEM_VER) {
+          return compareSemVer(value, decodeBase64(condition.value), (a, b) => semverGt(a, b));
+        }
         return compareNumber(value, Number(decodeBase64(condition.value)), (a, b) => a > b);
       case getMD5Hash(OperatorType.LTE):
+        if (conditionValueType === OperatorValueType.SEM_VER) {
+          return compareSemVer(value, decodeBase64(condition.value), (a, b) => semverLte(a, b));
+        }
         return compareNumber(value, Number(decodeBase64(condition.value)), (a, b) => a <= b);
       case getMD5Hash(OperatorType.LT):
+        if (conditionValueType === OperatorValueType.SEM_VER) {
+          return compareSemVer(value, decodeBase64(condition.value), (a, b) => semverLt(a, b));
+        }
         return compareNumber(value, Number(decodeBase64(condition.value)), (a, b) => a < b);
       case getMD5Hash(OperatorType.MATCHES):
         return new RegExp(decodeBase64(condition.value)).test(value as string);
@@ -115,10 +156,48 @@ function compareNumber(
   attributeValue: any,
   conditionValue: any,
   compareFn: (a: number, b: number) => boolean,
-) {
+): boolean {
   return (
     typeof attributeValue === 'number' &&
     typeof conditionValue === 'number' &&
     compareFn(attributeValue, conditionValue)
   );
+}
+
+function compareSemVer(
+  attributeValue: any,
+  conditionValue: any,
+  compareFn: (a: string, b: string) => boolean,
+): boolean {
+  return (
+    !!validSemver(attributeValue) &&
+    !!validSemver(conditionValue) &&
+    compareFn(attributeValue, conditionValue)
+  );
+}
+
+function targetingRuleConditionValuesTypesFromValues(
+  value: number | string | string[],
+): OperatorValueType {
+  // Check if input is a number
+  if (typeof value === 'number') {
+    return OperatorValueType.NUMERIC;
+  }
+
+  if (Array.isArray(value)) {
+    return OperatorValueType.STRING_ARRAY;
+  }
+
+  // Check if input is a string that represents a SemVer
+  if (validSemver(value)) {
+    return OperatorValueType.SEM_VER;
+  }
+
+  // Check if input is a string that represents a number
+  if (!isNaN(Number(value))) {
+    return OperatorValueType.NUMERIC;
+  }
+
+  // If none of the above, it's a general string
+  return OperatorValueType.PLAIN_STRING;
 }
