@@ -17,6 +17,7 @@ jobs:
         with:
           token: ${{ secrets.NPM_TOKEN }}
           access: public
+          tag: alpha
       - name: Upload npm debug log
         if: failure()  # This step will run only if the previous steps failed
         uses: actions/upload-artifact@v2

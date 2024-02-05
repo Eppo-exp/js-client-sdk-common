@@ -174,6 +174,9 @@ export default class EppoClient implements IEppoClient {
     this.configurationRequestParameters = configurationRequestParameters;
   }
 
+  /**
+   * @deprecated temporarily added for debugging
+   */
   public pollerStats() {
     return pollerStats();
   }
