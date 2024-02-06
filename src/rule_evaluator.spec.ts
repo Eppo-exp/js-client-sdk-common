@@ -21,6 +21,21 @@ describe('findMatchingRule', () => {
       },
     ],
   };
+  const semverRule: IRule = {
+    allocationKey: 'test',
+    conditions: [
+      {
+        operator: OperatorType.GTE,
+        attribute: 'version',
+        value: '1.0.0',
+      },
+      {
+        operator: OperatorType.LTE,
+        attribute: 'version',
+        value: '2.0.0',
+      },
+    ],
+  };
   const ruleWithMatchesCondition: IRule = {
     allocationKey: 'test',
     conditions: [
@@ -45,6 +60,13 @@ describe('findMatchingRule', () => {
   it('returns the rule if attributes match AND conditions', () => {
     const rules = [numericRule];
     expect(findMatchingRule({ totalSales: 100 }, rules, false)).toEqual(numericRule);
+  });
+
+  it('returns the rule for semver conditions', () => {
+    const rules = [semverRule];
+    expect(findMatchingRule({ version: '1.1.0' }, rules, false)).toEqual(semverRule);
+    expect(findMatchingRule({ version: '2.0.0' }, rules, false)).toEqual(semverRule);
+    expect(findMatchingRule({ version: '2.1.0' }, rules, false)).toBeNull();
   });
 
   it('returns null if there is no attribute for the condition', () => {
