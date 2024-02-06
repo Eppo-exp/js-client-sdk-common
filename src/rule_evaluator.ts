@@ -53,30 +53,26 @@ function evaluateCondition(subjectAttributes: Record<string, any>, condition: Co
 
   const conditionValueType = targetingRuleConditionValuesTypesFromValues(condition.value);
 
-  // think: old clients will receive a string value for
-  // gt, gte, lt, lte when they are expecting a numeric.
-  // what will their behavior be?
-
   if (value != null) {
     switch (condition.operator) {
       case OperatorType.GTE:
         if (conditionValueType === OperatorValueType.SEM_VER) {
-          return compareSemVer(value, condition.value, (a, b) => semverGte(a, b));
+          return compareSemVer(value, condition.value, semverGte);
         }
         return compareNumber(value, condition.value, (a, b) => a >= b);
       case OperatorType.GT:
         if (conditionValueType === OperatorValueType.SEM_VER) {
-          return compareSemVer(value, condition.value, (a, b) => semverGt(a, b));
+          return compareSemVer(value, condition.value, semverGt);
         }
         return compareNumber(value, condition.value, (a, b) => a > b);
       case OperatorType.LTE:
         if (conditionValueType === OperatorValueType.SEM_VER) {
-          return compareSemVer(value, condition.value, (a, b) => semverLte(a, b));
+          return compareSemVer(value, condition.value, semverLte);
         }
         return compareNumber(value, condition.value, (a, b) => a <= b);
       case OperatorType.LT:
         if (conditionValueType === OperatorValueType.SEM_VER) {
-          return compareSemVer(value, condition.value, (a, b) => semverLt(a, b));
+          return compareSemVer(value, condition.value, semverLt);
         }
         return compareNumber(value, condition.value, (a, b) => a < b);
       case OperatorType.MATCHES:
@@ -111,22 +107,22 @@ function evaluateObfuscatedCondition(
     switch (condition.operator) {
       case getMD5Hash(OperatorType.GTE):
         if (conditionValueType === OperatorValueType.SEM_VER) {
-          return compareSemVer(value, decodeBase64(condition.value), (a, b) => semverGte(a, b));
+          return compareSemVer(value, decodeBase64(condition.value), semverGte);
         }
         return compareNumber(value, Number(decodeBase64(condition.value)), (a, b) => a >= b);
       case getMD5Hash(OperatorType.GT):
         if (conditionValueType === OperatorValueType.SEM_VER) {
-          return compareSemVer(value, decodeBase64(condition.value), (a, b) => semverGt(a, b));
+          return compareSemVer(value, decodeBase64(condition.value), semverGt);
         }
         return compareNumber(value, Number(decodeBase64(condition.value)), (a, b) => a > b);
       case getMD5Hash(OperatorType.LTE):
         if (conditionValueType === OperatorValueType.SEM_VER) {
-          return compareSemVer(value, decodeBase64(condition.value), (a, b) => semverLte(a, b));
+          return compareSemVer(value, decodeBase64(condition.value), semverLte);
         }
         return compareNumber(value, Number(decodeBase64(condition.value)), (a, b) => a <= b);
       case getMD5Hash(OperatorType.LT):
         if (conditionValueType === OperatorValueType.SEM_VER) {
-          return compareSemVer(value, decodeBase64(condition.value), (a, b) => semverLt(a, b));
+          return compareSemVer(value, decodeBase64(condition.value), semverLt);
         }
         return compareNumber(value, Number(decodeBase64(condition.value)), (a, b) => a < b);
       case getMD5Hash(OperatorType.MATCHES):
