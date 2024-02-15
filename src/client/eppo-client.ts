@@ -31,7 +31,7 @@ import ExperimentConfigurationRequestor from '../experiment-configuration-reques
 import HttpClient from '../http-client';
 import { getMD5Hash } from '../obfuscation';
 import initPoller, { IPoller } from '../poller';
-import { findMatchingRule } from '../rule_evaluator';
+import { findMatchingRules } from '../rule_evaluator';
 import { getShard, isShardInRange } from '../shard';
 import { validateNotBlank } from '../validation';
 
@@ -450,69 +450,71 @@ export default class EppoClient implements IEppoClient {
     }
 
     // Attempt to match a rule from the list.
-    const matchedRule = findMatchingRule(
+    const matchedRules = findMatchingRules(
       subjectAttributes || {},
       experimentConfig.rules,
       obfuscated,
     );
-    if (!matchedRule) return nullAssignment;
+    if !matchedRules.length return nullAssignment;
 
-    // Check if subject is in allocation sample.
-    const allocation = experimentConfig.allocations[matchedRule.allocationKey];
-    if (!this.isInExperimentSample(subjectKey, flagKey, experimentConfig, allocation))
-      return nullAssignment;
+    for matchedRule in matchedRules {
+      // Check if subject is in allocation sample.
+      const allocation = experimentConfig.allocations[matchedRule.allocationKey];
+      if (!this.isInExperimentSample(subjectKey, flagKey, experimentConfig, allocation))
+        continue;
 
-    // Compute variation for subject.
-    const { subjectShards } = experimentConfig;
-    const { variations, holdouts, statusQuoVariationKey, shippedVariationKey } = allocation;
+      // Compute variation for subject.
+      const { subjectShards } = experimentConfig;
+      const { variations, holdouts, statusQuoVariationKey, shippedVariationKey } = allocation;
 
-    let assignedVariation: IVariation | undefined;
-    let holdoutVariation = null;
+      let assignedVariation: IVariation | undefined;
+      let holdoutVariation = null;
 
-    const holdoutShard = getShard(`holdout-${subjectKey}`, subjectShards);
-    const matchingHoldout = holdouts?.find((holdout) => {
-      const { statusQuoShardRange, shippedShardRange } = holdout;
-      if (isShardInRange(holdoutShard, statusQuoShardRange)) {
-        assignedVariation = variations.find(
-          (variation) => variation.variationKey === statusQuoVariationKey,
-        );
-        // Only log the holdout variation if this is a rollout allocation
-        // Only rollout allocations have shippedShardRange specified
-        if (shippedShardRange) {
-          holdoutVariation = HoldoutVariationEnum.STATUS_QUO;
+      const holdoutShard = getShard(`holdout-${subjectKey}`, subjectShards);
+      const matchingHoldout = holdouts?.find((holdout) => {
+        const { statusQuoShardRange, shippedShardRange } = holdout;
+        if (isShardInRange(holdoutShard, statusQuoShardRange)) {
+          assignedVariation = variations.find(
+            (variation) => variation.variationKey === statusQuoVariationKey,
+          );
+          // Only log the holdout variation if this is a rollout allocation
+          // Only rollout allocations have shippedShardRange specified
+          if (shippedShardRange) {
+            holdoutVariation = HoldoutVariationEnum.STATUS_QUO;
+          }
+        } else if (shippedShardRange && isShardInRange(holdoutShard, shippedShardRange)) {
+          assignedVariation = variations.find(
+            (variation) => variation.variationKey === shippedVariationKey,
+          );
+          holdoutVariation = HoldoutVariationEnum.ALL_SHIPPED;
         }
-      } else if (shippedShardRange && isShardInRange(holdoutShard, shippedShardRange)) {
-        assignedVariation = variations.find(
-          (variation) => variation.variationKey === shippedVariationKey,
+        return assignedVariation;
+      });
+      const holdoutKey = matchingHoldout?.holdoutKey ?? null;
+      if (!matchingHoldout) {
+        const assignmentShard = getShard(`assignment-${subjectKey}-${flagKey}`, subjectShards);
+        assignedVariation = variations.find((variation) =>
+          isShardInRange(assignmentShard, variation.shardRange),
         );
-        holdoutVariation = HoldoutVariationEnum.ALL_SHIPPED;
       }
-      return assignedVariation;
-    });
-    const holdoutKey = matchingHoldout?.holdoutKey ?? null;
-    if (!matchingHoldout) {
-      const assignmentShard = getShard(`assignment-${subjectKey}-${flagKey}`, subjectShards);
-      assignedVariation = variations.find((variation) =>
-        isShardInRange(assignmentShard, variation.shardRange),
-      );
-    }
 
-    const internalAssignment: {
-      allocationKey: string;
-      assignment: EppoValue;
-      holdoutKey: string | null;
-      holdoutVariation: NullableHoldoutVariationType;
-    } = {
-      allocationKey: matchedRule.allocationKey,
-      assignment: EppoValue.generateEppoValue(
-        expectedValueType,
-        assignedVariation?.value,
-        assignedVariation?.typedValue,
-      ),
-      holdoutKey,
-      holdoutVariation: holdoutVariation as NullableHoldoutVariationType,
-    };
-    return internalAssignment.assignment.isExpectedType() ? internalAssignment : nullAssignment;
+      const internalAssignment: {
+        allocationKey: string;
+        assignment: EppoValue;
+        holdoutKey: string | null;
+        holdoutVariation: NullableHoldoutVariationType;
+      } = {
+        allocationKey: matchedRule.allocationKey,
+        assignment: EppoValue.generateEppoValue(
+          expectedValueType,
+          assignedVariation?.value,
+          assignedVariation?.typedValue,
+        ),
+        holdoutKey,
+        holdoutVariation: holdoutVariation as NullableHoldoutVariationType,
+      };
+      return internalAssignment.assignment.isExpectedType() ? internalAssignment : nullAssignment;
+    }
   }
 
   public setLogger(logger: IAssignmentLogger) {

@@ -10,17 +10,18 @@ import {
 import { Condition, OperatorType, IRule, OperatorValueType } from './dto/rule-dto';
 import { decodeBase64, getMD5Hash } from './obfuscation';
 
-export function findMatchingRule(
+export function findMatchingRules(
   subjectAttributes: Record<string, any>,
   rules: IRule[],
   obfuscated: boolean,
-): IRule | null {
+): IRule[] {
+  const matchingRules = [];
   for (const rule of rules) {
     if (matchesRule(subjectAttributes, rule, obfuscated)) {
-      return rule;
+      matching_rules.append(rule);
     }
   }
-  return null;
+  return matchingRules;
 }
 
 function matchesRule(
