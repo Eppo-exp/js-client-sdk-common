@@ -455,12 +455,13 @@ export default class EppoClient implements IEppoClient {
       experimentConfig.rules,
       obfuscated,
     );
-    if !matchedRules.length return nullAssignment;
+    if (!matchedRules.length) return nullAssignment;
 
-    for matchedRule in matchedRules {
+    for (const matchedRule in matchedRules) {
       // Check if subject is in allocation sample.
       const allocation = experimentConfig.allocations[matchedRule.allocationKey];
-      if (!this.isInExperimentSample(subjectKey, flagKey, experimentConfig, allocation))
+      const trafficKey = allocation.layerKey ? `${flagKey}-${allocation.layerKey}` : `${flagKey}-${matchedRule.allocationKey}`
+      if (!this.isInExperimentSample(subjectKey, trafficKey, experimentConfig, allocation))
         continue;
 
       // Compute variation for subject.
@@ -626,13 +627,18 @@ export default class EppoClient implements IEppoClient {
    */
   private isInExperimentSample(
     subjectKey: string,
-    flagKey: string,
+    trafficKey: string,
     experimentConfig: IExperimentConfiguration,
     allocation: IAllocation,
   ): boolean {
     const { subjectShards } = experimentConfig;
-    const { percentExposure } = allocation;
-    const shard = getShard(`exposure-${subjectKey}-${flagKey}`, subjectShards);
-    return shard <= percentExposure * subjectShards;
+    const { trafficShards } = allocation;
+    const shard = getShard(`exposure-${subjectKey}-${trafficKey}`, subjectShards);
+    for (const shardRange of trafficShards) {
+      if (isShardInRange(shard, shardRange)) {
+        return true;
+      }
+    }
+    return false;
   }
 }

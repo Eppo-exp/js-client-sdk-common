@@ -15,10 +15,10 @@ export function findMatchingRules(
   rules: IRule[],
   obfuscated: boolean,
 ): IRule[] {
-  const matchingRules = [];
+  const matchingRules: IRule[] = [];
   for (const rule of rules) {
     if (matchesRule(subjectAttributes, rule, obfuscated)) {
-      matching_rules.append(rule);
+      matchingRules.push(rule);
     }
   }
   return matchingRules;
