@@ -457,7 +457,7 @@ export default class EppoClient implements IEppoClient {
     );
     if (!matchedRules.length) return nullAssignment;
 
-    for (const matchedRule in matchedRules) {
+    for (var matchedRule of matchedRules) {
       // Check if subject is in allocation sample.
       const allocation = experimentConfig.allocations[matchedRule.allocationKey];
       const trafficKey = allocation.layerKey ? `${flagKey}-${allocation.layerKey}` : `${flagKey}-${matchedRule.allocationKey}`
@@ -493,7 +493,7 @@ export default class EppoClient implements IEppoClient {
       });
       const holdoutKey = matchingHoldout?.holdoutKey ?? null;
       if (!matchingHoldout) {
-        const assignmentShard = getShard(`assignment-${subjectKey}-${flagKey}`, subjectShards);
+        const assignmentShard = getShard(`assignment-${subjectKey}-${flagKey}-${matchedRule.allocationKey}`, subjectShards);
         assignedVariation = variations.find((variation) =>
           isShardInRange(assignmentShard, variation.shardRange),
         );
@@ -516,6 +516,7 @@ export default class EppoClient implements IEppoClient {
       };
       return internalAssignment.assignment.isExpectedType() ? internalAssignment : nullAssignment;
     }
+    return nullAssignment;
   }
 
   public setLogger(logger: IAssignmentLogger) {
