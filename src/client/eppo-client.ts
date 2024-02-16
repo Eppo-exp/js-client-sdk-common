@@ -460,18 +460,17 @@ export default class EppoClient implements IEppoClient {
     for (var matchedRule of matchedRules) {
       // Check if subject is in allocation sample.
       const allocation = experimentConfig.allocations[matchedRule.allocationKey];
-      const trafficKey = allocation.layerKey ? `${flagKey}-${allocation.layerKey}` : `${flagKey}-${matchedRule.allocationKey}`
-      if (!this.isInExperimentSample(subjectKey, trafficKey, experimentConfig, allocation))
+      if (!this.isInExperimentSample(subjectKey, experimentConfig, allocation))
         continue;
 
       // Compute variation for subject.
       const { subjectShards } = experimentConfig;
-      const { variations, holdouts, statusQuoVariationKey, shippedVariationKey } = allocation;
+      const { variations, holdouts, statusQuoVariationKey, shippedVariationKey, variationsShardHashPrefix, holdoutShardHashPrefix } = allocation;
 
       let assignedVariation: IVariation | undefined;
       let holdoutVariation = null;
 
-      const holdoutShard = getShard(`holdout-${subjectKey}`, subjectShards);
+      const holdoutShard = getShard(this.createHashKey(holdoutShardHashPrefix, subjectKey), subjectShards);
       const matchingHoldout = holdouts?.find((holdout) => {
         const { statusQuoShardRange, shippedShardRange } = holdout;
         if (isShardInRange(holdoutShard, statusQuoShardRange)) {
@@ -493,7 +492,7 @@ export default class EppoClient implements IEppoClient {
       });
       const holdoutKey = matchingHoldout?.holdoutKey ?? null;
       if (!matchingHoldout) {
-        const assignmentShard = getShard(`assignment-${subjectKey}-${flagKey}-${matchedRule.allocationKey}`, subjectShards);
+        const assignmentShard = getShard(this.createHashKey(variationsShardHashPrefix, subjectKey), subjectShards);
         assignedVariation = variations.find((variation) =>
           isShardInRange(assignmentShard, variation.shardRange),
         );
@@ -628,18 +627,22 @@ export default class EppoClient implements IEppoClient {
    */
   private isInExperimentSample(
     subjectKey: string,
-    trafficKey: string,
     experimentConfig: IExperimentConfiguration,
     allocation: IAllocation,
   ): boolean {
     const { subjectShards } = experimentConfig;
-    const { trafficShards } = allocation;
-    const shard = getShard(`exposure-${subjectKey}-${trafficKey}`, subjectShards);
+    const { trafficShards, trafficShardHashPrefix } = allocation;
+    const trafficKey = this.createHashKey(trafficShardHashPrefix, subjectKey);
+    const shard = getShard(trafficKey, subjectShards);
     for (const shardRange of trafficShards) {
       if (isShardInRange(shard, shardRange)) {
         return true;
       }
     }
     return false;
+  }
+
+  private createHashKey(prefix: string, subjectKey: string): string {
+    return `${prefix}-${subjectKey}`;
   }
 }
