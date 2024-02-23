@@ -10,5 +10,4 @@ export interface IAllocation {
   statusQuoVariationKey: string | null;
   shippedVariationKey: string | null;
   holdouts: IHoldout[];
-  layerKey: string | null;
 }
