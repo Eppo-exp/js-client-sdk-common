@@ -9,3 +9,4 @@ temp
 yarn-error.log
 
 test/data
+.vscode/settings.json
