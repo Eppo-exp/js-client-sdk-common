@@ -78,11 +78,6 @@ describe('findMatchingRule', () => {
     ).toEqual(null);
   });
 
-  it('allows for numeric comparison with string', () => {
-    const rules = [numericRule];
-    expect(findMatchingRule({ totalSales: '100' }, rules, false)).toEqual(numericRule);
-  });
-
   it('returns the rule if attributes match AND conditions', () => {
     const rules = [numericRule];
     expect(findMatchingRule({ totalSales: 100 }, rules, false)).toEqual(numericRule);
@@ -105,10 +100,10 @@ describe('findMatchingRule', () => {
     expect(findMatchingRule({ totalSales: 101 }, rules, false)).toEqual(ruleWithEmptyConditions);
   });
 
-  it('returns null if using numeric operator with string', () => {
+  it('allows for a mix of numeric and string values', () => {
     const rules = [numericRule, ruleWithMatchesCondition];
     expect(findMatchingRule({ totalSales: 'stringValue' }, rules, false)).toEqual(null);
-    expect(findMatchingRule({ totalSales: '20' }, rules, false)).toEqual(null);
+    expect(findMatchingRule({ totalSales: '20' }, rules, false)).toEqual(numericRule);
   });
 
   it('handles rule with matches operator', () => {
