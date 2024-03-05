@@ -55,6 +55,32 @@ describe('findMatchingRule', () => {
   it('returns null if attributes do not match any rules', () => {
     const rules = [numericRule];
     expect(findMatchingRule({ totalSales: 101 }, rules, false)).toEqual(null);
+
+    // input subject attribute is a string which is not a valid semver nor numeric
+    // verify that is not parsed to a semver nor a numeric.
+    expect(
+      findMatchingRule(
+        { version: '1.2.03' },
+        [
+          {
+            allocationKey: 'test',
+            conditions: [
+              {
+                operator: OperatorType.GTE,
+                attribute: 'version',
+                value: '1.2.0',
+              },
+            ],
+          },
+        ],
+        false,
+      ),
+    ).toEqual(null);
+  });
+
+  it('allows for numeric comparison with string', () => {
+    const rules = [numericRule];
+    expect(findMatchingRule({ totalSales: '100' }, rules, false)).toEqual(numericRule);
   });
 
   it('returns the rule if attributes match AND conditions', () => {
