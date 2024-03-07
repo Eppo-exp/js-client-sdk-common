@@ -20,6 +20,6 @@ describe('obfuscation', () => {
 
     regexes.forEach((regex) => {
       expect(decodeBase64(encodeBase64(regex))).toEqual(regex);
-    }
+    })
   });
 });
