@@ -1,3 +1,5 @@
+import { TextDecoder } from 'util';
+
 import * as md5 from 'md5';
 
 export function getMD5Hash(input: string): string {
