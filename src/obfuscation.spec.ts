@@ -6,6 +6,14 @@ describe('obfuscation', () => {
   });
 
   it('decodes base64 to string', () => {
-    expect(Number(decodeBase64('NS4w'))).toEqual(5);
+    expect(decodeBase64('NS4w')).toEqual('5.0');
+  });
+
+  it('encodes/decodes regex', () => {
+    const regexes = ['.*@example.com', '.*@.*.com$', 'hello world'];
+
+    regexes.forEach((regex) => {
+      expect(decodeBase64(encodeBase64(regex))).toEqual(regex);
+    });
   });
 });
