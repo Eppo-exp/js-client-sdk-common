@@ -10,7 +10,7 @@ describe('obfuscation', () => {
   });
 
   it('encodes/decodes regex', () => {
-    const regexes = ['.*@example.com', '.*@.*.com$'];
+    const regexes = ['.*@example.com', '.*@.*.com$', 'hello world'];
 
     regexes.forEach((regex) => {
       expect(decodeBase64(encodeBase64(regex))).toEqual(regex);
