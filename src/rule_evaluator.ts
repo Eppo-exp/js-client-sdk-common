@@ -153,11 +153,7 @@ function compareNumber(
   conditionValue: any,
   compareFn: (a: number, b: number) => boolean,
 ): boolean {
-  return (
-    typeof attributeValue === 'number' &&
-    typeof conditionValue === 'number' &&
-    compareFn(attributeValue, conditionValue)
-  );
+  return compareFn(Number(attributeValue), Number(conditionValue));
 }
 
 function compareSemVer(
