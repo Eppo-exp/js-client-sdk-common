@@ -23,6 +23,5 @@ export interface Condition {
 }
 
 export interface IRule {
-  allocationKey: string;
   conditions: Condition[];
 }

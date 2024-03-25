@@ -1,6 +1,6 @@
 import { getMD5Hash } from './obfuscation';
 
-export enum ValueType {
+export enum EppoValueType {
   NullType,
   BoolType,
   NumericType,
@@ -11,14 +11,14 @@ export enum ValueType {
 export type IValue = boolean | number | string | undefined;
 
 export class EppoValue {
-  public valueType: ValueType;
+  public valueType: EppoValueType;
   public boolValue: boolean | undefined;
   public numericValue: number | undefined;
   public stringValue: string | undefined;
   public objectValue: object | undefined;
 
   private constructor(
-    valueType: ValueType,
+    valueType: EppoValueType,
     boolValue: boolean | undefined,
     numericValue: number | undefined,
     stringValue: string | undefined,
@@ -32,20 +32,19 @@ export class EppoValue {
   }
 
   static generateEppoValue(
-    expectedValueType?: ValueType,
-    value?: string,
-    typedValue?: boolean | number | string | object,
+    value: boolean | number | string | object | null | undefined,
+    valueType: EppoValueType,
   ): EppoValue {
-    if (value != null && typedValue != null) {
-      switch (expectedValueType) {
-        case ValueType.BoolType:
-          return EppoValue.Bool(typedValue as boolean);
-        case ValueType.NumericType:
-          return EppoValue.Numeric(typedValue as number);
-        case ValueType.StringType:
-          return EppoValue.String(typedValue as string);
-        case ValueType.JSONType:
-          return EppoValue.JSON(value, typedValue as object);
+    if (value != null && value != undefined) {
+      switch (valueType) {
+        case EppoValueType.BoolType:
+          return EppoValue.Bool(value as boolean);
+        case EppoValueType.NumericType:
+          return EppoValue.Numeric(value as number);
+        case EppoValueType.StringType:
+          return EppoValue.String(value as string);
+        case EppoValueType.JSONType:
+          return EppoValue.JSON(value as object);
         default:
           return EppoValue.String(value as string);
       }
@@ -55,15 +54,15 @@ export class EppoValue {
 
   toString(): string {
     switch (this.valueType) {
-      case ValueType.NullType:
+      case EppoValueType.NullType:
         return 'null';
-      case ValueType.BoolType:
+      case EppoValueType.BoolType:
         return this.boolValue ? 'true' : 'false';
-      case ValueType.NumericType:
+      case EppoValueType.NumericType:
         return this.numericValue ? this.numericValue.toString() : '0';
-      case ValueType.StringType:
+      case EppoValueType.StringType:
         return this.stringValue ?? '';
-      case ValueType.JSONType:
+      case EppoValueType.JSONType:
         try {
           return JSON.stringify(this.objectValue) ?? '';
         } catch {
@@ -85,48 +84,40 @@ export class EppoValue {
 
   isExpectedType(): boolean {
     switch (this.valueType) {
-      case ValueType.BoolType:
+      case EppoValueType.BoolType:
         return typeof this.boolValue === 'boolean';
-      case ValueType.NumericType:
+      case EppoValueType.NumericType:
         return typeof this.numericValue === 'number';
-      case ValueType.StringType:
+      case EppoValueType.StringType:
         return typeof this.stringValue === 'string';
-      case ValueType.JSONType:
-        try {
-          return (
-            typeof this.objectValue === 'object' &&
-            typeof this.stringValue === 'string' &&
-            JSON.stringify(JSON.parse(this.stringValue)) === JSON.stringify(this.objectValue)
-          );
-        } catch {
-          return false;
-        }
-      case ValueType.NullType:
+      case EppoValueType.JSONType:
+        return typeof this.objectValue === 'object';
+      case EppoValueType.NullType:
         return false;
     }
   }
 
   isNullType(): boolean {
-    return this.valueType === ValueType.NullType;
+    return this.valueType === EppoValueType.NullType;
   }
 
   static Bool(value: boolean): EppoValue {
-    return new EppoValue(ValueType.BoolType, value, undefined, undefined, undefined);
+    return new EppoValue(EppoValueType.BoolType, value, undefined, undefined, undefined);
   }
 
   static Numeric(value: number): EppoValue {
-    return new EppoValue(ValueType.NumericType, undefined, value, undefined, undefined);
+    return new EppoValue(EppoValueType.NumericType, undefined, value, undefined, undefined);
   }
 
   static String(value: string): EppoValue {
-    return new EppoValue(ValueType.StringType, undefined, undefined, value, undefined);
+    return new EppoValue(EppoValueType.StringType, undefined, undefined, value, undefined);
   }
 
-  static JSON(value: string, typedValue: object): EppoValue {
-    return new EppoValue(ValueType.JSONType, undefined, undefined, value, typedValue);
+  static JSON(value: object): EppoValue {
+    return new EppoValue(EppoValueType.JSONType, undefined, undefined, undefined, value);
   }
 
   static Null(): EppoValue {
-    return new EppoValue(ValueType.NullType, undefined, undefined, undefined, undefined);
+    return new EppoValue(EppoValueType.NullType, undefined, undefined, undefined, undefined);
   }
 }
