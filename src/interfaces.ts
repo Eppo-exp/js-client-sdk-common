@@ -1,4 +1,4 @@
-import { ConditionValueType } from './types';
+import { getMD5Hash } from './obfuscation';
 
 export enum VariationType {
   STRING = 'string',
@@ -26,7 +26,7 @@ export interface Shard {
 export interface Split {
   shards: Shard[];
   variationKey: string;
-  extraLogging: Record<string, string>;
+  extraLogging?: Record<string, string>;
 }
 
 export interface Allocation {

@@ -21,7 +21,7 @@ import { EppoValue } from '../eppo_value';
 import { Evaluator } from '../eval';
 import ExperimentConfigurationRequestor from '../experiment-configuration-requestor';
 import HttpClient from '../http-client';
-import { VariationType } from '../interfaces';
+import { Flag, VariationType } from '../interfaces';
 import { MD5Sharder } from '../sharders';
 
 import EppoClient, { FlagConfigurationRequestParameters } from './eppo-client';
@@ -94,12 +94,12 @@ describe('EppoClient E2E test', () => {
   };
 
   const variationB = {
-    name: 'b',
+    key: 'b',
     value: 'variation-b',
   };
 
-  const mockExperimentConfig = {
-    name: flagKey,
+  const mockFlag: Flag = {
+    key: flagKey,
     enabled: true,
     variationType: VariationType.STRING,
     variations: { a: variationA, b: variationB },
@@ -109,18 +109,8 @@ describe('EppoClient E2E test', () => {
         rules: [],
         splits: [
           {
-            shards: [
-              { salt: 'traffic', ranges: [{ start: 0, end: 10000 }] },
-              { salt: 'assignment', ranges: [{ start: 0, end: 5000 }] },
-            ],
+            shards: [],
             variationKey: 'a',
-          },
-          {
-            shards: [
-              { salt: 'traffic', ranges: [{ start: 0, end: 10000 }] },
-              { salt: 'assignment', ranges: [{ start: 5000, end: 10000 }] },
-            ],
-            variationKey: 'b',
           },
         ],
         doLog: true,
@@ -134,12 +124,12 @@ describe('EppoClient E2E test', () => {
     const mockHooks = td.object<IAssignmentHooks>();
 
     beforeAll(() => {
-      storage.setEntries({ [flagKey]: mockExperimentConfig });
+      storage.setEntries({ [flagKey]: mockFlag });
       const evaluator = new Evaluator(new MD5Sharder());
       client = new EppoClient(evaluator, storage);
 
-      td.replace(EppoClient.prototype, 'getAssignmentVariation', function () {
-        throw new Error('So Graceful Error');
+      td.replace(EppoClient.prototype, 'getAssignmentDetail', function () {
+        throw new Error('Mock test error');
       });
     });
 
@@ -179,7 +169,7 @@ describe('EppoClient E2E test', () => {
 
   describe('setLogger', () => {
     beforeAll(() => {
-      storage.setEntries({ [flagKey]: mockExperimentConfig });
+      storage.setEntries({ [flagKey]: mockFlag });
     });
 
     it('Invokes logger for queued events', () => {
@@ -279,7 +269,7 @@ describe('EppoClient E2E test', () => {
   it('logs variation assignment and experiment key', () => {
     const mockLogger = td.object<IAssignmentLogger>();
 
-    storage.setEntries({ [flagKey]: mockExperimentConfig });
+    storage.setEntries({ [flagKey]: mockFlag });
     const evaluator = new Evaluator(new MD5Sharder());
     const client = new EppoClient(evaluator, storage);
     client.setLogger(mockLogger);
@@ -287,23 +277,22 @@ describe('EppoClient E2E test', () => {
     const subjectAttributes = { foo: 3 };
     const assignment = client.getStringAssignment('subject-10', flagKey, subjectAttributes);
 
-    expect(assignment).toEqual('control');
+    expect(assignment).toEqual(variationA.value);
     expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
-    expect(td.explain(mockLogger.logAssignment).calls[0].args[0].subject).toEqual('subject-10');
-    expect(td.explain(mockLogger.logAssignment).calls[0].args[0].featureFlag).toEqual(flagKey);
-    // expect(td.explain(mockLogger.logAssignment).calls[0].args[0].experiment).toEqual(
-    //   `${flagKey}-${mockExperimentConfig.rules[0].allocationKey}`,
-    // );
-    // expect(td.explain(mockLogger.logAssignment).calls[0].args[0].allocation).toEqual(
-    //   `${mockExperimentConfig.rules[0].allocationKey}`,
-    // );
+
+    const loggedAssignmentEvent = td.explain(mockLogger.logAssignment).calls[0].args[0];
+    console.log(loggedAssignmentEvent);
+    expect(loggedAssignmentEvent.subject).toEqual('subject-10');
+    expect(loggedAssignmentEvent.featureFlag).toEqual(flagKey);
+    expect(loggedAssignmentEvent.experiment).toEqual(`${flagKey}-${mockFlag.allocations[0].key}`);
+    expect(loggedAssignmentEvent.allocation).toEqual(mockFlag.allocations[0].key);
   });
 
   it('handles logging exception', () => {
     const mockLogger = td.object<IAssignmentLogger>();
     td.when(mockLogger.logAssignment(td.matchers.anything())).thenThrow(new Error('logging error'));
 
-    storage.setEntries({ [flagKey]: mockExperimentConfig });
+    storage.setEntries({ [flagKey]: mockFlag });
     const evaluator = new Evaluator(new MD5Sharder());
     const client = new EppoClient(evaluator, storage);
     client.setLogger(mockLogger);
@@ -321,7 +310,7 @@ describe('EppoClient E2E test', () => {
     beforeEach(() => {
       mockLogger = td.object<IAssignmentLogger>();
 
-      storage.setEntries({ [flagKey]: mockExperimentConfig });
+      storage.setEntries({ [flagKey]: mockFlag });
       const evaluator = new Evaluator(new MD5Sharder());
       const client = new EppoClient(evaluator, storage);
       client.setLogger(mockLogger);
@@ -382,13 +371,13 @@ describe('EppoClient E2E test', () => {
 
     it('logs for each unique flag', () => {
       storage.setEntries({
-        [flagKey]: mockExperimentConfig,
+        [flagKey]: mockFlag,
         'flag-2': {
-          ...mockExperimentConfig,
+          ...mockFlag,
           name: 'flag-2',
         },
         'flag-3': {
-          ...mockExperimentConfig,
+          ...mockFlag,
           name: 'flag-3',
         },
       });
@@ -413,7 +402,7 @@ describe('EppoClient E2E test', () => {
 
       storage.setEntries({
         [flagKey]: {
-          ...mockExperimentConfig,
+          ...mockFlag,
           allocations: {
             allocation1: {
               percentExposure: 1,
@@ -448,7 +437,7 @@ describe('EppoClient E2E test', () => {
 
       storage.setEntries({
         [flagKey]: {
-          ...mockExperimentConfig,
+          ...mockFlag,
           allocations: {
             allocation1: {
               percentExposure: 1,
@@ -487,7 +476,7 @@ describe('EppoClient E2E test', () => {
       client.useNonExpiringInMemoryAssignmentCache();
 
       // original configuration version
-      storage.setEntries({ [flagKey]: mockExperimentConfig });
+      storage.setEntries({ [flagKey]: mockFlag });
 
       client.getStringAssignment('subject-10', flagKey); // log this assignment
       client.getStringAssignment('subject-10', flagKey); // cache hit, don't log
@@ -495,7 +484,7 @@ describe('EppoClient E2E test', () => {
       // change the flag
       storage.setEntries({
         [flagKey]: {
-          ...mockExperimentConfig,
+          ...mockFlag,
           allocations: {
             allocation1: {
               percentExposure: 1,
@@ -522,7 +511,7 @@ describe('EppoClient E2E test', () => {
       client.getStringAssignment('subject-10', flagKey); // cache hit, don't log
 
       // change the flag again, back to the original
-      storage.setEntries({ [flagKey]: mockExperimentConfig });
+      storage.setEntries({ [flagKey]: mockFlag });
 
       client.getStringAssignment('subject-10', flagKey); // important: log this assignment
       client.getStringAssignment('subject-10', flagKey); // cache hit, don't log
@@ -533,7 +522,7 @@ describe('EppoClient E2E test', () => {
 
   it('only returns variation if subject matches rules', () => {
     const entry = {
-      ...mockExperimentConfig,
+      ...mockFlag,
       rules: [
         {
           allocationKey: 'allocation1',
