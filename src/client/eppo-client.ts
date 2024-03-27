@@ -1,5 +1,4 @@
 import axios from 'axios';
-import * as md5 from 'md5';
 
 import {
   AssignmentCache,
@@ -8,12 +7,7 @@ import {
   NonExpiringInMemoryAssignmentCache,
 } from '../assignment-cache';
 import { IAssignmentHooks } from '../assignment-hooks';
-import {
-  IAssignmentEvent,
-  IAssignmentLogger,
-  HoldoutVariationEnum,
-  NullableHoldoutVariationType,
-} from '../assignment-logger';
+import { IAssignmentEvent, IAssignmentLogger } from '../assignment-logger';
 import { IConfigurationStore } from '../configuration-store';
 import {
   BASE_URL as DEFAULT_BASE_URL,
@@ -23,16 +17,13 @@ import {
   MAX_EVENT_QUEUE_SIZE,
   POLL_INTERVAL_MS,
 } from '../constants';
-import { IAllocation } from '../dto/allocation-dto';
-import { IExperimentConfiguration } from '../dto/experiment-configuration-dto';
-import { IVariation } from '../dto/variation-dto';
-import { EppoValue, ValueType } from '../eppo_value';
+import { EppoValue } from '../eppo_value';
 import { Evaluator, FlagEvaluation, noneResult } from '../eval';
 import ExperimentConfigurationRequestor from '../experiment-configuration-requestor';
 import HttpClient from '../http-client';
 import { Flag, VariationType } from '../interfaces';
-import { getMD5Hash } from '../obfuscation';
 import initPoller, { IPoller } from '../poller';
+import { AttributeType } from '../types';
 import { validateNotBlank } from '../validation';
 
 /**
@@ -77,15 +68,6 @@ export interface IEppoClient {
     assignmentHooks?: IAssignmentHooks,
   ): number | null;
 
-  getJSONStringAssignment(
-    subjectKey: string,
-    flagKey: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes?: Record<string, any>,
-    defaultValue?: string | null,
-    assignmentHooks?: IAssignmentHooks,
-  ): string | null;
-
   getParsedJSONAssignment(
     subjectKey: string,
     flagKey: string,
@@ -102,7 +84,7 @@ export interface IEppoClient {
   useCustomAssignmentCache(cache: AssignmentCache<Cacheable>): void;
 
   setConfigurationRequestParameters(
-    configurationRequestParameters: ExperimentConfigurationRequestParameters,
+    configurationRequestParameters: FlagConfigurationRequestParameters,
   ): void;
 
   fetchFlagConfigurations(): void;
@@ -112,7 +94,7 @@ export interface IEppoClient {
   setIsGracefulFailureMode(gracefulFailureMode: boolean): void;
 }
 
-export type ExperimentConfigurationRequestParameters = {
+export type FlagConfigurationRequestParameters = {
   apiKey: string;
   sdkVersion: string;
   sdkName: string;
@@ -131,14 +113,14 @@ export default class EppoClient implements IEppoClient {
   private isGracefulFailureMode = true;
   private assignmentCache: AssignmentCache<Cacheable> | undefined;
   private configurationStore: IConfigurationStore;
-  private configurationRequestParameters: ExperimentConfigurationRequestParameters | undefined;
+  private configurationRequestParameters: FlagConfigurationRequestParameters | undefined;
   private requestPoller: IPoller | undefined;
   private evaluator: Evaluator;
 
   constructor(
     evaluator: Evaluator,
     configurationStore: IConfigurationStore,
-    configurationRequestParameters?: ExperimentConfigurationRequestParameters,
+    configurationRequestParameters?: FlagConfigurationRequestParameters,
   ) {
     this.evaluator = evaluator;
     this.configurationStore = configurationStore;
@@ -146,7 +128,7 @@ export default class EppoClient implements IEppoClient {
   }
 
   public setConfigurationRequestParameters(
-    configurationRequestParameters: ExperimentConfigurationRequestParameters,
+    configurationRequestParameters: FlagConfigurationRequestParameters,
   ) {
     this.configurationRequestParameters = configurationRequestParameters;
   }
@@ -328,7 +310,7 @@ export default class EppoClient implements IEppoClient {
   public getAssignmentDetail(
     subjectKey: string,
     flagKey: string,
-    subjectAttributes: Record<string, any> = {},
+    subjectAttributes: Record<string, AttributeType> = {},
     expectedVariationType?: VariationType,
     obfuscated = false,
   ): FlagEvaluation {
@@ -360,7 +342,7 @@ export default class EppoClient implements IEppoClient {
     try {
       if (result && result.doLog) {
         // TODO: check assignment cache
-        this.logAssignment(assignmentEvent);
+        this.logAssignment(result);
       }
     } catch (error) {
       console.error(`[Eppo SDK] Error logging assignment event: ${error}`);
@@ -458,8 +440,8 @@ export default class EppoClient implements IEppoClient {
       this.assignmentCache?.setLastLoggedAssignment({
         flagKey: result.flagKey,
         subjectKey: result.subjectKey,
-        allocationKey: result.allocationKey ?? null,
-        variationKey: result.variation?.key ?? null,
+        allocationKey: result.allocationKey ?? '__eppo_no_allocation',
+        variationKey: result.variation?.key ?? '__eppo_no_variation',
       });
     } catch (error) {
       console.error(`[Eppo SDK] Error logging assignment event: ${error.message}`);

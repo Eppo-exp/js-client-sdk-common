@@ -1,5 +1,5 @@
 import { Evaluator, hashKey, isInShardRange } from './eval';
-import { Flag, Variation, Shard, VariationType } from './interfaces';
+import { Flag, Variation, Shard, VariationType, OperatorType } from './interfaces';
 import { MD5Sharder, DeterministicSharder } from './sharders';
 
 describe('Evaluator', () => {
@@ -97,7 +97,7 @@ describe('Evaluator', () => {
       key: 'flag-key',
       enabled: true,
       variationType: VariationType.STRING,
-      variations: { control: { key: 'control', value: 'control' } },
+      variations: { control: { key: 'control', value: 'control-value' } },
       allocations: [
         {
           key: 'allocation',
@@ -117,10 +117,10 @@ describe('Evaluator', () => {
 
     const evaluator = new Evaluator(new MD5Sharder());
     const result = evaluator.evaluateFlag(flag, 'user-1', {}, false);
-    expect(result.variation).toEqual({ key: 'control', value: 'control' });
+    expect(result.variation).toEqual({ key: 'control', value: 'control-value' });
   });
 
-  it('should evaluate flag and target on id', () => {
+  it('should evaluate flag based on a targeting condition based on id', () => {
     const flag: Flag = {
       key: 'flag-key',
       enabled: true,
@@ -129,7 +129,13 @@ describe('Evaluator', () => {
       allocations: [
         {
           key: 'allocation',
-          rules: [],
+          rules: [
+            {
+              conditions: [
+                { operator: OperatorType.ONE_OF, attribute: 'id', value: ['alice', 'bob'] },
+              ],
+            },
+          ],
           splits: [
             {
               variationKey: 'control',
@@ -144,10 +150,13 @@ describe('Evaluator', () => {
     };
 
     const evaluator = new Evaluator(new MD5Sharder());
-    let result = evaluator.evaluateFlag(flag, 'user-1', {}, false);
+    let result = evaluator.evaluateFlag(flag, 'alice', {}, false);
     expect(result.variation).toEqual({ key: 'control', value: 'control' });
 
-    result = evaluator.evaluateFlag(flag, 'user-3', {}, false);
+    result = evaluator.evaluateFlag(flag, 'bob', {}, false);
+    expect(result.variation).toEqual({ key: 'control', value: 'control' });
+
+    result = evaluator.evaluateFlag(flag, 'charlie', {}, false);
     expect(result.variation).toBeNull();
   });
 
@@ -191,7 +200,13 @@ describe('Evaluator', () => {
       allocations: [
         {
           key: 'first',
-          rules: [],
+          rules: [
+            {
+              conditions: [
+                { operator: OperatorType.MATCHES, attribute: 'email', value: '.*@example.com' },
+              ],
+            },
+          ],
           splits: [
             {
               variationKey: 'b',
@@ -238,7 +253,13 @@ describe('Evaluator', () => {
       allocations: [
         {
           key: 'first',
-          rules: [],
+          rules: [
+            {
+              conditions: [
+                { operator: OperatorType.MATCHES, attribute: 'email', value: '.*@example.com' },
+              ],
+            },
+          ],
           splits: [
             {
               variationKey: 'b',

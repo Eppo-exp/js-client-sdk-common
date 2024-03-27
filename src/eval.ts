@@ -35,7 +35,7 @@ export class Evaluator {
       if (allocation.endAt && now > allocation.endAt) continue;
 
       if (
-        !allocation.rules ||
+        !allocation.rules.length ||
         allocation.rules.some((rule) =>
           matchesRule(rule, { id: subjectKey, ...subjectAttributes }, obfuscated),
         )

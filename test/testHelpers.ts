@@ -1,14 +1,12 @@
 import * as fs from 'fs';
 
-import { IExperimentConfiguration } from '../src/dto/experiment-configuration-dto';
-import { IVariation } from '../src/dto/variation-dto';
-import { IValue } from '../src/eppo_value';
+import { Flag, VariationType } from '../src/interfaces';
 
-export const TEST_DATA_DIR = './test/data/';
-export const ASSIGNMENT_TEST_DATA_DIR = TEST_DATA_DIR + 'assignment-v2/';
-const MOCK_RAC_FILENAME = 'rac-experiments-v3';
-export const MOCK_RAC_RESPONSE_FILE = `${MOCK_RAC_FILENAME}.json`;
-export const OBFUSCATED_MOCK_RAC_RESPONSE_FILE = `${MOCK_RAC_FILENAME}-obfuscated.json`;
+export const TEST_DATA_DIR = './test/data/ufc/';
+export const ASSIGNMENT_TEST_DATA_DIR = TEST_DATA_DIR + 'tests/';
+const MOCK_UFC_FILENAME = 'flags-v1';
+export const MOCK_UFC_RESPONSE_FILE = `${MOCK_UFC_FILENAME}.json`;
+export const OBFUSCATED_MOCK_UFC_RESPONSE_FILE = `${MOCK_UFC_FILENAME}-obfuscated.json`;
 
 export enum ValueTestType {
   BoolType = 'boolean',
@@ -17,19 +15,21 @@ export enum ValueTestType {
   JSONType = 'json',
 }
 
-export interface IAssignmentTestCase {
-  experiment: string;
-  valueType: ValueTestType;
-  percentExposure: number;
-  variations: IVariation[];
-  subjects: string[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  subjectsWithAttributes: { subjectKey: string; subjectAttributes: Record<string, any> }[];
-  expectedAssignments: IValue[];
+interface SubjectTestCase {
+  subjectKey: string;
+  subjectAttributes: Record<string, unknown>;
+  assignment: string | null;
 }
 
-export function readMockRacResponse(filename: string): {
-  flags: Record<string, IExperimentConfiguration>;
+export interface IAssignmentTestCase {
+  flag: string;
+  variationType: VariationType;
+  percentExposure: number;
+  subjects: SubjectTestCase[];
+}
+
+export function readMockUFCResponse(filename: string): {
+  flags: Record<string, Flag>;
 } {
   return JSON.parse(fs.readFileSync(TEST_DATA_DIR + filename, 'utf-8'));
 }

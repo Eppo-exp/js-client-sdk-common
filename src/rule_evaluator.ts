@@ -7,11 +7,12 @@ import {
   lte as semverLte,
 } from 'semver';
 
-import { Condition, OperatorType, IRule, OperatorValueType } from './dto/rule-dto';
+import { Condition, OperatorType, Rule, OperatorValueType } from './interfaces';
 import { decodeBase64, getMD5Hash } from './obfuscation';
+import { ConditionValueType } from './types';
 
 export function matchesRule(
-  rule: IRule,
+  rule: Rule,
   subjectAttributes: Record<string, any>,
   obfuscated: boolean,
 ): boolean {
@@ -28,11 +29,8 @@ function evaluateRuleConditions(
   conditions: Condition[],
   obfuscated: boolean,
 ): boolean[] {
-  return conditions.map((condition) =>
-    obfuscated
-      ? evaluateObfuscatedCondition(subjectAttributes, condition)
-      : evaluateCondition(subjectAttributes, condition),
-  );
+  // TODO: obfuscated version
+  return conditions.map((condition) => evaluateCondition(subjectAttributes, condition));
 }
 
 function evaluateCondition(subjectAttributes: Record<string, any>, condition: Condition): boolean {
@@ -79,49 +77,50 @@ function evaluateCondition(subjectAttributes: Record<string, any>, condition: Co
   return false;
 }
 
-function evaluateObfuscatedCondition(
-  subjectAttributes: Record<string, any>,
-  condition: Condition,
-): boolean {
-  const hashedSubjectAttributes: Record<string, any> = Object.entries(subjectAttributes).reduce(
-    (accum, [key, val]) => ({ [getMD5Hash(key)]: val, ...accum }),
-    {},
-  );
-  const value = hashedSubjectAttributes[condition.attribute];
-  const conditionValueType = targetingRuleConditionValuesTypesFromValues(value);
+// TODO: implement the obfuscated version of this function
+// function evaluateObfuscatedCondition(
+//   subjectAttributes: Record<string, any>,
+//   condition: Condition,
+// ): boolean {
+//   const hashedSubjectAttributes: Record<string, any> = Object.entries(subjectAttributes).reduce(
+//     (accum, [key, val]) => ({ [getMD5Hash(key)]: val, ...accum }),
+//     {},
+//   );
+//   const value = hashedSubjectAttributes[condition.attribute];
+//   const conditionValueType = targetingRuleConditionValuesTypesFromValues(value);
 
-  if (value != null) {
-    switch (condition.operator) {
-      case getMD5Hash(OperatorType.GTE):
-        if (conditionValueType === OperatorValueType.SEM_VER) {
-          return compareSemVer(value, decodeBase64(condition.value), semverGte);
-        }
-        return compareNumber(value, Number(decodeBase64(condition.value)), (a, b) => a >= b);
-      case getMD5Hash(OperatorType.GT):
-        if (conditionValueType === OperatorValueType.SEM_VER) {
-          return compareSemVer(value, decodeBase64(condition.value), semverGt);
-        }
-        return compareNumber(value, Number(decodeBase64(condition.value)), (a, b) => a > b);
-      case getMD5Hash(OperatorType.LTE):
-        if (conditionValueType === OperatorValueType.SEM_VER) {
-          return compareSemVer(value, decodeBase64(condition.value), semverLte);
-        }
-        return compareNumber(value, Number(decodeBase64(condition.value)), (a, b) => a <= b);
-      case getMD5Hash(OperatorType.LT):
-        if (conditionValueType === OperatorValueType.SEM_VER) {
-          return compareSemVer(value, decodeBase64(condition.value), semverLt);
-        }
-        return compareNumber(value, Number(decodeBase64(condition.value)), (a, b) => a < b);
-      case getMD5Hash(OperatorType.MATCHES):
-        return new RegExp(decodeBase64(condition.value)).test(value as string);
-      case getMD5Hash(OperatorType.ONE_OF):
-        return isOneOf(getMD5Hash(value.toString().toLowerCase()), condition.value);
-      case getMD5Hash(OperatorType.NOT_ONE_OF):
-        return isNotOneOf(getMD5Hash(value.toString().toLowerCase()), condition.value);
-    }
-  }
-  return false;
-}
+//   if (value != null) {
+//     switch (condition.operator) {
+//       case getMD5Hash(OperatorType.GTE):
+//         if (conditionValueType === OperatorValueType.SEM_VER) {
+//           return compareSemVer(value, decodeBase64(condition.value), semverGte);
+//         }
+//         return compareNumber(value, Number(decodeBase64(condition.value)), (a, b) => a >= b);
+//       case getMD5Hash(OperatorType.GT):
+//         if (conditionValueType === OperatorValueType.SEM_VER) {
+//           return compareSemVer(value, decodeBase64(condition.value), semverGt);
+//         }
+//         return compareNumber(value, Number(decodeBase64(condition.value)), (a, b) => a > b);
+//       case getMD5Hash(OperatorType.LTE):
+//         if (conditionValueType === OperatorValueType.SEM_VER) {
+//           return compareSemVer(value, decodeBase64(condition.value), semverLte);
+//         }
+//         return compareNumber(value, Number(decodeBase64(condition.value)), (a, b) => a <= b);
+//       case getMD5Hash(OperatorType.LT):
+//         if (conditionValueType === OperatorValueType.SEM_VER) {
+//           return compareSemVer(value, decodeBase64(condition.value), semverLt);
+//         }
+//         return compareNumber(value, Number(decodeBase64(condition.value)), (a, b) => a < b);
+//       case getMD5Hash(OperatorType.MATCHES):
+//         return new RegExp(decodeBase64(condition.value)).test(value as string);
+//       case getMD5Hash(OperatorType.ONE_OF):
+//         return isOneOf(getMD5Hash(value.toString().toLowerCase()), condition.value);
+//       case getMD5Hash(OperatorType.NOT_ONE_OF):
+//         return isNotOneOf(getMD5Hash(value.toString().toLowerCase()), condition.value);
+//     }
+//   }
+//   return false;
+// }
 
 function isOneOf(attributeValue: string, conditionValue: string[]) {
   return getMatchingStringValues(attributeValue, conditionValue).length > 0;
@@ -155,9 +154,7 @@ function compareSemVer(
   );
 }
 
-function targetingRuleConditionValuesTypesFromValues(
-  value: number | string | string[],
-): OperatorValueType {
+function targetingRuleConditionValuesTypesFromValues(value: ConditionValueType): OperatorValueType {
   // Check if input is a number
   if (typeof value === 'number') {
     return OperatorValueType.NUMERIC;
@@ -168,7 +165,7 @@ function targetingRuleConditionValuesTypesFromValues(
   }
 
   // Check if input is a string that represents a SemVer
-  if (validSemver(value)) {
+  if (typeof value === 'string' && validSemver(value)) {
     return OperatorValueType.SEM_VER;
   }
 

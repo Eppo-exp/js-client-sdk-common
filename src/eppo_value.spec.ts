@@ -7,7 +7,7 @@ describe('EppoValue toHashedString function', () => {
   });
 
   it('is JsonType', () => {
-    const myInstance = EppoValue.JSON('{"hello":"world"}', { hello: 'world' });
+    const myInstance = EppoValue.JSON({ hello: 'world' });
     expect(myInstance.toHashedString()).toBe('fbc24bcc7a1794758fc1327fcfebdaf6');
   });
 });

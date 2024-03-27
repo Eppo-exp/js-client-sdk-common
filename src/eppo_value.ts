@@ -1,3 +1,4 @@
+import { VariationType } from './interfaces';
 import { getMD5Hash } from './obfuscation';
 
 export enum EppoValueType {
@@ -33,17 +34,19 @@ export class EppoValue {
 
   static generateEppoValue(
     value: boolean | number | string | object | null | undefined,
-    valueType: EppoValueType,
+    valueType: VariationType,
   ): EppoValue {
     if (value != null && value != undefined) {
       switch (valueType) {
-        case EppoValueType.BoolType:
+        case VariationType.BOOLEAN:
           return EppoValue.Bool(value as boolean);
-        case EppoValueType.NumericType:
+        case VariationType.FLOAT:
           return EppoValue.Numeric(value as number);
-        case EppoValueType.StringType:
+        case VariationType.INTEGER:
+          return EppoValue.Numeric(value as number);
+        case VariationType.STRING:
           return EppoValue.String(value as string);
-        case EppoValueType.JSONType:
+        case VariationType.JSON:
           return EppoValue.JSON(value as object);
         default:
           return EppoValue.String(value as string);
