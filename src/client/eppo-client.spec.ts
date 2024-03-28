@@ -516,18 +516,18 @@ describe('EppoClient E2E test', () => {
       client.getStringAssignment('subject-10', flagKey); // log this assignment
       client.getStringAssignment('subject-10', flagKey); // cache hit, don't log
 
-      // change the flag
+      // change the variation
       storage.setEntries({
         [flagKey]: {
           ...mockFlag,
           allocations: [
             {
-              key: 'allocation-b',
+              key: 'allocation-a', // note: same key
               rules: [],
               splits: [
                 {
                   shards: [],
-                  variationKey: 'b',
+                  variationKey: 'b', // but different variation!
                 },
               ],
               doLog: true,
@@ -542,11 +542,33 @@ describe('EppoClient E2E test', () => {
       // change the flag again, back to the original
       storage.setEntries({ [flagKey]: mockFlag });
 
-      // Question: Why do we need to log the same assignment again?
       client.getStringAssignment('subject-10', flagKey); // important: log this assignment
       client.getStringAssignment('subject-10', flagKey); // cache hit, don't log
 
-      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(3);
+      // change the allocation
+      storage.setEntries({
+        [flagKey]: {
+          ...mockFlag,
+          allocations: [
+            {
+              key: 'allocation-b', // note: different key
+              rules: [],
+              splits: [
+                {
+                  shards: [],
+                  variationKey: 'b', // variation has been seen before
+                },
+              ],
+              doLog: true,
+            },
+          ],
+        },
+      });
+
+      client.getStringAssignment('subject-10', flagKey); // log this assignment
+      client.getStringAssignment('subject-10', flagKey); // cache hit, don't log
+
+      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(4);
     });
   });
 
