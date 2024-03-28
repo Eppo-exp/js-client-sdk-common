@@ -1,22 +1,22 @@
 import { IConfigurationStore } from './configuration-store';
-import { IExperimentConfiguration } from './dto/experiment-configuration-dto';
 import HttpClient from './http-client';
+import { Flag } from './interfaces';
 
-const RAC_ENDPOINT = '/randomized_assignment/v3/config';
+const UFC_ENDPOINT = '/flag_config/v1/config';
 
-interface IRandomizedAssignmentConfig {
-  flags: Record<string, IExperimentConfiguration>;
+interface IUniversalFlagConfig {
+  flags: Record<string, Flag>;
 }
 
 export default class ExperimentConfigurationRequestor {
   constructor(private configurationStore: IConfigurationStore, private httpClient: HttpClient) {}
 
-  async fetchAndStoreConfigurations(): Promise<Record<string, IExperimentConfiguration>> {
-    const responseData = await this.httpClient.get<IRandomizedAssignmentConfig>(RAC_ENDPOINT);
+  async fetchAndStoreConfigurations(): Promise<Record<string, Flag>> {
+    const responseData = await this.httpClient.get<IUniversalFlagConfig>(UFC_ENDPOINT);
     if (!responseData) {
       return {};
     }
-    this.configurationStore.setEntries<IExperimentConfiguration>(responseData.flags);
+    this.configurationStore.setEntries<Flag>(responseData.flags);
     return responseData.flags;
   }
 }
