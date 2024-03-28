@@ -268,35 +268,35 @@ describe('EppoClient E2E test', () => {
           case VariationType.BOOLEAN: {
             assignments = getTestAssignments(
               { flag, variationType, subjects },
-              client.getBoolAssignment,
+              client.getBoolAssignment.bind(client),
             );
             break;
           }
           case VariationType.NUMERIC: {
             assignments = getTestAssignments(
               { flag, variationType, subjects },
-              client.getNumericAssignment,
+              client.getNumericAssignment.bind(client),
             );
             break;
           }
           case VariationType.INTEGER: {
             assignments = getTestAssignments(
               { flag, variationType, subjects },
-              client.getIntegerAssignment,
+              client.getIntegerAssignment.bind(client),
             );
             break;
           }
           case VariationType.STRING: {
             assignments = getTestAssignments(
               { flag, variationType, subjects },
-              client.getStringAssignment,
+              client.getStringAssignment.bind(client),
             );
             break;
           }
           case VariationType.JSON: {
             assignments = getTestAssignments(
               { flag, variationType, subjects },
-              client.getStringAssignment,
+              client.getStringAssignment.bind(client),
             );
             break;
           }
