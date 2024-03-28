@@ -50,7 +50,7 @@ export class Evaluator {
               subjectAttributes,
               allocationKey: allocation.key,
               variation: flag.variations[split.variationKey],
-              extraLogging: split.extraLogging,
+              extraLogging: split.extraLogging ?? {},
               doLog: allocation.doLog,
             };
           }

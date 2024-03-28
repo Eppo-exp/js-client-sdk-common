@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 
 import { Flag, VariationType } from '../src/interfaces';
+import { AttributeType } from '../src/types';
 
 export const TEST_DATA_DIR = './test/data/ufc/';
 export const ASSIGNMENT_TEST_DATA_DIR = TEST_DATA_DIR + 'tests/';
@@ -15,16 +16,15 @@ export enum ValueTestType {
   JSONType = 'json',
 }
 
-interface SubjectTestCase {
+export interface SubjectTestCase {
   subjectKey: string;
-  subjectAttributes: Record<string, unknown>;
+  subjectAttributes: Record<string, AttributeType>;
   assignment: string | null;
 }
 
 export interface IAssignmentTestCase {
   flag: string;
   variationType: VariationType;
-  percentExposure: number;
   subjects: SubjectTestCase[];
 }
 

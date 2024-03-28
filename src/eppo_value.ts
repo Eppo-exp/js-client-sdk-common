@@ -40,7 +40,7 @@ export class EppoValue {
       switch (valueType) {
         case VariationType.BOOLEAN:
           return EppoValue.Bool(value as boolean);
-        case VariationType.FLOAT:
+        case VariationType.NUMERIC:
           return EppoValue.Numeric(value as number);
         case VariationType.INTEGER:
           return EppoValue.Numeric(value as number);

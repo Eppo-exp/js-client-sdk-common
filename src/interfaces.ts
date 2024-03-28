@@ -3,7 +3,7 @@ import { getMD5Hash } from './obfuscation';
 export enum VariationType {
   STRING = 'string',
   INTEGER = 'integer',
-  FLOAT = 'float',
+  NUMERIC = 'numeric',
   BOOLEAN = 'boolean',
   JSON = 'json',
 }

@@ -68,7 +68,7 @@ export interface IEppoClient {
     assignmentHooks?: IAssignmentHooks,
   ): number | null;
 
-  getParsedJSONAssignment(
+  getJSONAssignment(
     subjectKey: string,
     flagKey: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -247,12 +247,33 @@ export default class EppoClient implements IEppoClient {
         defaultValue ? EppoValue.Numeric(defaultValue) : EppoValue.Null(),
         assignmentHooks,
         obfuscated,
-        VariationType.FLOAT,
+        VariationType.NUMERIC,
       ).numericValue ?? null
     );
   }
 
-  public getParsedJSONAssignment(
+  getIntegerAssignment(
+    subjectKey: string,
+    flagKey: string,
+    subjectAttributes?: Record<string, EppoValue>,
+    defaultValue?: number | null,
+    assignmentHooks?: IAssignmentHooks | undefined,
+    obfuscated = false,
+  ): number | null {
+    return (
+      this.getAssignmentVariation(
+        subjectKey,
+        flagKey,
+        subjectAttributes,
+        defaultValue ? EppoValue.Numeric(defaultValue) : EppoValue.Null(),
+        assignmentHooks,
+        obfuscated,
+        VariationType.INTEGER,
+      ).numericValue ?? null
+    );
+  }
+
+  public getJSONAssignment(
     subjectKey: string,
     flagKey: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -298,12 +319,16 @@ export default class EppoClient implements IEppoClient {
         flagKey,
         subjectAttributes,
         expectedVariationType,
+        obfuscated,
       );
 
-      // TODO: figure out whether to translate VariationType to EppoValueType or not
-      return EppoValue.generateEppoValue(result.variation?.value, expectedVariationType);
+      if (!result.variation) {
+        return defaultValue;
+      }
+
+      return EppoValue.generateEppoValue(result.variation.value, expectedVariationType);
     } catch (error) {
-      return this.rethrowIfNotGraceful(error);
+      return this.rethrowIfNotGraceful(error, defaultValue);
     }
   }
 

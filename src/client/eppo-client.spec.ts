@@ -6,8 +6,10 @@ import * as td from 'testdouble';
 import mock, { MockResponse } from 'xhr-mock';
 
 import {
+  IAssignmentTestCase,
   MOCK_UFC_RESPONSE_FILE,
   OBFUSCATED_MOCK_UFC_RESPONSE_FILE,
+  SubjectTestCase,
   ValueTestType,
   readAssignmentTestData,
   readMockUFCResponse,
@@ -23,6 +25,7 @@ import ExperimentConfigurationRequestor from '../experiment-configuration-reques
 import HttpClient from '../http-client';
 import { Flag, VariationType } from '../interfaces';
 import { MD5Sharder } from '../sharders';
+import { AttributeType, SubjectAttributes } from '../types';
 
 import EppoClient, { FlagConfigurationRequestParameters } from './eppo-client';
 
@@ -48,6 +51,29 @@ class TestConfigurationStore implements IConfigurationStore {
   }
 }
 
+function getTestAssignments(
+  testCase: IAssignmentTestCase,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  assignmentFn: any,
+): { subject: SubjectTestCase; assignment: string | boolean | number | null | object }[] {
+  const assignments: {
+    subject: SubjectTestCase;
+    assignment: string | boolean | number | null | object;
+  }[] = [];
+  for (const subject of testCase.subjects) {
+    const assignment = assignmentFn(
+      subject.subjectKey,
+      testCase.flag,
+      subject.subjectAttributes,
+      null,
+      undefined,
+      false,
+    );
+    assignments.push({ subject: subject, assignment: assignment });
+  }
+  return assignments;
+}
+
 export async function init(configurationStore: IConfigurationStore) {
   const axiosInstance = axios.create({
     baseURL: 'http://127.0.0.1:4000',
@@ -68,9 +94,9 @@ export async function init(configurationStore: IConfigurationStore) {
 }
 
 describe('EppoClient E2E test', () => {
-  // const evaluator = new Evaluator(new MD5Sharder());
+  const evaluator = new Evaluator(new MD5Sharder());
   const storage = new TestConfigurationStore();
-  // const globalClient = new EppoClient(evaluator, storage);
+  const globalClient = new EppoClient(evaluator, storage);
 
   beforeAll(async () => {
     mock.setup();
@@ -142,8 +168,19 @@ describe('EppoClient E2E test', () => {
 
       expect(client.getBoolAssignment('subject-identifer', flagKey, {})).toBeNull();
       expect(client.getNumericAssignment('subject-identifer', flagKey, {})).toBeNull();
-      expect(client.getParsedJSONAssignment('subject-identifer', flagKey, {})).toBeNull();
+      expect(client.getJSONAssignment('subject-identifer', flagKey, {})).toBeNull();
       expect(client.getStringAssignment('subject-identifer', flagKey, {})).toBeNull();
+    });
+
+    it('returns default value when graceful failure if error encounterd', async () => {
+      client.setIsGracefulFailureMode(true);
+
+      expect(client.getBoolAssignment('subject-identifer', flagKey, {}, true)).toBe(true);
+      expect(client.getNumericAssignment('subject-identifer', flagKey, {}, 1)).toBe(1);
+      expect(client.getJSONAssignment('subject-identifer', flagKey, {}, {})).toEqual({});
+      expect(client.getStringAssignment('subject-identifer', flagKey, {}, 'default')).toBe(
+        'default',
+      );
     });
 
     it('throws error when graceful failure is false', async () => {
@@ -154,7 +191,7 @@ describe('EppoClient E2E test', () => {
       }).toThrow();
 
       expect(() => {
-        client.getParsedJSONAssignment('subject-identifer', flagKey, {});
+        client.getJSONAssignment('subject-identifer', flagKey, {});
       }).toThrow();
 
       expect(() => {
@@ -214,57 +251,86 @@ describe('EppoClient E2E test', () => {
     });
   });
 
-  // describe('getStringAssignment', () => {
-  //   it.each(readAssignmentTestData())(
-  //     'test variation assignment splits',
-  //     async ({
-  //       experiment,
-  //       valueType = ValueTestType.StringType,
-  //       subjects,
-  //       subjectsWithAttributes,
-  //       expectedAssignments,
-  //     }: IAssignmentTestCase) => {
-  //       `---- Test Case for ${experiment} Experiment ----`;
+  describe('UFC General Test Cases', () => {
+    it.each(readAssignmentTestData())(
+      'test variation assignment splits',
+      async ({ flag, variationType, subjects }: IAssignmentTestCase) => {
+        `---- Test Case for ${flag} Experiment ----`;
 
-  //       const assignments = getAssignmentsWithSubjectAttributes(
-  //         subjectsWithAttributes
-  //           ? subjectsWithAttributes
-  //           : subjects.map((subject) => ({ subjectKey: subject })),
-  //         experiment,
-  //         valueType,
-  //       );
+        const evaluator = new Evaluator(new MD5Sharder());
+        const client = new EppoClient(evaluator, storage);
 
-  //       switch (valueType) {
-  //         case ValueTestType.BoolType: {
-  //           const boolAssignments = assignments.map((a) => a?.boolValue ?? null);
-  //           expect(boolAssignments).toEqual(expectedAssignments);
-  //           break;
-  //         }
-  //         case ValueTestType.NumericType: {
-  //           const numericAssignments = assignments.map((a) => a?.numericValue ?? null);
-  //           expect(numericAssignments).toEqual(expectedAssignments);
-  //           break;
-  //         }
-  //         case ValueTestType.StringType: {
-  //           const stringAssignments = assignments.map((a) => a?.stringValue ?? null);
-  //           expect(stringAssignments).toEqual(expectedAssignments);
-  //           break;
-  //         }
-  //         case ValueTestType.JSONType: {
-  //           const jsonStringAssignments = assignments.map((a) => a?.stringValue ?? null);
-  //           expect(jsonStringAssignments).toEqual(expectedAssignments);
-  //           break;
-  //         }
-  //       }
-  //     },
-  //   );
-  // });
+        let assignments: {
+          subject: SubjectTestCase;
+          assignment: string | boolean | number | null | object;
+        }[] = [];
+        switch (variationType) {
+          case VariationType.BOOLEAN: {
+            assignments = getTestAssignments(
+              { flag, variationType, subjects },
+              client.getBoolAssignment,
+            );
+            break;
+          }
+          case VariationType.NUMERIC: {
+            assignments = getTestAssignments(
+              { flag, variationType, subjects },
+              client.getNumericAssignment,
+            );
+            break;
+          }
+          case VariationType.INTEGER: {
+            assignments = getTestAssignments(
+              { flag, variationType, subjects },
+              client.getIntegerAssignment,
+            );
+            break;
+          }
+          case VariationType.STRING: {
+            assignments = getTestAssignments(
+              { flag, variationType, subjects },
+              client.getStringAssignment,
+            );
+            break;
+          }
+          case VariationType.JSON: {
+            assignments = getTestAssignments(
+              { flag, variationType, subjects },
+              client.getStringAssignment,
+            );
+            break;
+          }
+          default: {
+            throw new Error(`Unknown variation type: ${variationType}`);
+          }
+        }
+        console.log(assignments);
+        for (const { subject, assignment } of assignments) {
+          expect(assignment).toEqual(subject.assignment);
+        }
+      },
+    );
+  });
 
   // it('returns null if getStringAssignment was called for the subject before any RAC was loaded', () => {
   //   expect(
   //     globalClient.getStringAssignment(sessionOverrideSubject, sessionOverrideExperiment),
   //   ).toEqual(null);
   // });
+
+  it('returns default value when key does not exist', async () => {
+    const evaluator = new Evaluator(new MD5Sharder());
+    const client = new EppoClient(evaluator, storage);
+
+    const nonExistantFlag = 'non-existent-flag';
+
+    expect(client.getBoolAssignment('subject-identifer', nonExistantFlag, {}, true)).toBe(true);
+    expect(client.getNumericAssignment('subject-identifer', nonExistantFlag, {}, 1)).toBe(1);
+    expect(client.getJSONAssignment('subject-identifer', nonExistantFlag, {}, {})).toEqual({});
+    expect(client.getStringAssignment('subject-identifer', nonExistantFlag, {}, 'default')).toBe(
+      'default',
+    );
+  });
 
   it('logs variation assignment and experiment key', () => {
     const mockLogger = td.object<IAssignmentLogger>();
@@ -281,7 +347,6 @@ describe('EppoClient E2E test', () => {
     expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
 
     const loggedAssignmentEvent = td.explain(mockLogger.logAssignment).calls[0].args[0];
-    console.log(loggedAssignmentEvent);
     expect(loggedAssignmentEvent.subject).toEqual('subject-10');
     expect(loggedAssignmentEvent.featureFlag).toEqual(flagKey);
     expect(loggedAssignmentEvent.experiment).toEqual(`${flagKey}-${mockFlag.allocations[0].key}`);
@@ -300,19 +365,20 @@ describe('EppoClient E2E test', () => {
     const subjectAttributes = { foo: 3 };
     const assignment = client.getStringAssignment('subject-10', flagKey, subjectAttributes);
 
-    expect(assignment).toEqual('control');
+    expect(assignment).toEqual('variation-a');
   });
 
   describe('assignment logging deduplication', () => {
     let client: EppoClient;
+    let evaluator: Evaluator;
     let mockLogger: IAssignmentLogger;
 
     beforeEach(() => {
       mockLogger = td.object<IAssignmentLogger>();
 
       storage.setEntries({ [flagKey]: mockFlag });
-      const evaluator = new Evaluator(new MD5Sharder());
-      const client = new EppoClient(evaluator, storage);
+      evaluator = new Evaluator(new MD5Sharder());
+      client = new EppoClient(evaluator, storage);
       client.setLogger(mockLogger);
     });
 
@@ -357,8 +423,6 @@ describe('EppoClient E2E test', () => {
         new Error('logging error'),
       );
 
-      const evaluator = new Evaluator(new MD5Sharder());
-      const client = new EppoClient(evaluator, storage);
       client.setLogger(mockLogger);
 
       client.getStringAssignment('subject-10', flagKey);
@@ -374,11 +438,11 @@ describe('EppoClient E2E test', () => {
         [flagKey]: mockFlag,
         'flag-2': {
           ...mockFlag,
-          name: 'flag-2',
+          key: 'flag-2',
         },
         'flag-3': {
           ...mockFlag,
-          name: 'flag-3',
+          key: 'flag-3',
         },
       });
 
@@ -398,6 +462,7 @@ describe('EppoClient E2E test', () => {
     });
 
     it('logs twice for the same flag when rollout increases/flag changes', () => {
+      // TODO: update test to UFC format
       client.useNonExpiringInMemoryAssignmentCache();
 
       storage.setEntries({
@@ -473,6 +538,7 @@ describe('EppoClient E2E test', () => {
     });
 
     it('logs the same subject/flag/variation after two changes', () => {
+      // TODO: update test to UFC format
       client.useNonExpiringInMemoryAssignmentCache();
 
       // original configuration version
@@ -518,39 +584,6 @@ describe('EppoClient E2E test', () => {
 
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(3);
     });
-  });
-
-  it('only returns variation if subject matches rules', () => {
-    const entry = {
-      ...mockFlag,
-      rules: [
-        {
-          allocationKey: 'allocation1',
-          conditions: [
-            {
-              operator: OperatorType.GT,
-              attribute: 'appVersion',
-              value: 10,
-            },
-          ],
-        },
-      ],
-    };
-
-    storage.setEntries({ [flagKey]: entry });
-
-    const evaluator = new Evaluator(new MD5Sharder());
-    const client = new EppoClient(evaluator, storage);
-    let assignment = client.getStringAssignment('subject-10', flagKey, {
-      appVersion: 9,
-    });
-    expect(assignment).toBeNull();
-    assignment = client.getStringAssignment('subject-10', flagKey);
-    expect(assignment).toBeNull();
-    assignment = client.getStringAssignment('subject-10', flagKey, {
-      appVersion: 11,
-    });
-    expect(assignment).toEqual('control');
   });
 
   //   describe('getStringAssignment with hooks', () => {
