@@ -296,7 +296,7 @@ describe('EppoClient E2E test', () => {
           case VariationType.JSON: {
             assignments = getTestAssignments(
               { flag, variationType, subjects },
-              client.getStringAssignment.bind(client),
+              client.getJSONAssignment.bind(client),
             );
             break;
           }
@@ -304,7 +304,6 @@ describe('EppoClient E2E test', () => {
             throw new Error(`Unknown variation type: ${variationType}`);
           }
         }
-        console.log(assignments);
         for (const { subject, assignment } of assignments) {
           expect(assignment).toEqual(subject.assignment);
         }

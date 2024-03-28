@@ -116,8 +116,14 @@ export class EppoValue {
     return new EppoValue(EppoValueType.StringType, undefined, undefined, value, undefined);
   }
 
-  static JSON(value: object): EppoValue {
-    return new EppoValue(EppoValueType.JSONType, undefined, undefined, undefined, value);
+  static JSON(value: string | object): EppoValue {
+    return new EppoValue(
+      EppoValueType.JSONType,
+      undefined,
+      undefined,
+      undefined,
+      typeof value === 'string' ? JSON.parse(value) : value,
+    );
   }
 
   static Null(): EppoValue {
