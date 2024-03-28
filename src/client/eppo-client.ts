@@ -218,6 +218,7 @@ export default class EppoClient implements IEppoClient {
     assignmentHooks?: IAssignmentHooks | undefined,
     obfuscated = false,
   ): boolean | null {
+    console.log(this.getAssignmentVariation);
     return (
       this.getAssignmentVariation(
         subjectKey,

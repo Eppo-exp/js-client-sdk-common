@@ -461,41 +461,26 @@ describe('EppoClient E2E test', () => {
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(3);
     });
 
-    it('logs twice for the same flag when rollout increases/flag changes', () => {
-      // TODO: update test to UFC format
+    it('logs twice for the same flag when allocations change', () => {
       client.useNonExpiringInMemoryAssignmentCache();
 
       storage.setEntries({
         [flagKey]: {
           ...mockFlag,
-          allocations: {
-            allocation1: {
-              percentExposure: 1,
-              statusQuoVariationKey: null,
-              shippedVariationKey: null,
-              holdouts: [],
-              variations: [
+
+          allocations: [
+            {
+              key: 'allocation-a-2',
+              rules: [],
+              splits: [
                 {
-                  name: 'control',
-                  value: 'control',
-                  typedValue: 'control',
-                  shardRange: {
-                    start: 0,
-                    end: 10000,
-                  },
-                },
-                {
-                  name: 'treatment',
-                  value: 'treatment',
-                  typedValue: 'treatment',
-                  shardRange: {
-                    start: 0,
-                    end: 0,
-                  },
+                  shards: [],
+                  variationKey: 'a',
                 },
               ],
+              doLog: true,
             },
-          },
+          ],
         },
       });
       client.getStringAssignment('subject-10', flagKey);
@@ -503,34 +488,19 @@ describe('EppoClient E2E test', () => {
       storage.setEntries({
         [flagKey]: {
           ...mockFlag,
-          allocations: {
-            allocation1: {
-              percentExposure: 1,
-              statusQuoVariationKey: null,
-              shippedVariationKey: null,
-              holdouts: [],
-              variations: [
+          allocations: [
+            {
+              key: 'allocation-a-3',
+              rules: [],
+              splits: [
                 {
-                  name: 'control',
-                  value: 'control',
-                  typedValue: 'control',
-                  shardRange: {
-                    start: 0,
-                    end: 0,
-                  },
-                },
-                {
-                  name: 'treatment',
-                  value: 'treatment',
-                  typedValue: 'treatment',
-                  shardRange: {
-                    start: 0,
-                    end: 10000,
-                  },
+                  shards: [],
+                  variationKey: 'a',
                 },
               ],
+              doLog: true,
             },
-          },
+          ],
         },
       });
       client.getStringAssignment('subject-10', flagKey);
@@ -538,7 +508,6 @@ describe('EppoClient E2E test', () => {
     });
 
     it('logs the same subject/flag/variation after two changes', () => {
-      // TODO: update test to UFC format
       client.useNonExpiringInMemoryAssignmentCache();
 
       // original configuration version
@@ -551,25 +520,19 @@ describe('EppoClient E2E test', () => {
       storage.setEntries({
         [flagKey]: {
           ...mockFlag,
-          allocations: {
-            allocation1: {
-              percentExposure: 1,
-              statusQuoVariationKey: null,
-              shippedVariationKey: null,
-              holdouts: [],
-              variations: [
+          allocations: [
+            {
+              key: 'allocation-b',
+              rules: [],
+              splits: [
                 {
-                  name: 'some-new-treatment',
-                  value: 'some-new-treatment',
-                  typedValue: 'some-new-treatment',
-                  shardRange: {
-                    start: 0,
-                    end: 10000,
-                  },
+                  shards: [],
+                  variationKey: 'b',
                 },
               ],
+              doLog: true,
             },
-          },
+          ],
         },
       });
 
@@ -579,6 +542,7 @@ describe('EppoClient E2E test', () => {
       // change the flag again, back to the original
       storage.setEntries({ [flagKey]: mockFlag });
 
+      // Question: Why do we need to log the same assignment again?
       client.getStringAssignment('subject-10', flagKey); // important: log this assignment
       client.getStringAssignment('subject-10', flagKey); // cache hit, don't log
 
