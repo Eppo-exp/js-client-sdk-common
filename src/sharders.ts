@@ -26,7 +26,8 @@ export class DeterministicSharder extends Sharder {
     this.lookup = lookup;
   }
 
-  getShard(input: string, totalShards: number): number {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  getShard(input: string, _totalShards: number): number {
     return this.lookup[input] ?? 0;
   }
 }

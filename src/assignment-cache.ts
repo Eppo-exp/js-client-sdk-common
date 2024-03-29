@@ -1,6 +1,5 @@
 import { LRUCache } from 'lru-cache';
 
-import { EppoValue } from './eppo_value';
 import { getMD5Hash } from './obfuscation';
 
 export interface AssignmentCacheKey {

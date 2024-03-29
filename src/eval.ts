@@ -1,4 +1,4 @@
-import { Flag, Shard, Range, Variation, Allocation, Split } from './interfaces';
+import { Flag, Shard, Range, Variation } from './interfaces';
 import { matchesRule } from './rules';
 import { Sharder } from './sharders';
 

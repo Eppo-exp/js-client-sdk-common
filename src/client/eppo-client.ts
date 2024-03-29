@@ -219,7 +219,6 @@ export default class EppoClient implements IEppoClient {
     assignmentHooks?: IAssignmentHooks | undefined,
     obfuscated = false,
   ): boolean | null {
-    console.log(this.getAssignmentVariation);
     return (
       this.getAssignmentVariation(
         subjectKey,
@@ -372,7 +371,6 @@ export default class EppoClient implements IEppoClient {
 
     try {
       if (result && result.doLog) {
-        // TODO: check assignment cache
         this.logAssignment(result);
       }
     } catch (error) {
