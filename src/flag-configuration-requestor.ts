@@ -8,7 +8,7 @@ interface IUniversalFlagConfig {
   flags: Record<string, Flag>;
 }
 
-export default class ExperimentConfigurationRequestor {
+export default class FlagConfigurationRequestor {
   constructor(private configurationStore: IConfigurationStore, private httpClient: HttpClient) {}
 
   async fetchAndStoreConfigurations(): Promise<Record<string, Flag>> {

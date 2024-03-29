@@ -1,5 +1,5 @@
 import { Flag, Shard, Range, Variation, Allocation, Split } from './interfaces';
-import { matchesRule } from './rule_evaluator';
+import { matchesRule } from './rules';
 import { Sharder } from './sharders';
 
 export interface FlagEvaluation {

@@ -19,9 +19,10 @@ import {
 } from '../constants';
 import { EppoValue } from '../eppo_value';
 import { Evaluator, FlagEvaluation, noneResult } from '../eval';
-import ExperimentConfigurationRequestor from '../experiment-configuration-requestor';
+import ExperimentConfigurationRequestor from '../flag-configuration-requestor';
 import HttpClient from '../http-client';
 import { Flag, VariationType } from '../interfaces';
+import { getMD5Hash } from '../obfuscation';
 import initPoller, { IPoller } from '../poller';
 import { AttributeType } from '../types';
 import { validateNotBlank } from '../validation';
@@ -343,7 +344,7 @@ export default class EppoClient implements IEppoClient {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
     validateNotBlank(flagKey, 'Invalid argument: flagKey cannot be blank');
 
-    const flag: Flag = this.configurationStore.get(flagKey);
+    const flag: Flag = this.configurationStore.get(obfuscated ? getMD5Hash(flagKey) : flagKey);
 
     if (flag === null) {
       console.warn(`[Eppo SDK] No assigned variation. Flag not found: ${flagKey}`);
@@ -364,6 +365,10 @@ export default class EppoClient implements IEppoClient {
     }
 
     const result = this.evaluator.evaluateFlag(flag, subjectKey, subjectAttributes, obfuscated);
+    if (obfuscated) {
+      // flag.key is obfuscated, replace with requested flag key
+      result.flagKey = flagKey;
+    }
 
     try {
       if (result && result.doLog) {

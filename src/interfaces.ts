@@ -1,4 +1,4 @@
-import { getMD5Hash } from './obfuscation';
+import { Rule } from './rules';
 
 export enum VariationType {
   STRING = 'string',
@@ -45,70 +45,4 @@ export interface Flag {
   variations: Record<string, Variation>;
   allocations: Allocation[];
   totalShards: number;
-}
-
-export enum OperatorType {
-  MATCHES = 'MATCHES',
-  NOT_MATCHES = 'NOT_MATCHES',
-  GTE = 'GTE',
-  GT = 'GT',
-  LTE = 'LTE',
-  LT = 'LT',
-  ONE_OF = 'ONE_OF',
-  NOT_ONE_OF = 'NOT_ONE_OF',
-}
-
-export enum OperatorValueType {
-  PLAIN_STRING = 'PLAIN_STRING',
-  STRING_ARRAY = 'STRING_ARRAY',
-  SEM_VER = 'SEM_VER',
-  NUMERIC = 'NUMERIC',
-}
-
-interface MatchesCondition {
-  operator: OperatorType.MATCHES;
-  attribute: string;
-  value: string;
-}
-
-interface NotMatchesCondition {
-  operator: OperatorType.NOT_MATCHES;
-  attribute: string;
-  value: string;
-}
-
-interface OneOfCondition {
-  operator: OperatorType.ONE_OF;
-  attribute: string;
-  value: string[];
-}
-
-interface NotOneOfCondition {
-  operator: OperatorType.NOT_ONE_OF;
-  attribute: string;
-  value: string[];
-}
-
-interface SemVerCondition {
-  operator: OperatorType.GTE | OperatorType.GT | OperatorType.LTE | OperatorType.LT;
-  attribute: string;
-  value: string;
-}
-
-interface NumericCondition {
-  operator: OperatorType.GTE | OperatorType.GT | OperatorType.LTE | OperatorType.LT;
-  attribute: string;
-  value: number;
-}
-
-export type Condition =
-  | MatchesCondition
-  | NotMatchesCondition
-  | OneOfCondition
-  | NotOneOfCondition
-  | SemVerCondition
-  | NumericCondition;
-
-export interface Rule {
-  conditions: Condition[];
 }

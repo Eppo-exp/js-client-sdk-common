@@ -1,5 +1,7 @@
 import { Evaluator, hashKey, isInShardRange } from './eval';
-import { Flag, Variation, Shard, VariationType, OperatorType } from './interfaces';
+import { Flag, Variation, Shard, VariationType } from './interfaces';
+import { encodeBase64, getMD5Hash } from './obfuscation';
+import { ObfuscatedOperatorType, OperatorType } from './rules';
 import { MD5Sharder, DeterministicSharder } from './sharders';
 
 describe('Evaluator', () => {
@@ -203,7 +205,7 @@ describe('Evaluator', () => {
           rules: [
             {
               conditions: [
-                { operator: OperatorType.MATCHES, attribute: 'email', value: '.*@example.com' },
+                { operator: OperatorType.MATCHES, attribute: 'email', value: '.*@example\\.com$' },
               ],
             },
           ],
@@ -256,7 +258,7 @@ describe('Evaluator', () => {
           rules: [
             {
               conditions: [
-                { operator: OperatorType.MATCHES, attribute: 'email', value: '.*@example.com' },
+                { operator: OperatorType.MATCHES, attribute: 'email', value: '.*@example\\.com$' },
               ],
             },
           ],
@@ -291,6 +293,59 @@ describe('Evaluator', () => {
     expect(result.allocationKey).toEqual('default');
     expect(result.variation).toEqual(VARIATION_A);
   });
+
+  it('should not match first allocation rule and return variation A (obfuscated)', () => {
+    const flag: Flag = {
+      key: 'obfuscated_flag_key',
+      enabled: true,
+      variationType: VariationType.STRING,
+      variations: { a: VARIATION_A, b: VARIATION_B },
+      allocations: [
+        {
+          key: 'first',
+          rules: [
+            {
+              conditions: [
+                {
+                  operator: ObfuscatedOperatorType.MATCHES,
+                  attribute: getMD5Hash('email'),
+                  value: encodeBase64('.*@example\\.com$'),
+                },
+              ],
+            },
+          ],
+          splits: [
+            {
+              variationKey: 'b',
+              shards: [],
+              extraLogging: {},
+            },
+          ],
+          doLog: true,
+        },
+        {
+          key: 'default',
+          rules: [],
+          splits: [
+            {
+              variationKey: 'a',
+              shards: [],
+              extraLogging: {},
+            },
+          ],
+          doLog: true,
+        },
+      ],
+      totalShards: 10,
+    };
+
+    const evaluator = new Evaluator(new MD5Sharder());
+    const result = evaluator.evaluateFlag(flag, 'subject_key', { email: 'eppo@test.com' }, false);
+    expect(result.flagKey).toEqual('obfuscated_flag_key');
+    expect(result.allocationKey).toEqual('default');
+    expect(result.variation).toEqual(VARIATION_A);
+  });
+
   it('should evaluate sharding and return correct variations', () => {
     const flag: Flag = {
       key: 'flag',

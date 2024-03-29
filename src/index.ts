@@ -4,7 +4,7 @@ import { IAssignmentLogger, IAssignmentEvent } from './assignment-logger';
 import EppoClient, { FlagConfigurationRequestParameters, IEppoClient } from './client/eppo-client';
 import { IConfigurationStore } from './configuration-store';
 import * as constants from './constants';
-import ExperimentConfigurationRequestor from './experiment-configuration-requestor';
+import ExperimentConfigurationRequestor from './flag-configuration-requestor';
 import HttpClient from './http-client';
 import * as validation from './validation';
 
