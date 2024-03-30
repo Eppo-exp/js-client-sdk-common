@@ -27,7 +27,10 @@ import { IAllocation } from '../dto/allocation-dto';
 import { IExperimentConfiguration } from '../dto/experiment-configuration-dto';
 import { IVariation } from '../dto/variation-dto';
 import { EppoValue, ValueType } from '../eppo_value';
-import ExperimentConfigurationRequestor from '../experiment-configuration-requestor';
+import ExperimentConfigurationRequestor, {
+  IRandomizedAssignmentConfig,
+  RAC_ENDPOINT,
+} from '../experiment-configuration-requestor';
 import HttpClient from '../http-client';
 import { getMD5Hash } from '../obfuscation';
 import initPoller, { IPoller } from '../poller';
@@ -126,18 +129,22 @@ export interface IEppoClient {
   setIsGracefulFailureMode(gracefulFailureMode: boolean): void;
 }
 
-export type ExperimentConfigurationRequestParameters = {
+export type ExperimentConfigurationRequestBaseParameters = {
   apiKey: string;
   sdkVersion: string;
   sdkName: string;
   baseUrl?: string;
   requestTimeoutMs?: number;
-  numInitialRequestRetries?: number;
-  numPollRequestRetries?: number;
-  pollAfterSuccessfulInitialization?: boolean;
-  pollAfterFailedInitialization?: boolean;
-  throwOnFailedInitialization?: boolean;
 };
+
+export type ExperimentConfigurationRequestParameters =
+  ExperimentConfigurationRequestBaseParameters & {
+    numInitialRequestRetries?: number;
+    numPollRequestRetries?: number;
+    pollAfterSuccessfulInitialization?: boolean;
+    pollAfterFailedInitialization?: boolean;
+    throwOnFailedInitialization?: boolean;
+  };
 
 export default class EppoClient implements IEppoClient {
   private queuedEvents: IAssignmentEvent[] = [];
@@ -162,6 +169,36 @@ export default class EppoClient implements IEppoClient {
     this.configurationRequestParameters = configurationRequestParameters;
   }
 
+  public async storeFlagConfigurations(flagConfigurations: IRandomizedAssignmentConfig) {
+    this.configurationStore.setEntries<IExperimentConfiguration>(flagConfigurations.flags);
+  }
+
+  private static generateHttpClient(
+    configurationRequestParameters: ExperimentConfigurationRequestBaseParameters,
+  ) {
+    const axiosInstance = axios.create({
+      baseURL: configurationRequestParameters.baseUrl || DEFAULT_BASE_URL,
+      timeout: configurationRequestParameters.requestTimeoutMs || DEFAULT_REQUEST_TIMEOUT_MS,
+    });
+    const httpClient = new HttpClient(axiosInstance, {
+      apiKey: configurationRequestParameters.apiKey,
+      sdkName: configurationRequestParameters.sdkName,
+      sdkVersion: configurationRequestParameters.sdkVersion,
+    });
+    return httpClient;
+  }
+
+  public static async getFlagConfigurations(
+    configurationRequestParameters: ExperimentConfigurationRequestBaseParameters,
+  ): Promise<IRandomizedAssignmentConfig> {
+    const httpClient = EppoClient.generateHttpClient(configurationRequestParameters);
+    const responseData = await httpClient.get<IRandomizedAssignmentConfig>(RAC_ENDPOINT);
+    if (!responseData) {
+      return { flags: {} };
+    }
+    return responseData;
+  }
+
   public async fetchFlagConfigurations() {
     if (!this.configurationRequestParameters) {
       throw new Error(
@@ -174,15 +211,8 @@ export default class EppoClient implements IEppoClient {
       this.requestPoller.stop();
     }
 
-    const axiosInstance = axios.create({
-      baseURL: this.configurationRequestParameters.baseUrl || DEFAULT_BASE_URL,
-      timeout: this.configurationRequestParameters.requestTimeoutMs || DEFAULT_REQUEST_TIMEOUT_MS,
-    });
-    const httpClient = new HttpClient(axiosInstance, {
-      apiKey: this.configurationRequestParameters.apiKey,
-      sdkName: this.configurationRequestParameters.sdkName,
-      sdkVersion: this.configurationRequestParameters.sdkVersion,
-    });
+    const httpClient = EppoClient.generateHttpClient(this.configurationRequestParameters);
+
     const configurationRequestor = new ExperimentConfigurationRequestor(
       this.configurationStore,
       httpClient,
