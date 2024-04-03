@@ -32,7 +32,7 @@ export enum ObfuscatedOperatorType {
   NOT_ONE_OF = '602f5ee0b6e84fe29f43ab48b9e1addf',
 }
 
-export enum OperatorValueType {
+enum OperatorValueType {
   PLAIN_STRING = 'PLAIN_STRING',
   STRING_ARRAY = 'STRING_ARRAY',
   SEM_VER = 'SEM_VER',

@@ -1,6 +1,6 @@
 import { Flag, Shard, Range, Variation } from './interfaces';
 import { matchesRule } from './rules';
-import { Sharder } from './sharders';
+import { MD5Sharder, Sharder } from './sharders';
 
 export interface FlagEvaluation {
   flagKey: string;
@@ -13,10 +13,10 @@ export interface FlagEvaluation {
 }
 
 export class Evaluator {
-  sharder: Sharder; // Assuming a Sharder type exists, replace 'any' with 'Sharder' when available
+  sharder: Sharder;
 
-  constructor(sharder: Sharder) {
-    this.sharder = sharder;
+  constructor(sharder?: Sharder) {
+    this.sharder = sharder ?? new MD5Sharder();
   }
 
   evaluateFlag(
@@ -62,8 +62,8 @@ export class Evaluator {
   }
 
   matchesShard(shard: Shard, subjectKey: string, totalShards: number): boolean {
-    const h = this.sharder.getShard(hashKey(shard.salt, subjectKey), totalShards);
-    return shard.ranges.some((range) => isInShardRange(h, range));
+    const assignedShard = this.sharder.getShard(hashKey(shard.salt, subjectKey), totalShards);
+    return shard.ranges.some((range) => isInShardRange(assignedShard, range));
   }
 }
 

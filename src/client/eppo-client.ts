@@ -18,7 +18,7 @@ import {
   POLL_INTERVAL_MS,
 } from '../constants';
 import { EppoValue } from '../eppo_value';
-import { Evaluator, FlagEvaluation, noneResult } from '../eval';
+import { Evaluator, FlagEvaluation, noneResult } from '../evaluator';
 import ExperimentConfigurationRequestor from '../flag-configuration-requestor';
 import HttpClient from '../http-client';
 import { Flag, VariationType } from '../interfaces';

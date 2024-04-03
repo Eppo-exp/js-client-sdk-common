@@ -37,7 +37,7 @@ describe('rules', () => {
         {
           operator: OperatorType.ONE_OF,
           attribute: 'country',
-          value: ['USA', 'Canada'],
+          value: ['Canada', 'Mexico', 'USA'],
         },
       ],
     };
@@ -47,7 +47,7 @@ describe('rules', () => {
         {
           operator: OperatorType.NOT_ONE_OF,
           attribute: 'country',
-          value: ['USA', 'Canada'],
+          value: ['Canada', 'Mexico', 'USA'],
         },
       ],
     };
@@ -71,7 +71,7 @@ describe('rules', () => {
         {
           operator: OperatorType.MATCHES,
           attribute: 'user_id',
-          value: '[0-9]+',
+          value: '\\d+',
         },
       ],
     };
@@ -116,6 +116,10 @@ describe('rules', () => {
       expect(matchesRule(ruleWithOneOfCondition, { age: 10 }, false)).toBe(false);
     });
 
+    it('should return false for a rule with ONE_OF condition when subject attribute is null', () => {
+      expect(matchesRule(ruleWithOneOfCondition, { country: null }, false)).toBe(false);
+    });
+
     it('should return false for a rule with NOT_ONE_OF condition that matches the subject attributes', () => {
       expect(matchesRule(ruleWithNotOneOfCondition, { country: 'USA' }, false)).toBe(false);
     });
@@ -127,7 +131,11 @@ describe('rules', () => {
     it('should return false for a rule with NOT_ONE_OF condition when subject attribute is missing', () => {
       expect(matchesRule(ruleWithNotOneOfCondition, { age: 10 }, false)).toBe(false);
     });
-    ``;
+
+    it('should return false for a rule with NOT_ONE_OF condition when subject attribute is null', () => {
+      expect(matchesRule(ruleWithNotOneOfCondition, { country: null }, false)).toBe(false);
+    });
+
     it('should return true for a semver rule that matches the subject attributes', () => {
       expect(matchesRule(semverRule, subjectAttributes, false)).toBe(true);
     });

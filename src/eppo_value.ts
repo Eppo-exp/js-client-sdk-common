@@ -36,23 +36,23 @@ export class EppoValue {
     value: boolean | number | string | object | null | undefined,
     valueType: VariationType,
   ): EppoValue {
-    if (value != null && value != undefined) {
-      switch (valueType) {
-        case VariationType.BOOLEAN:
-          return EppoValue.Bool(value as boolean);
-        case VariationType.NUMERIC:
-          return EppoValue.Numeric(value as number);
-        case VariationType.INTEGER:
-          return EppoValue.Numeric(value as number);
-        case VariationType.STRING:
-          return EppoValue.String(value as string);
-        case VariationType.JSON:
-          return EppoValue.JSON(value as object);
-        default:
-          return EppoValue.String(value as string);
-      }
+    if (value == null) {
+      return EppoValue.Null();
     }
-    return EppoValue.Null();
+    switch (valueType) {
+      case VariationType.BOOLEAN:
+        return EppoValue.Bool(value as boolean);
+      case VariationType.NUMERIC:
+        return EppoValue.Numeric(value as number);
+      case VariationType.INTEGER:
+        return EppoValue.Numeric(value as number);
+      case VariationType.STRING:
+        return EppoValue.String(value as string);
+      case VariationType.JSON:
+        return EppoValue.JSON(value as object);
+      default:
+        return EppoValue.String(value as string);
+    }
   }
 
   toString(): string {
@@ -83,25 +83,6 @@ export class EppoValue {
   toHashedString(): string {
     const value = this.toString();
     return getMD5Hash(value);
-  }
-
-  isExpectedType(): boolean {
-    switch (this.valueType) {
-      case EppoValueType.BoolType:
-        return typeof this.boolValue === 'boolean';
-      case EppoValueType.NumericType:
-        return typeof this.numericValue === 'number';
-      case EppoValueType.StringType:
-        return typeof this.stringValue === 'string';
-      case EppoValueType.JSONType:
-        return typeof this.objectValue === 'object';
-      case EppoValueType.NullType:
-        return false;
-    }
-  }
-
-  isNullType(): boolean {
-    return this.valueType === EppoValueType.NullType;
   }
 
   static Bool(value: boolean): EppoValue {

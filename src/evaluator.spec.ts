@@ -1,4 +1,4 @@
-import { Evaluator, hashKey, isInShardRange } from './eval';
+import { Evaluator, hashKey, isInShardRange } from './evaluator';
 import { Flag, Variation, Shard, VariationType } from './interfaces';
 import { encodeBase64, getMD5Hash } from './obfuscation';
 import { ObfuscatedOperatorType, OperatorType } from './rules';
