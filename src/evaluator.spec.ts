@@ -158,6 +158,39 @@ describe('Evaluator', () => {
     expect(result.variation).toBeNull();
   });
 
+  it('should evaluate flag based on a targeting condition with overwritten id', () => {
+    const flag: Flag = {
+      key: 'flag-key',
+      enabled: true,
+      variationType: VariationType.STRING,
+      variations: { control: { key: 'control', value: 'control' } },
+      allocations: [
+        {
+          key: 'allocation',
+          rules: [
+            {
+              conditions: [
+                { operator: OperatorType.ONE_OF, attribute: 'id', value: ['alice', 'bob'] },
+              ],
+            },
+          ],
+          splits: [
+            {
+              variationKey: 'control',
+              shards: [],
+              extraLogging: {},
+            },
+          ],
+          doLog: true,
+        },
+      ],
+      totalShards: 10000,
+    };
+
+    const result = evaluator.evaluateFlag(flag, 'alice', { id: 'charlie' }, false);
+    expect(result.variation).toBeNull();
+  });
+
   it('should catch all allocation and return variation A', () => {
     const flag: Flag = {
       key: 'flag',
