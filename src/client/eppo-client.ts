@@ -185,7 +185,6 @@ export default class EppoClient implements IEppoClient {
     subjectKey: string,
     flagKey: string,
     defaultValue: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subjectAttributes: Record<string, AttributeType> = {},
     obfuscated = false,
   ): string {
