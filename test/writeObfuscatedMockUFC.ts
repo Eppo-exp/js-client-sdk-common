@@ -1,7 +1,8 @@
 import * as fs from 'fs';
 
-import { Flag, Rule } from '../src/interfaces';
+import { Flag } from '../src/interfaces';
 import { encodeBase64, getMD5Hash } from '../src/obfuscation';
+import { Rule } from '../src/rules';
 
 import {
   MOCK_UFC_RESPONSE_FILE,

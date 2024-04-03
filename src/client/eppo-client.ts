@@ -6,7 +6,6 @@ import {
   LRUInMemoryAssignmentCache,
   NonExpiringInMemoryAssignmentCache,
 } from '../assignment-cache';
-import { IAssignmentHooks } from '../assignment-hooks';
 import { IAssignmentEvent, IAssignmentLogger } from '../assignment-logger';
 import { IConfigurationStore } from '../configuration-store';
 import {
@@ -45,38 +44,30 @@ export interface IEppoClient {
   getStringAssignment(
     subjectKey: string,
     flagKey: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes?: Record<string, any>,
-    defaultValue?: string | null,
-    assignmentHooks?: IAssignmentHooks,
-  ): string | null;
+    defaultValue: string,
+    subjectAttributes?: Record<string, AttributeType>,
+  ): string;
 
   getBoolAssignment(
     subjectKey: string,
     flagKey: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes?: Record<string, any>,
-    defaultValue?: boolean | null,
-    assignmentHooks?: IAssignmentHooks,
-  ): boolean | null;
+    defaultValue: boolean,
+    subjectAttributes?: Record<string, AttributeType>,
+  ): boolean;
 
   getNumericAssignment(
     subjectKey: string,
     flagKey: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes?: Record<string, any>,
-    defaultValue?: number | null,
-    assignmentHooks?: IAssignmentHooks,
-  ): number | null;
+    defaultValue: number,
+    subjectAttributes?: Record<string, AttributeType>,
+  ): number;
 
   getJSONAssignment(
     subjectKey: string,
     flagKey: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes?: Record<string, any>,
-    defaultValue?: object | null,
-    assignmentHooks?: IAssignmentHooks,
-  ): object | null;
+    defaultValue: object,
+    subjectAttributes?: Record<string, AttributeType>,
+  ): object;
 
   setLogger(logger: IAssignmentLogger): void;
 
@@ -93,6 +84,8 @@ export interface IEppoClient {
   stopPolling(): void;
 
   setIsGracefulFailureMode(gracefulFailureMode: boolean): void;
+
+  getFlagKeys(): string[];
 }
 
 export type FlagConfigurationRequestParameters = {
@@ -191,108 +184,96 @@ export default class EppoClient implements IEppoClient {
   public getStringAssignment(
     subjectKey: string,
     flagKey: string,
+    defaultValue: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes: Record<string, any> = {},
-    defaultValue?: string | null,
-    assignmentHooks?: IAssignmentHooks | undefined,
+    subjectAttributes: Record<string, AttributeType> = {},
     obfuscated = false,
-  ): string | null {
+  ): string {
     return (
       this.getAssignmentVariation(
         subjectKey,
         flagKey,
+        EppoValue.String(defaultValue),
         subjectAttributes,
-        defaultValue ? EppoValue.String(defaultValue) : EppoValue.Null(),
-        assignmentHooks,
         obfuscated,
         VariationType.STRING,
-      ).stringValue ?? null
+      ).stringValue ?? defaultValue
     );
   }
 
   getBoolAssignment(
     subjectKey: string,
     flagKey: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes: Record<string, any> = {},
-    defaultValue: boolean | null = null,
-    assignmentHooks?: IAssignmentHooks | undefined,
+    defaultValue: boolean,
+    subjectAttributes: Record<string, AttributeType> = {},
     obfuscated = false,
-  ): boolean | null {
+  ): boolean {
     return (
       this.getAssignmentVariation(
         subjectKey,
         flagKey,
+        EppoValue.Bool(defaultValue),
         subjectAttributes,
-        defaultValue ? EppoValue.Bool(defaultValue) : EppoValue.Null(),
-        assignmentHooks,
         obfuscated,
         VariationType.BOOLEAN,
-      ).boolValue ?? null
+      ).boolValue ?? defaultValue
     );
   }
 
   getNumericAssignment(
     subjectKey: string,
     flagKey: string,
-    subjectAttributes?: Record<string, EppoValue>,
-    defaultValue?: number | null,
-    assignmentHooks?: IAssignmentHooks | undefined,
+    defaultValue: number,
+    subjectAttributes?: Record<string, AttributeType>,
     obfuscated = false,
-  ): number | null {
+  ): number {
     return (
       this.getAssignmentVariation(
         subjectKey,
         flagKey,
+        EppoValue.Numeric(defaultValue),
         subjectAttributes,
-        defaultValue ? EppoValue.Numeric(defaultValue) : EppoValue.Null(),
-        assignmentHooks,
         obfuscated,
         VariationType.NUMERIC,
-      ).numericValue ?? null
+      ).numericValue ?? defaultValue
     );
   }
 
   getIntegerAssignment(
     subjectKey: string,
     flagKey: string,
-    subjectAttributes?: Record<string, EppoValue>,
-    defaultValue?: number | null,
-    assignmentHooks?: IAssignmentHooks | undefined,
+    defaultValue: number,
+    subjectAttributes?: Record<string, AttributeType>,
     obfuscated = false,
-  ): number | null {
+  ): number {
     return (
       this.getAssignmentVariation(
         subjectKey,
         flagKey,
+        EppoValue.Numeric(defaultValue),
         subjectAttributes,
-        defaultValue ? EppoValue.Numeric(defaultValue) : EppoValue.Null(),
-        assignmentHooks,
         obfuscated,
         VariationType.INTEGER,
-      ).numericValue ?? null
+      ).numericValue ?? defaultValue
     );
   }
 
   public getJSONAssignment(
     subjectKey: string,
     flagKey: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes: Record<string, any> = {},
-    defaultValue?: object | null,
-    assignmentHooks?: IAssignmentHooks | undefined,
+    defaultValue: object,
+    subjectAttributes: Record<string, AttributeType> = {},
     obfuscated = false,
-  ): object | null {
+  ): object {
     return (
       this.getAssignmentVariation(
         subjectKey,
         flagKey,
+        EppoValue.JSON(defaultValue),
         subjectAttributes,
-        defaultValue ? EppoValue.JSON(defaultValue) : EppoValue.Null(),
-        assignmentHooks,
         obfuscated,
         VariationType.JSON,
-      ).objectValue ?? null
+      ).objectValue ?? defaultValue
     );
   }
 
@@ -307,10 +288,8 @@ export default class EppoClient implements IEppoClient {
   private getAssignmentVariation(
     subjectKey: string,
     flagKey: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes: Record<string, any> = {},
     defaultValue: EppoValue,
-    assignmentHooks: IAssignmentHooks | undefined,
+    subjectAttributes: Record<string, AttributeType> = {},
     obfuscated: boolean,
     expectedVariationType: VariationType,
   ): EppoValue {
@@ -384,7 +363,7 @@ export default class EppoClient implements IEppoClient {
     return expectedType === undefined || actualType === expectedType;
   }
 
-  public get_flag_keys() {
+  public getFlagKeys() {
     /**
      * Returns a list of all flag keys that have been initialized.
      * This can be useful to debug the initialization process.

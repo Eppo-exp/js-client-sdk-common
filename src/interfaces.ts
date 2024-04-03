@@ -1,11 +1,11 @@
 import { Rule } from './rules';
 
 export enum VariationType {
-  STRING = 'string',
-  INTEGER = 'integer',
-  NUMERIC = 'numeric',
-  BOOLEAN = 'boolean',
-  JSON = 'json',
+  STRING = 'STRING',
+  INTEGER = 'INTEGER',
+  NUMERIC = 'NUMERIC',
+  BOOLEAN = 'BOOLEAN',
+  JSON = 'JSON',
 }
 
 export interface Variation {

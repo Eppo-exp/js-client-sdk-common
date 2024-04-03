@@ -9,7 +9,7 @@ export enum EppoValueType {
   JSONType,
 }
 
-export type IValue = boolean | number | string | undefined;
+export type IValue = boolean | number | string;
 
 export class EppoValue {
   public valueType: EppoValueType;
@@ -33,7 +33,7 @@ export class EppoValue {
   }
 
   static generateEppoValue(
-    value: boolean | number | string | object | null | undefined,
+    value: boolean | number | string | object,
     valueType: VariationType,
   ): EppoValue {
     if (value == null) {

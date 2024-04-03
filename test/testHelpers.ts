@@ -25,6 +25,7 @@ export interface SubjectTestCase {
 export interface IAssignmentTestCase {
   flag: string;
   variationType: VariationType;
+  defaultValue: string | number | boolean | object;
   subjects: SubjectTestCase[];
 }
 
