@@ -344,12 +344,12 @@ describe('EppoClient E2E test', () => {
     const evaluator = new Evaluator();
     const client = new EppoClient(evaluator, storage);
 
-    const nonExistantFlag = 'non-existent-flag';
+    const nonExistentFlag = 'non-existent-flag';
 
-    expect(client.getBoolAssignment('subject-identifer', nonExistantFlag, true, {})).toBe(true);
-    expect(client.getNumericAssignment('subject-identifer', nonExistantFlag, 1, {})).toBe(1);
-    expect(client.getJSONAssignment('subject-identifer', nonExistantFlag, {}, {})).toEqual({});
-    expect(client.getStringAssignment('subject-identifer', nonExistantFlag, 'default', {})).toBe(
+    expect(client.getBoolAssignment('subject-identifer', nonExistentFlag, true, {})).toBe(true);
+    expect(client.getNumericAssignment('subject-identifer', nonExistentFlag, 1, {})).toBe(1);
+    expect(client.getJSONAssignment('subject-identifer', nonExistentFlag, {}, {})).toEqual({});
+    expect(client.getStringAssignment('subject-identifer', nonExistentFlag, 'default', {})).toBe(
       'default',
     );
   });

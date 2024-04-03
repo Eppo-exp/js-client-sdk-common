@@ -1,13 +1,15 @@
 import { Evaluator, hashKey, isInShardRange } from './evaluator';
 import { Flag, Variation, Shard, VariationType } from './interfaces';
-import { encodeBase64, getMD5Hash } from './obfuscation';
+import { getMD5Hash } from './obfuscation';
 import { ObfuscatedOperatorType, OperatorType } from './rules';
-import { MD5Sharder, DeterministicSharder } from './sharders';
+import { DeterministicSharder } from './sharders';
 
 describe('Evaluator', () => {
   const VARIATION_A: Variation = { key: 'a', value: 'A' };
   const VARIATION_B: Variation = { key: 'b', value: 'B' };
   const VARIATION_C: Variation = { key: 'c', value: 'C' };
+
+  const evaluator = new Evaluator();
 
   it('should return none result for disabled flag', () => {
     const flag: Flag = {
@@ -32,7 +34,6 @@ describe('Evaluator', () => {
       totalShards: 10,
     };
 
-    const evaluator = new Evaluator(new MD5Sharder());
     const result = evaluator.evaluateFlag(flag, 'subject_key', {}, false);
     expect(result.flagKey).toEqual('disabled_flag');
     expect(result.allocationKey).toBeNull();
@@ -46,7 +47,6 @@ describe('Evaluator', () => {
       ranges: [{ start: 0, end: 100 }],
     };
 
-    const evaluator = new Evaluator(new MD5Sharder());
     expect(evaluator.matchesShard(shard, 'subject_key', 100)).toBeTruthy();
   });
 
@@ -59,7 +59,6 @@ describe('Evaluator', () => {
       ],
     };
 
-    const evaluator = new Evaluator(new MD5Sharder());
     expect(evaluator.matchesShard(shard, 'subject_key', 100)).toBeTruthy();
 
     const deterministicEvaluator = new Evaluator(new DeterministicSharder({ subject_key: 50 }));
@@ -86,7 +85,6 @@ describe('Evaluator', () => {
       totalShards: 10,
     };
 
-    const evaluator = new Evaluator(new MD5Sharder());
     const result = evaluator.evaluateFlag(emptyFlag, 'subject_key', {}, false);
     expect(result.flagKey).toEqual('empty');
     expect(result.allocationKey).toBeNull();
@@ -117,7 +115,6 @@ describe('Evaluator', () => {
       totalShards: 10000,
     };
 
-    const evaluator = new Evaluator(new MD5Sharder());
     const result = evaluator.evaluateFlag(flag, 'user-1', {}, false);
     expect(result.variation).toEqual({ key: 'control', value: 'control-value' });
   });
@@ -151,7 +148,6 @@ describe('Evaluator', () => {
       totalShards: 10000,
     };
 
-    const evaluator = new Evaluator(new MD5Sharder());
     let result = evaluator.evaluateFlag(flag, 'alice', {}, false);
     expect(result.variation).toEqual({ key: 'control', value: 'control' });
 
@@ -185,7 +181,6 @@ describe('Evaluator', () => {
       totalShards: 10,
     };
 
-    const evaluator = new Evaluator(new MD5Sharder());
     const result = evaluator.evaluateFlag(flag, 'subject_key', {}, false);
     expect(result.flagKey).toEqual('flag');
     expect(result.allocationKey).toEqual('default');
@@ -234,7 +229,6 @@ describe('Evaluator', () => {
       totalShards: 10,
     };
 
-    const evaluator = new Evaluator(new MD5Sharder());
     const result = evaluator.evaluateFlag(
       flag,
       'subject_key',
@@ -287,7 +281,6 @@ describe('Evaluator', () => {
       totalShards: 10,
     };
 
-    const evaluator = new Evaluator(new MD5Sharder());
     const result = evaluator.evaluateFlag(flag, 'subject_key', { email: 'eppo@test.com' }, false);
     expect(result.flagKey).toEqual('flag');
     expect(result.allocationKey).toEqual('default');
@@ -309,7 +302,7 @@ describe('Evaluator', () => {
                 {
                   operator: ObfuscatedOperatorType.MATCHES,
                   attribute: getMD5Hash('email'),
-                  value: encodeBase64('.*@example\\.com$'),
+                  value: 'LipAZXhhbXBsZVxcLmNvbSQ=', //encodeBase64('.*@example\\.com$')
                 },
               ],
             },
@@ -339,7 +332,6 @@ describe('Evaluator', () => {
       totalShards: 10,
     };
 
-    const evaluator = new Evaluator(new MD5Sharder());
     const result = evaluator.evaluateFlag(flag, 'subject_key', { email: 'eppo@test.com' }, false);
     expect(result.flagKey).toEqual('obfuscated_flag_key');
     expect(result.allocationKey).toEqual('default');
@@ -419,7 +411,7 @@ describe('Evaluator', () => {
     );
   });
 
-  it('should return none result for evaluation prior to allocation', () => {
+  it('should not match on allocation before startAt has passed', () => {
     const now = new Date();
     const flag: Flag = {
       key: 'flag',
@@ -445,7 +437,6 @@ describe('Evaluator', () => {
       totalShards: 10,
     };
 
-    const evaluator = new Evaluator(new MD5Sharder());
     const result = evaluator.evaluateFlag(flag, 'subject_key', {}, false);
     expect(result.flagKey).toEqual('flag');
     expect(result.allocationKey).toBeNull();
@@ -478,14 +469,13 @@ describe('Evaluator', () => {
       totalShards: 10,
     };
 
-    const evaluator = new Evaluator(new MD5Sharder());
     const result = evaluator.evaluateFlag(flag, 'subject_key', {}, false);
     expect(result.flagKey).toEqual('flag');
     expect(result.allocationKey).toEqual('default');
     expect(result.variation).toEqual(VARIATION_A);
   });
 
-  it('should evaluate flag after allocation period', () => {
+  it('should not match on allocation after endAt has passed', () => {
     const now = new Date();
     const flag: Flag = {
       key: 'flag',
@@ -511,7 +501,6 @@ describe('Evaluator', () => {
       totalShards: 10,
     };
 
-    const evaluator = new Evaluator(new MD5Sharder());
     const result = evaluator.evaluateFlag(flag, 'subject_key', {}, false);
     expect(result.flagKey).toEqual('flag');
     expect(result.allocationKey).toBeNull();

@@ -349,7 +349,7 @@ export default class EppoClient implements IEppoClient {
     }
 
     try {
-      if (result && result.doLog) {
+      if (result?.doLog) {
         this.logAssignment(result);
       }
     } catch (error) {

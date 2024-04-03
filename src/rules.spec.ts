@@ -57,12 +57,12 @@ describe('rules', () => {
         {
           operator: OperatorType.GTE,
           attribute: 'version',
-          value: '1.0.0',
+          value: '1.2.5',
         },
         {
           operator: OperatorType.LTE,
           attribute: 'version',
-          value: '2.0.0',
+          value: '2.4.2',
         },
       ],
     };
@@ -141,7 +141,12 @@ describe('rules', () => {
     });
 
     it('should return false for a semver rule that does not match the subject attributes', () => {
-      const failingAttributes = { version: '2.1.0' };
+      const failingAttributes = { version: '2.6.2' };
+      expect(matchesRule(semverRule, failingAttributes, false)).toBe(false);
+    });
+
+    it('should return false for a semver rule that does not match the subject attributes', () => {
+      const failingAttributes = { version: '1.0.6' };
       expect(matchesRule(semverRule, failingAttributes, false)).toBe(false);
     });
 
@@ -165,8 +170,12 @@ describe('rules', () => {
         conditions: [
           {
             operator: ObfuscatedOperatorType.ONE_OF,
-            attribute: getMD5Hash('country'),
-            value: ['usa', 'canada', 'mexico'].map(getMD5Hash),
+            attribute: 'e909c2d7067ea37437cf97fe11d91bd0', // getMD5Hash('country')
+            value: [
+              'ada53304c5b9e4a839615b6e8f908eb6',
+              'c2aadac2ca30ca8aadfbe331ae180d28',
+              '4edfc924721abb774d5447bade86ea5d',
+            ], // ['usa', 'canada', 'mexico'].map(getMD5Hash)
           },
         ],
       };
@@ -175,8 +184,12 @@ describe('rules', () => {
         conditions: [
           {
             operator: ObfuscatedOperatorType.NOT_ONE_OF,
-            attribute: getMD5Hash('country'),
-            value: ['usa', 'canada', 'mexico'].map(getMD5Hash),
+            attribute: 'e909c2d7067ea37437cf97fe11d91bd0', // getMD5Hash('country')
+            value: [
+              'ada53304c5b9e4a839615b6e8f908eb6',
+              'c2aadac2ca30ca8aadfbe331ae180d28',
+              '4edfc924721abb774d5447bade86ea5d',
+            ], // ['usa', 'canada', 'mexico'].map(getMD5Hash)
           },
         ],
       };
@@ -185,8 +198,8 @@ describe('rules', () => {
         conditions: [
           {
             operator: ObfuscatedOperatorType.GTE,
-            attribute: getMD5Hash('age'),
-            value: encodeBase64('18'),
+            attribute: '7d637d275668ed6d41a9b97e6ad3a556', //getMD5Hash('age')
+            value: 'MTg=', //encodeBase64('18')
           },
         ],
       };
@@ -195,8 +208,8 @@ describe('rules', () => {
         conditions: [
           {
             operator: ObfuscatedOperatorType.GT,
-            attribute: getMD5Hash('age'),
-            value: encodeBase64('18'),
+            attribute: '7d637d275668ed6d41a9b97e6ad3a556', //getMD5Hash('age')
+            value: 'MTg=', //encodeBase64('18')
           },
         ],
       };
@@ -204,8 +217,8 @@ describe('rules', () => {
         conditions: [
           {
             operator: ObfuscatedOperatorType.LTE,
-            attribute: getMD5Hash('age'),
-            value: encodeBase64('18'),
+            attribute: '7d637d275668ed6d41a9b97e6ad3a556', //getMD5Hash('age')
+            value: 'MTg=', //encodeBase64('18')
           },
         ],
       };
@@ -214,8 +227,8 @@ describe('rules', () => {
         conditions: [
           {
             operator: ObfuscatedOperatorType.LT,
-            attribute: getMD5Hash('age'),
-            value: encodeBase64('18'),
+            attribute: '7d637d275668ed6d41a9b97e6ad3a556', //getMD5Hash('age')
+            value: 'MTg=', //encodeBase64('18')
           },
         ],
       };
@@ -223,8 +236,8 @@ describe('rules', () => {
         conditions: [
           {
             operator: ObfuscatedOperatorType.MATCHES,
-            attribute: getMD5Hash('email'),
-            value: encodeBase64('.+@example\\.com$'),
+            attribute: '0c83f57c786a0b4a39efab23731c7ebc', // getMD5Hash('email')
+            value: 'LitAZXhhbXBsZVwuY29tJA==', //encodeBase64('.+@example\\.com$')
           },
         ],
       };
@@ -233,8 +246,8 @@ describe('rules', () => {
         conditions: [
           {
             operator: ObfuscatedOperatorType.NOT_MATCHES,
-            attribute: getMD5Hash('email'),
-            value: encodeBase64('.+@example\\.com$'),
+            attribute: '0c83f57c786a0b4a39efab23731c7ebc', // getMD5Hash('email')
+            value: 'LitAZXhhbXBsZVwuY29tJA==', //encodeBase64('.+@example\\.com$')
           },
         ],
       };
@@ -255,6 +268,12 @@ describe('rules', () => {
 
       it('should return false for an obfuscated rule with NOT_ONE_OF condition that matches the subject attributes', () => {
         expect(matchesRule(obfuscatedRuleWithNotOneOfCondition, { country: 'USA' }, true)).toBe(
+          false,
+        );
+      });
+
+      it('should return false for an obfuscated rule with NOT_ONE_OF condition when the subject attribute is null', () => {
+        expect(matchesRule(obfuscatedRuleWithNotOneOfCondition, { country: null }, true)).toBe(
           false,
         );
       });
