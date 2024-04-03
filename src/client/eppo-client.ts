@@ -311,6 +311,19 @@ export default class EppoClient implements IEppoClient {
     }
   }
 
+  /**
+   * [Experimental] Get a detailed return of assignment for a particular subject and flag.
+   *
+   * Note: This method is experimental and may change in future versions.
+   * Please only use for debugging purposes, and not in production.
+   *
+   * @param subjectKey The subject key
+   * @param flagKey The flag key
+   * @param subjectAttributes The subject attributes
+   * @param expectedVariationType The expected variation type
+   * @param obfuscated Whether the flag key is obfuscated
+   * @returns A detailed return of assignment for a particular subject and flag
+   */
   public getAssignmentDetail(
     subjectKey: string,
     flagKey: string,
