@@ -1,4 +1,4 @@
-import { encodeBase64, getMD5Hash } from './obfuscation';
+import { getMD5Hash } from './obfuscation';
 import { ObfuscatedOperatorType, OperatorType, Rule, matchesRule } from './rules';
 
 describe('rules', () => {
