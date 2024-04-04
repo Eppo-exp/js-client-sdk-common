@@ -10,6 +10,3 @@ yarn-error.log
 
 test/data
 .vscode/settings.json
-
-# automatically generated version
-src/version.ts
