@@ -55,14 +55,14 @@ export interface IEppoClient {
     subjectAttributes?: Record<string, AttributeType>,
   ): boolean;
 
-  getNumericAssignment(
+  getIntegerAssignment(
     subjectKey: string,
     flagKey: string,
     defaultValue: number,
     subjectAttributes?: Record<string, AttributeType>,
   ): number;
 
-  getIntegerAssignment(
+  getNumericAssignment(
     subjectKey: string,
     flagKey: string,
     defaultValue: number,
@@ -112,6 +112,7 @@ export default class EppoClient implements IEppoClient {
   private queuedEvents: IAssignmentEvent[] = [];
   private assignmentLogger: IAssignmentLogger | undefined;
   private isGracefulFailureMode = true;
+  private isObfuscated = false;
   private assignmentCache: AssignmentCache<Cacheable> | undefined;
   private configurationStore: IConfigurationStore;
   private configurationRequestParameters: FlagConfigurationRequestParameters | undefined;
@@ -122,10 +123,12 @@ export default class EppoClient implements IEppoClient {
     evaluator: Evaluator,
     configurationStore: IConfigurationStore,
     configurationRequestParameters?: FlagConfigurationRequestParameters,
+    obfuscated = false,
   ) {
     this.evaluator = evaluator;
     this.configurationStore = configurationStore;
     this.configurationRequestParameters = configurationRequestParameters;
+    this.isObfuscated = obfuscated;
   }
 
   public setConfigurationRequestParameters(
@@ -193,7 +196,6 @@ export default class EppoClient implements IEppoClient {
     flagKey: string,
     defaultValue: string,
     subjectAttributes: Record<string, AttributeType> = {},
-    obfuscated = false,
   ): string {
     return (
       this.getAssignmentVariation(
@@ -201,7 +203,6 @@ export default class EppoClient implements IEppoClient {
         flagKey,
         EppoValue.String(defaultValue),
         subjectAttributes,
-        obfuscated,
         VariationType.STRING,
       ).stringValue ?? defaultValue
     );
@@ -212,7 +213,6 @@ export default class EppoClient implements IEppoClient {
     flagKey: string,
     defaultValue: boolean,
     subjectAttributes: Record<string, AttributeType> = {},
-    obfuscated = false,
   ): boolean {
     return (
       this.getAssignmentVariation(
@@ -220,28 +220,8 @@ export default class EppoClient implements IEppoClient {
         flagKey,
         EppoValue.Bool(defaultValue),
         subjectAttributes,
-        obfuscated,
         VariationType.BOOLEAN,
       ).boolValue ?? defaultValue
-    );
-  }
-
-  getNumericAssignment(
-    subjectKey: string,
-    flagKey: string,
-    defaultValue: number,
-    subjectAttributes?: Record<string, AttributeType>,
-    obfuscated = false,
-  ): number {
-    return (
-      this.getAssignmentVariation(
-        subjectKey,
-        flagKey,
-        EppoValue.Numeric(defaultValue),
-        subjectAttributes,
-        obfuscated,
-        VariationType.NUMERIC,
-      ).numericValue ?? defaultValue
     );
   }
 
@@ -250,7 +230,6 @@ export default class EppoClient implements IEppoClient {
     flagKey: string,
     defaultValue: number,
     subjectAttributes?: Record<string, AttributeType>,
-    obfuscated = false,
   ): number {
     return (
       this.getAssignmentVariation(
@@ -258,8 +237,24 @@ export default class EppoClient implements IEppoClient {
         flagKey,
         EppoValue.Numeric(defaultValue),
         subjectAttributes,
-        obfuscated,
         VariationType.INTEGER,
+      ).numericValue ?? defaultValue
+    );
+  }
+
+  getNumericAssignment(
+    subjectKey: string,
+    flagKey: string,
+    defaultValue: number,
+    subjectAttributes?: Record<string, AttributeType>,
+  ): number {
+    return (
+      this.getAssignmentVariation(
+        subjectKey,
+        flagKey,
+        EppoValue.Numeric(defaultValue),
+        subjectAttributes,
+        VariationType.NUMERIC,
       ).numericValue ?? defaultValue
     );
   }
@@ -269,7 +264,6 @@ export default class EppoClient implements IEppoClient {
     flagKey: string,
     defaultValue: object,
     subjectAttributes: Record<string, AttributeType> = {},
-    obfuscated = false,
   ): object {
     return (
       this.getAssignmentVariation(
@@ -277,18 +271,9 @@ export default class EppoClient implements IEppoClient {
         flagKey,
         EppoValue.JSON(defaultValue),
         subjectAttributes,
-        obfuscated,
         VariationType.JSON,
       ).objectValue ?? defaultValue
     );
-  }
-
-  private rethrowIfNotGraceful(err: Error, defaultValue?: EppoValue): EppoValue {
-    if (this.isGracefulFailureMode) {
-      console.error(`[Eppo SDK] Error getting assignment: ${err.message}`);
-      return defaultValue ?? EppoValue.Null();
-    }
-    throw err;
   }
 
   private getAssignmentVariation(
@@ -296,7 +281,6 @@ export default class EppoClient implements IEppoClient {
     flagKey: string,
     defaultValue: EppoValue,
     subjectAttributes: Record<string, AttributeType> = {},
-    obfuscated: boolean,
     expectedVariationType: VariationType,
   ): EppoValue {
     try {
@@ -305,17 +289,24 @@ export default class EppoClient implements IEppoClient {
         flagKey,
         subjectAttributes,
         expectedVariationType,
-        obfuscated,
       );
 
       if (!result.variation) {
         return defaultValue;
       }
 
-      return EppoValue.generateEppoValue(result.variation.value, expectedVariationType);
+      return EppoValue.valueOf(result.variation.value, expectedVariationType);
     } catch (error) {
       return this.rethrowIfNotGraceful(error, defaultValue);
     }
+  }
+
+  private rethrowIfNotGraceful(err: Error, defaultValue?: EppoValue): EppoValue {
+    if (this.isGracefulFailureMode) {
+      console.error(`[Eppo SDK] Error getting assignment: ${err.message}`);
+      return defaultValue ?? EppoValue.Null();
+    }
+    throw err;
   }
 
   /**
@@ -336,12 +327,11 @@ export default class EppoClient implements IEppoClient {
     flagKey: string,
     subjectAttributes: Record<string, AttributeType> = {},
     expectedVariationType?: VariationType,
-    obfuscated = false,
   ): FlagEvaluation {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
     validateNotBlank(flagKey, 'Invalid argument: flagKey cannot be blank');
 
-    const flag: Flag = this.configurationStore.get(obfuscated ? getMD5Hash(flagKey) : flagKey);
+    const flag = this.getFlag(flagKey);
 
     if (flag === null) {
       console.warn(`[Eppo SDK] No assigned variation. Flag not found: ${flagKey}`);
@@ -361,8 +351,13 @@ export default class EppoClient implements IEppoClient {
       return noneResult(flagKey, subjectKey, subjectAttributes);
     }
 
-    const result = this.evaluator.evaluateFlag(flag, subjectKey, subjectAttributes, obfuscated);
-    if (obfuscated) {
+    const result = this.evaluator.evaluateFlag(
+      flag,
+      subjectKey,
+      subjectAttributes,
+      this.isObfuscated,
+    );
+    if (this.isObfuscated) {
       // flag.key is obfuscated, replace with requested flag key
       result.flagKey = flagKey;
     }
@@ -376,6 +371,13 @@ export default class EppoClient implements IEppoClient {
     }
 
     return result;
+  }
+
+  private getFlag(flagKey: string): Flag | null {
+    const flag: Flag = this.configurationStore.get(
+      this.isObfuscated ? getMD5Hash(flagKey) : flagKey,
+    );
+    return flag;
   }
 
   private checkTypeMatch(expectedType?: VariationType, actualType?: VariationType): boolean {

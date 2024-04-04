@@ -32,10 +32,7 @@ export class EppoValue {
     this.objectValue = objectValue;
   }
 
-  static generateEppoValue(
-    value: boolean | number | string | object,
-    valueType: VariationType,
-  ): EppoValue {
+  static valueOf(value: boolean | number | string | object, valueType: VariationType): EppoValue {
     if (value == null) {
       return EppoValue.Null();
     }
