@@ -1,3 +1,4 @@
+import { logger } from './application-logger';
 import {
   DEFAULT_INITIAL_CONFIG_REQUEST_RETRIES,
   DEFAULT_POLL_CONFIG_REQUEST_RETRIES,
@@ -43,23 +44,23 @@ export default function initPoller(
         await callback();
         startRequestSuccess = true;
         previousPollFailed = false;
-        console.log('Eppo SDK successfully requested initial configuration');
+        logger.info('Eppo SDK successfully requested initial configuration');
       } catch (pollingError) {
         previousPollFailed = true;
-        console.warn(
+        logger.warn(
           `Eppo SDK encountered an error with initial poll of configurations: ${pollingError.message}`,
         );
         if (--startAttemptsRemaining > 0) {
           const jitterMs = randomJitterMs(intervalMs);
-          console.warn(
+          logger.warn(
             `Eppo SDK will retry the initial poll again in ${jitterMs} ms (${startAttemptsRemaining} attempts remaining)`,
           );
           await new Promise((resolve) => setTimeout(resolve, jitterMs));
         } else {
           if (options?.pollAfterFailedStart) {
-            console.warn('Eppo SDK initial poll failed; will attempt regular polling');
+            logger.warn('Eppo SDK initial poll failed; will attempt regular polling');
           } else {
-            console.error('Eppo SDK initial poll failed. Aborting polling');
+            logger.error('Eppo SDK initial poll failed. Aborting polling');
             stop();
           }
 
@@ -76,14 +77,14 @@ export default function initPoller(
         (!startRequestSuccess && options?.pollAfterFailedStart));
 
     if (startRegularPolling) {
-      console.log(`Eppo SDK starting regularly polling every ${intervalMs} ms`);
+      logger.info(`Eppo SDK starting regularly polling every ${intervalMs} ms`);
       nextTimer = setTimeout(poll, intervalMs);
     } else {
-      console.log(`Eppo SDK will not poll for configuration updates`);
+      logger.info(`Eppo SDK will not poll for configuration updates`);
     }
 
     if (startErrorToThrow) {
-      console.log('Eppo SDK rethrowing start error');
+      logger.info('Eppo SDK rethrowing start error');
       throw startErrorToThrow;
     }
   };
@@ -94,7 +95,7 @@ export default function initPoller(
       if (nextTimer) {
         clearTimeout(nextTimer);
       }
-      console.log('Eppo SDK polling stopped');
+      logger.info('Eppo SDK polling stopped');
     }
   };
 
@@ -110,23 +111,23 @@ export default function initPoller(
       nextPollMs = intervalMs;
       if (previousPollFailed) {
         previousPollFailed = false;
-        console.log('Eppo SDK poll successful; resuming normal polling');
+        logger.info('Eppo SDK poll successful; resuming normal polling');
       }
     } catch (error) {
       previousPollFailed = true;
-      console.warn(`Eppo SDK encountered an error polling configurations: ${error.message}`);
+      logger.warn(`Eppo SDK encountered an error polling configurations: ${error.message}`);
       const maxTries = 1 + (options?.maxPollRetries ?? DEFAULT_POLL_CONFIG_REQUEST_RETRIES);
       if (++failedAttempts < maxTries) {
         const failureWaitMultiplier = Math.pow(2, failedAttempts);
         const jitterMs = randomJitterMs(intervalMs);
         nextPollMs = failureWaitMultiplier * intervalMs + jitterMs;
-        console.warn(
+        logger.warn(
           `Eppo SDK will try polling again in ${nextPollMs} ms (${
             maxTries - failedAttempts
           } attempts remaining)`,
         );
       } else {
-        console.error(
+        logger.error(
           `Eppo SDK reached maximum of ${failedAttempts} failed polling attempts. Stopping polling`,
         );
         stop();
