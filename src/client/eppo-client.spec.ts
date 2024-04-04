@@ -346,11 +346,13 @@ describe('EppoClient E2E test', () => {
     );
   });
 
-  // it('returns null if getStringAssignment was called for the subject before any RAC was loaded', () => {
-  //   expect(
-  //     globalClient.getStringAssignment(sessionOverrideSubject, sessionOverrideExperiment),
-  //   ).toEqual(null);
-  // });
+  it('returns null if getStringAssignment was called for the subject before any UFC was loaded', () => {
+    const localClient = new EppoClient(new Evaluator(), new TestConfigurationStore());
+    expect(localClient.getStringAssignment('subject-1', flagKey, 'hello world')).toEqual(
+      'hello world',
+    );
+    expect(localClient.isInitialized()).toBe(false);
+  });
 
   it('returns default value when key does not exist', async () => {
     const evaluator = new Evaluator();
