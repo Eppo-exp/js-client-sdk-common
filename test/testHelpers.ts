@@ -19,7 +19,7 @@ export enum ValueTestType {
 export interface SubjectTestCase {
   subjectKey: string;
   subjectAttributes: Record<string, AttributeType>;
-  assignment: string | null;
+  assignment: string | number | boolean | object;
 }
 
 export interface IAssignmentTestCase {

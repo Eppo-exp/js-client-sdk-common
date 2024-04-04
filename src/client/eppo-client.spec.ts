@@ -71,6 +71,28 @@ function getTestAssignments(
   return assignments;
 }
 
+function validateTestAssignments(
+  assignments: {
+    subject: SubjectTestCase;
+    assignment: string | boolean | number | object | null;
+  }[],
+  flag: string,
+) {
+  for (const { subject, assignment } of assignments) {
+    if (typeof assignment !== 'object') {
+      // the expect works well for objects, but this comparison does not
+      if (assignment !== subject.assignment) {
+        throw new Error(
+          `subject ${
+            subject.subjectKey
+          } was assigned ${assignment?.toString()} when expected ${subject.assignment?.toString()} for flag ${flag}`,
+        );
+      }
+    }
+    expect(subject.assignment).toEqual(assignment);
+  }
+}
+
 export async function init(configurationStore: IConfigurationStore) {
   const axiosInstance = axios.create({
     baseURL: 'http://127.0.0.1:4000',
@@ -267,9 +289,7 @@ describe('EppoClient E2E test', () => {
           false,
         );
 
-        for (const { subject, assignment } of assignments) {
-          expect(assignment).toEqual(subject.assignment);
-        }
+        validateTestAssignments(assignments, flag);
       },
     );
   });
@@ -316,15 +336,7 @@ describe('EppoClient E2E test', () => {
           true,
         );
 
-        for (const { subject, assignment } of assignments) {
-          expect(assignment).toEqual(subject.assignment);
-          if (assignment !== subject.assignment) {
-            console.log(assignment, subject.assignment);
-            throw new Error(
-              `subject ${subject.subjectKey} was assigned ${assignment} when expected ${subject.assignment} for flag ${flag}`,
-            );
-          }
-        }
+        validateTestAssignments(assignments, flag);
       },
     );
   });
