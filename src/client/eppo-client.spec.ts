@@ -13,7 +13,6 @@ import {
   readAssignmentTestData,
   readMockUFCResponse,
 } from '../../test/testHelpers';
-import { IAssignmentHooks } from '../assignment-hooks';
 import { IAssignmentLogger } from '../assignment-logger';
 import { IConfigurationStore } from '../configuration-store';
 import { MAX_EVENT_QUEUE_SIZE, POLL_INTERVAL_MS, POLL_JITTER_PCT } from '../constants';
@@ -31,6 +30,7 @@ const flagEndpoint = /flag_config\/v1\/config*/;
 
 class TestConfigurationStore implements IConfigurationStore {
   private store: Record<string, string> = {};
+  private _isInitialized = false;
 
   public get<T>(key: string): T {
     const rval = this.store[key];
@@ -41,10 +41,15 @@ class TestConfigurationStore implements IConfigurationStore {
     Object.entries(entries).forEach(([key, val]) => {
       this.store[key] = JSON.stringify(val);
     });
+    this._isInitialized = true;
   }
 
   public getKeys(): string[] {
     return Object.keys(this.store);
+  }
+
+  public isInitialized(): boolean {
+    return this._isInitialized;
   }
 }
 
@@ -675,8 +680,8 @@ describe('EppoClient E2E test', () => {
       client = new EppoClient(evaluator, storage, requestConfiguration);
       client.setIsGracefulFailureMode(false);
       // no configuration loaded
-      let variation = client.getNumericAssignment(subject, flagKey, 0.0);
-      expect(variation).toBe(0.0);
+      let variation = client.getNumericAssignment(subject, flagKey, 123.4);
+      expect(variation).toBe(123.4);
       // have client fetch configurations
       await client.fetchFlagConfigurations();
       variation = client.getNumericAssignment(subject, flagKey, 0.0);

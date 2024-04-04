@@ -44,6 +44,8 @@ export interface IAssignmentEvent {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   subjectAttributes: Record<string, any>;
   [propName: string]: unknown;
+
+  metaData?: Record<string, unknown>;
 }
 
 /**

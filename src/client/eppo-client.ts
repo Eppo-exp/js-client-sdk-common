@@ -25,6 +25,7 @@ import { getMD5Hash } from '../obfuscation';
 import initPoller, { IPoller } from '../poller';
 import { AttributeType } from '../types';
 import { validateNotBlank } from '../validation';
+import { LIB_VERSION } from '../version';
 
 /**
  * Client for assigning experiment variations.
@@ -93,6 +94,8 @@ export interface IEppoClient {
   setIsGracefulFailureMode(gracefulFailureMode: boolean): void;
 
   getFlagKeys(): string[];
+
+  isInitialized(): boolean;
 }
 
 export type FlagConfigurationRequestParameters = {
@@ -394,6 +397,10 @@ export default class EppoClient implements IEppoClient {
     return this.configurationStore.getKeys();
   }
 
+  public isInitialized() {
+    return this.configurationStore.isInitialized();
+  }
+
   public setLogger(logger: IAssignmentLogger) {
     this.assignmentLogger = logger;
     this.flushQueuedEvents(); // log any events that may have been queued while initializing
@@ -444,6 +451,11 @@ export default class EppoClient implements IEppoClient {
       subject: result.subjectKey,
       timestamp: new Date().toISOString(),
       subjectAttributes: result.subjectAttributes,
+      metaData: {
+        obfuscated: this.isObfuscated,
+        sdkLanguage: 'javascript',
+        sdkLibVersion: LIB_VERSION,
+      },
     };
 
     if (
