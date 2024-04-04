@@ -21,7 +21,7 @@
     "lint:fix": "eslint --fix '**/*.{ts,tsx}' --cache",
     "lint:fix-pre-commit": "eslint -c .eslintrc.pre-commit.js --fix '**/*.{ts,tsx}' --no-eslintrc --cache",
     "prepare": "make prepare",
-    "pre-commit": "lint-staged && node -p \"'export const LIB_VERSION = ' + JSON.stringify(require('./package.json').version) + ';'\" > src/version.ts && tsc",
+    "pre-commit": "lint-staged && tsc",
     "typecheck": "tsc",
     "test": "yarn test:unit",
     "test:unit": "NODE_ENV=test jest '.*\\.spec\\.ts'",
