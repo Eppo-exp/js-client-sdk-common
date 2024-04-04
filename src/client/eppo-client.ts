@@ -62,6 +62,13 @@ export interface IEppoClient {
     subjectAttributes?: Record<string, AttributeType>,
   ): number;
 
+  getIntegerAssignment(
+    subjectKey: string,
+    flagKey: string,
+    defaultValue: number,
+    subjectAttributes?: Record<string, AttributeType>,
+  ): number;
+
   getJSONAssignment(
     subjectKey: string,
     flagKey: string,

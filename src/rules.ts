@@ -178,7 +178,6 @@ function evaluateCondition(subjectAttributes: Record<string, any>, condition: Co
   return false;
 }
 
-// TODO: implement the obfuscated version of this function
 function evaluateObfuscatedCondition(
   hashedSubjectAttributes: Record<string, any>,
   condition: Condition,

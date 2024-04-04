@@ -86,7 +86,7 @@ describe('rules', () => {
     };
     const subjectAttributes = {
       totalSales: 50,
-      version: '1.5.0',
+      version: '1.15.0',
       user_id: '12345',
       country: 'USA',
     };

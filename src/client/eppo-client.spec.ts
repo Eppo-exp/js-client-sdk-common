@@ -88,9 +88,7 @@ export async function init(configurationStore: IConfigurationStore) {
 }
 
 describe('EppoClient E2E test', () => {
-  const evaluator = new Evaluator();
   const storage = new TestConfigurationStore();
-  const globalClient = new EppoClient(evaluator, storage);
 
   beforeAll(async () => {
     mock.setup();
@@ -141,7 +139,6 @@ describe('EppoClient E2E test', () => {
 
   describe('error encountered', () => {
     let client: EppoClient;
-    const mockHooks = td.object<IAssignmentHooks>();
 
     beforeAll(() => {
       storage.setEntries({ [flagKey]: mockFlag });
@@ -157,39 +154,37 @@ describe('EppoClient E2E test', () => {
       td.reset();
     });
 
-    it('returns default value when graceful failure if error encounterd', async () => {
+    it('returns default value when graceful failure if error encountered', async () => {
       client.setIsGracefulFailureMode(true);
 
-      expect(client.getBoolAssignment('subject-identifer', flagKey, true, {})).toBe(true);
-      expect(client.getBoolAssignment('subject-identifer', flagKey, false, {})).toBe(false);
-      expect(client.getNumericAssignment('subject-identifer', flagKey, 1, {})).toBe(1);
-      expect(client.getNumericAssignment('subject-identifer', flagKey, 0, {})).toBe(0);
-      expect(client.getJSONAssignment('subject-identifer', flagKey, {}, {})).toEqual({});
-      expect(
-        client.getJSONAssignment('subject-identifer', flagKey, { hello: 'world' }, {}),
-      ).toEqual({ hello: 'world' });
-      expect(client.getStringAssignment('subject-identifer', flagKey, 'default', {})).toBe(
-        'default',
-      );
+      expect(client.getBoolAssignment('subject-identifer', flagKey, true)).toBe(true);
+      expect(client.getBoolAssignment('subject-identifer', flagKey, false)).toBe(false);
+      expect(client.getNumericAssignment('subject-identifer', flagKey, 1)).toBe(1);
+      expect(client.getNumericAssignment('subject-identifer', flagKey, 0)).toBe(0);
+      expect(client.getJSONAssignment('subject-identifer', flagKey, {})).toEqual({});
+      expect(client.getJSONAssignment('subject-identifer', flagKey, { hello: 'world' })).toEqual({
+        hello: 'world',
+      });
+      expect(client.getStringAssignment('subject-identifer', flagKey, 'default')).toBe('default');
     });
 
     it('throws error when graceful failure is false', async () => {
       client.setIsGracefulFailureMode(false);
 
       expect(() => {
-        client.getBoolAssignment('subject-identifer', flagKey, true, {});
+        client.getBoolAssignment('subject-identifer', flagKey, true);
       }).toThrow();
 
       expect(() => {
-        client.getJSONAssignment('subject-identifer', flagKey, {}, {});
+        client.getJSONAssignment('subject-identifer', flagKey, {});
       }).toThrow();
 
       expect(() => {
-        client.getNumericAssignment('subject-identifer', flagKey, 1, {});
+        client.getNumericAssignment('subject-identifer', flagKey, 1);
       }).toThrow();
 
       expect(() => {
-        client.getStringAssignment('subject-identifer', flagKey, 'default', {});
+        client.getStringAssignment('subject-identifer', flagKey, 'default');
       }).toThrow();
     });
   });
@@ -245,8 +240,6 @@ describe('EppoClient E2E test', () => {
     it.each(readAssignmentTestData())(
       'test variation assignment splits',
       async ({ flag, variationType, defaultValue, subjects }: IAssignmentTestCase) => {
-        `---- Test Case for ${flag} Experiment ----`;
-
         const evaluator = new Evaluator();
         const client = new EppoClient(evaluator, storage);
 
@@ -283,8 +276,6 @@ describe('EppoClient E2E test', () => {
 
   describe('UFC Obfuscated Test Cases', () => {
     const storage = new TestConfigurationStore();
-    const evaluator = new Evaluator();
-    const globalClient = new EppoClient(evaluator, storage);
 
     beforeAll(async () => {
       mock.setup();
@@ -303,8 +294,6 @@ describe('EppoClient E2E test', () => {
     it.each(readAssignmentTestData())(
       'test variation assignment splits',
       async ({ flag, variationType, defaultValue, subjects }: IAssignmentTestCase) => {
-        `---- Test Case for ${flag} Experiment ----`;
-
         const evaluator = new Evaluator();
         const client = new EppoClient(evaluator, storage);
 
@@ -329,6 +318,12 @@ describe('EppoClient E2E test', () => {
 
         for (const { subject, assignment } of assignments) {
           expect(assignment).toEqual(subject.assignment);
+          if (assignment !== subject.assignment) {
+            console.log(assignment, subject.assignment);
+            throw new Error(
+              `subject ${subject.subjectKey} was assigned ${assignment} when expected ${subject.assignment} for flag ${flag}`,
+            );
+          }
         }
       },
     );
