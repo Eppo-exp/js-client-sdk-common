@@ -1,6 +1,5 @@
-import { LRUCache } from 'lru-cache';
-
 import { EppoValue } from './eppo_value';
+import { LRUCache } from './lru-cache';
 
 export interface AssignmentCacheKey {
   subjectKey: string;
@@ -69,8 +68,8 @@ export class NonExpiringInMemoryAssignmentCache extends AssignmentCache<Map<stri
  * multiple users. In this case, the cache size should be set to the maximum number
  * of users that can be active at the same time.
  */
-export class LRUInMemoryAssignmentCache extends AssignmentCache<LRUCache<string, string>> {
+export class LRUInMemoryAssignmentCache extends AssignmentCache<LRUCache> {
   constructor(maxSize: number) {
-    super(new LRUCache<string, string>({ max: maxSize }));
+    super(new LRUCache(maxSize));
   }
 }
