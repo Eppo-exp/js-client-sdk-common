@@ -169,8 +169,7 @@ describe('EppoClient E2E test', () => {
 
     beforeAll(() => {
       storage.setEntries({ [flagKey]: mockFlag });
-      const evaluator = new Evaluator();
-      client = new EppoClient(evaluator, storage);
+      client = new EppoClient(storage);
 
       td.replace(EppoClient.prototype, 'getAssignmentDetail', function () {
         throw new Error('Mock test error');
@@ -224,8 +223,7 @@ describe('EppoClient E2E test', () => {
     it('Invokes logger for queued events', () => {
       const mockLogger = td.object<IAssignmentLogger>();
 
-      const evaluator = new Evaluator();
-      const client = new EppoClient(evaluator, storage);
+      const client = new EppoClient(storage);
       client.getStringAssignment('subject-to-be-logged', flagKey, 'default-value');
       client.setLogger(mockLogger);
 
@@ -238,8 +236,7 @@ describe('EppoClient E2E test', () => {
     it('Does not log same queued event twice', () => {
       const mockLogger = td.object<IAssignmentLogger>();
 
-      const evaluator = new Evaluator();
-      const client = new EppoClient(evaluator, storage);
+      const client = new EppoClient(storage);
 
       client.getStringAssignment('subject-to-be-logged', flagKey, 'default-value');
       client.setLogger(mockLogger);
@@ -252,8 +249,7 @@ describe('EppoClient E2E test', () => {
     it('Does not invoke logger for events that exceed queue size', () => {
       const mockLogger = td.object<IAssignmentLogger>();
 
-      const evaluator = new Evaluator();
-      const client = new EppoClient(evaluator, storage);
+      const client = new EppoClient(storage);
 
       for (let i = 0; i < MAX_EVENT_QUEUE_SIZE + 100; i++) {
         client.getStringAssignment(`subject-to-be-logged-${i}`, flagKey, 'default-value');
@@ -267,8 +263,7 @@ describe('EppoClient E2E test', () => {
     it.each(readAssignmentTestData())(
       'test variation assignment splits',
       async ({ flag, variationType, defaultValue, subjects }: IAssignmentTestCase) => {
-        const evaluator = new Evaluator();
-        const client = new EppoClient(evaluator, storage);
+        const client = new EppoClient(storage);
 
         let assignments: {
           subject: SubjectTestCase;
@@ -319,8 +314,7 @@ describe('EppoClient E2E test', () => {
     it.each(readAssignmentTestData())(
       'test variation assignment splits',
       async ({ flag, variationType, defaultValue, subjects }: IAssignmentTestCase) => {
-        const evaluator = new Evaluator();
-        const client = new EppoClient(evaluator, storage, undefined, true);
+        const client = new EppoClient(storage, undefined, true);
 
         const typeAssignmentFunctions = {
           [VariationType.BOOLEAN]: client.getBoolAssignment.bind(client),
@@ -347,7 +341,7 @@ describe('EppoClient E2E test', () => {
   });
 
   it('returns null if getStringAssignment was called for the subject before any UFC was loaded', () => {
-    const localClient = new EppoClient(new Evaluator(), new TestConfigurationStore());
+    const localClient = new EppoClient(new TestConfigurationStore());
     expect(localClient.getStringAssignment('subject-1', flagKey, 'hello world')).toEqual(
       'hello world',
     );
@@ -355,8 +349,7 @@ describe('EppoClient E2E test', () => {
   });
 
   it('returns default value when key does not exist', async () => {
-    const evaluator = new Evaluator();
-    const client = new EppoClient(evaluator, storage);
+    const client = new EppoClient(storage);
 
     const nonExistentFlag = 'non-existent-flag';
 
@@ -372,8 +365,7 @@ describe('EppoClient E2E test', () => {
     const mockLogger = td.object<IAssignmentLogger>();
 
     storage.setEntries({ [flagKey]: mockFlag });
-    const evaluator = new Evaluator();
-    const client = new EppoClient(evaluator, storage);
+    const client = new EppoClient(storage);
     client.setLogger(mockLogger);
 
     const subjectAttributes = { foo: 3 };
@@ -399,8 +391,7 @@ describe('EppoClient E2E test', () => {
     td.when(mockLogger.logAssignment(td.matchers.anything())).thenThrow(new Error('logging error'));
 
     storage.setEntries({ [flagKey]: mockFlag });
-    const evaluator = new Evaluator();
-    const client = new EppoClient(evaluator, storage);
+    const client = new EppoClient(storage);
     client.setLogger(mockLogger);
 
     const subjectAttributes = { foo: 3 };
@@ -416,15 +407,13 @@ describe('EppoClient E2E test', () => {
 
   describe('assignment logging deduplication', () => {
     let client: EppoClient;
-    let evaluator: Evaluator;
     let mockLogger: IAssignmentLogger;
 
     beforeEach(() => {
       mockLogger = td.object<IAssignmentLogger>();
 
       storage.setEntries({ [flagKey]: mockFlag });
-      evaluator = new Evaluator();
-      client = new EppoClient(evaluator, storage);
+      client = new EppoClient(storage);
       client.setLogger(mockLogger);
     });
 
@@ -624,7 +613,6 @@ describe('EppoClient E2E test', () => {
     let requestConfiguration: FlagConfigurationRequestParameters;
     let mockServerResponseFunc: (res: MockResponse) => MockResponse;
 
-    const evaluator = new Evaluator();
     const ufcBody = JSON.stringify(readMockUFCResponse(MOCK_UFC_RESPONSE_FILE));
     const flagKey = 'numeric_flag';
     const subject = 'alice';
@@ -679,7 +667,7 @@ describe('EppoClient E2E test', () => {
     });
 
     it('Fetches initial configuration with parameters in constructor', async () => {
-      client = new EppoClient(evaluator, storage, requestConfiguration);
+      client = new EppoClient(storage, requestConfiguration);
       client.setIsGracefulFailureMode(false);
       // no configuration loaded
       let variation = client.getNumericAssignment(subject, flagKey, 123.4);
@@ -691,7 +679,7 @@ describe('EppoClient E2E test', () => {
     });
 
     it('Fetches initial configuration with parameters provided later', async () => {
-      client = new EppoClient(evaluator, storage);
+      client = new EppoClient(storage);
       client.setIsGracefulFailureMode(false);
       client.setConfigurationRequestParameters(requestConfiguration);
       // no configuration loaded
@@ -723,7 +711,7 @@ describe('EppoClient E2E test', () => {
         ...requestConfiguration,
         pollAfterSuccessfulInitialization,
       };
-      client = new EppoClient(evaluator, storage, requestConfiguration);
+      client = new EppoClient(storage, requestConfiguration);
       client.setIsGracefulFailureMode(false);
       // no configuration loaded
       let variation = client.getNumericAssignment(subject, flagKey, 0.0);
@@ -779,7 +767,7 @@ describe('EppoClient E2E test', () => {
         throwOnFailedInitialization,
         pollAfterFailedInitialization,
       };
-      client = new EppoClient(evaluator, storage, requestConfiguration);
+      client = new EppoClient(storage, requestConfiguration);
       client.setIsGracefulFailureMode(false);
       // no configuration loaded
       expect(client.getNumericAssignment(subject, flagKey, 0.0)).toBe(0.0);

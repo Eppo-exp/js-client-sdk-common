@@ -123,12 +123,11 @@ export default class EppoClient implements IEppoClient {
   private evaluator: Evaluator;
 
   constructor(
-    evaluator: Evaluator,
     configurationStore: IConfigurationStore,
     configurationRequestParameters?: FlagConfigurationRequestParameters,
     obfuscated = false,
   ) {
-    this.evaluator = evaluator;
+    this.evaluator = new Evaluator();
     this.configurationStore = configurationStore;
     this.configurationRequestParameters = configurationRequestParameters;
     this.isObfuscated = obfuscated;
