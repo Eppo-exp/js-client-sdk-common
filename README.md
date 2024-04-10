@@ -9,3 +9,14 @@ This SDK is for client-side JS applications that run in a web browser. For serve
 ## Getting Started
 
 Refer to our [SDK documentation](https://docs.geteppo.com/feature-flags/sdks/client-sdks/javascript) for how to install and use the SDK.
+
+## Local development
+
+To set up the package for local development, run `make prepare` after cloning the repository
+
+### Installing local package
+
+It may be useful to install the local version of this package as you develop the client SDK or Node SDK.
+This can be done in two steps:
+1. Open the directory with the client SDK you want to add this library to, and run `make prepare`
+2. Add the local version of this library to the SDK you are developing by running `yarn add --force file:../js-client-sdk-common` (this assumes both repositories were cloned into the same directory)
