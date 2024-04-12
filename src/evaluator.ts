@@ -32,8 +32,8 @@ export class Evaluator {
 
     const now = new Date();
     for (const allocation of flag.allocations) {
-      if (allocation.startAt && now < allocation.startAt) continue;
-      if (allocation.endAt && now > allocation.endAt) continue;
+      if (allocation.startAt && now < new Date(allocation.startAt)) continue;
+      if (allocation.endAt && now > new Date(allocation.endAt)) continue;
 
       if (matchesRules(allocation.rules, { id: subjectKey, ...subjectAttributes }, obfuscated)) {
         for (const split of allocation.splits) {

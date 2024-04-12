@@ -210,7 +210,7 @@ function evaluateObfuscatedCondition(
   const conditionValueType = targetingRuleConditionValuesTypesFromValues(value);
 
   if (condition.operator === ObfuscatedOperatorType.IS_NULL) {
-    if (getMD5Hash('true') === condition.value) {
+    if (condition.value === getMD5Hash('true')) {
       return value === null || value === undefined;
     }
     return value !== null && value !== undefined;

@@ -454,8 +454,8 @@ describe('Evaluator', () => {
       allocations: [
         {
           key: 'default',
-          startAt: new Date(now.getFullYear() + 1, 0, 1),
-          endAt: new Date(now.getFullYear() + 1, 1, 1),
+          startAt: new Date(now.getFullYear() + 1, 0, 1).toISOString(),
+          endAt: new Date(now.getFullYear() + 1, 1, 1).toISOString(),
           rules: [],
           splits: [
             {
@@ -486,8 +486,8 @@ describe('Evaluator', () => {
       allocations: [
         {
           key: 'default',
-          startAt: new Date(now.getFullYear() - 1, 0, 1),
-          endAt: new Date(now.getFullYear() + 1, 0, 1),
+          startAt: new Date(now.getFullYear() - 1, 0, 1).toISOString(),
+          endAt: new Date(now.getFullYear() + 1, 0, 1).toISOString(),
           rules: [],
           splits: [
             {
@@ -518,8 +518,8 @@ describe('Evaluator', () => {
       allocations: [
         {
           key: 'default',
-          startAt: new Date(now.getFullYear() - 2, 0, 1),
-          endAt: new Date(now.getFullYear() - 1, 0, 1),
+          startAt: new Date(now.getFullYear() - 2, 0, 1).toISOString(),
+          endAt: new Date(now.getFullYear() - 1, 0, 1).toISOString(),
           rules: [],
           splits: [
             {

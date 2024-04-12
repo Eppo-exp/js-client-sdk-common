@@ -39,6 +39,7 @@ class TestConfigurationStore implements IConfigurationStore {
   public setEntries<T>(entries: Record<string, T>) {
     Object.entries(entries).forEach(([key, val]) => {
       this.store[key] = JSON.stringify(val);
+      console.log(JSON.stringify(val));
     });
     this._isInitialized = true;
   }
