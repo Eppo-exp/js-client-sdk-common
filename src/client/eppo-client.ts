@@ -23,7 +23,7 @@ import HttpClient from '../http-client';
 import { Flag, VariationType } from '../interfaces';
 import { getMD5Hash } from '../obfuscation';
 import initPoller, { IPoller } from '../poller';
-import { AttributeType } from '../types';
+import { AttributeType, ValueType } from '../types';
 import { validateNotBlank } from '../validation';
 import { LIB_VERSION } from '../version';
 
@@ -364,6 +364,13 @@ export default class EppoClient implements IEppoClient {
       result.flagKey = flagKey;
     }
 
+    if (
+      result?.variation &&
+      !this.checkValueTypeMatch(expectedVariationType, result.variation.value)
+    ) {
+      return noneResult(flagKey, subjectKey, subjectAttributes);
+    }
+
     try {
       if (result?.doLog) {
         this.logAssignment(result);
@@ -384,6 +391,28 @@ export default class EppoClient implements IEppoClient {
 
   private checkTypeMatch(expectedType?: VariationType, actualType?: VariationType): boolean {
     return expectedType === undefined || actualType === expectedType;
+  }
+
+  private checkValueTypeMatch(expectedType: VariationType | undefined, value: ValueType): boolean {
+    if (expectedType == undefined) {
+      return true;
+    }
+
+    switch (expectedType) {
+      case VariationType.STRING:
+        return typeof value === 'string';
+      case VariationType.BOOLEAN:
+        return typeof value === 'boolean';
+      case VariationType.INTEGER:
+        return typeof value === 'number' && Number.isInteger(value);
+      case VariationType.NUMERIC:
+        return typeof value === 'number';
+      case VariationType.JSON:
+        // note: converting to object downstream
+        return typeof value === 'string';
+      default:
+        return false;
+    }
   }
 
   public getFlagKeys() {
