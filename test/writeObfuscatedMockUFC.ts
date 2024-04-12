@@ -27,12 +27,14 @@ function obfuscateRule(rule: Rule) {
 }
 
 function obfuscateFlag(flag: Flag) {
+  console.log(flag.key);
+  console.log(flag.allocations);
   return {
     ...flag,
     key: getMD5Hash(flag.key),
     allocations: flag.allocations.map((allocation) => ({
       ...allocation,
-      rules: allocation.rules.map(obfuscateRule),
+      rules: allocation.rules?.map(obfuscateRule),
     })),
   };
 }
