@@ -1,11 +1,12 @@
 import { Flag, Shard, Range, Variation } from './interfaces';
-import { matchesRule } from './rules';
+import { Rule, matchesRule } from './rules';
 import { MD5Sharder, Sharder } from './sharders';
+import { SubjectAttributes } from './types';
 
 export interface FlagEvaluation {
   flagKey: string;
   subjectKey: string;
-  subjectAttributes: Record<string, string | number | boolean>;
+  subjectAttributes: SubjectAttributes;
   allocationKey: string | null;
   variation: Variation | null;
   extraLogging: Record<string, string>;
@@ -22,24 +23,21 @@ export class Evaluator {
   evaluateFlag(
     flag: Flag,
     subjectKey: string,
-    subjectAttributes: Record<string, string | number | boolean>,
+    subjectAttributes: SubjectAttributes,
     obfuscated: boolean,
   ): FlagEvaluation {
     if (!flag.enabled) {
       return noneResult(flag.key, subjectKey, subjectAttributes);
     }
-
+    if (flag.key === 'start-and-end-date-test') {
+      console.log(flag);
+    }
     const now = new Date();
     for (const allocation of flag.allocations) {
       if (allocation.startAt && now < allocation.startAt) continue;
       if (allocation.endAt && now > allocation.endAt) continue;
 
-      if (
-        !allocation.rules.length ||
-        allocation.rules.some((rule) =>
-          matchesRule(rule, { id: subjectKey, ...subjectAttributes }, obfuscated),
-        )
-      ) {
+      if (matchesRules(allocation.rules, { id: subjectKey, ...subjectAttributes }, obfuscated)) {
         for (const split of allocation.splits) {
           if (
             split.shards.every((shard) => this.matchesShard(shard, subjectKey, flag.totalShards))
@@ -78,7 +76,7 @@ export function hashKey(salt: string, subjectKey: string): string {
 export function noneResult(
   flagKey: string,
   subjectKey: string,
-  subjectAttributes: Record<string, string | number | boolean>,
+  subjectAttributes: SubjectAttributes,
 ): FlagEvaluation {
   return {
     flagKey,
@@ -89,4 +87,12 @@ export function noneResult(
     extraLogging: {},
     doLog: false,
   };
+}
+
+export function matchesRules(
+  rules: Rule[],
+  subjectAttributes: SubjectAttributes,
+  obfuscated: boolean,
+): boolean {
+  return !rules.length || rules.some((rule) => matchesRule(rule, subjectAttributes, obfuscated));
 }
