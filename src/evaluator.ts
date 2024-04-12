@@ -29,9 +29,7 @@ export class Evaluator {
     if (!flag.enabled) {
       return noneResult(flag.key, subjectKey, subjectAttributes);
     }
-    if (flag.key === 'start-and-end-date-test') {
-      console.log(flag);
-    }
+
     const now = new Date();
     for (const allocation of flag.allocations) {
       if (allocation.startAt && now < allocation.startAt) continue;
