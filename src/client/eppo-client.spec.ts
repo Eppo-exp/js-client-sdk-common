@@ -26,7 +26,7 @@ import EppoClient, { FlagConfigurationRequestParameters } from './eppo-client';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const packageJson = require('../../package.json');
 
-const flagEndpoint = /flag_config\/v1\/config*/;
+const flagEndpoint = /flag-config\/v1\/config*/;
 
 class TestConfigurationStore implements IConfigurationStore {
   private store: Record<string, string> = {};

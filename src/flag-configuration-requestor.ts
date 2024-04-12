@@ -2,7 +2,7 @@ import { IConfigurationStore } from './configuration-store';
 import HttpClient from './http-client';
 import { Flag } from './interfaces';
 
-const UFC_ENDPOINT = '/flag_config/v1/config';
+const UFC_ENDPOINT = '/flag-config/v1/config';
 
 interface IUniversalFlagConfig {
   flags: Record<string, Flag>;
