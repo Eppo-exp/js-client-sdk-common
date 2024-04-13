@@ -27,8 +27,6 @@ function obfuscateRule(rule: Rule) {
 }
 
 function obfuscateFlag(flag: Flag) {
-  console.log(flag.key);
-  console.log(flag.allocations);
   return {
     ...flag,
     key: getMD5Hash(flag.key),
