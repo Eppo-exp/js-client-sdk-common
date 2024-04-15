@@ -468,8 +468,6 @@ describe('Evaluator', () => {
       totalShards: 10,
     };
 
-    console.log(flag);
-
     const result = evaluator.evaluateFlag(flag, 'subject_key', {}, false);
     expect(result.flagKey).toEqual('flag');
     expect(result.allocationKey).toBeNull();
