@@ -52,6 +52,26 @@ describe('rules', () => {
       ],
     };
 
+    const ruleWithNullCondition: Rule = {
+      conditions: [
+        {
+          operator: OperatorType.IS_NULL,
+          attribute: 'country',
+          value: true,
+        },
+      ],
+    };
+
+    const ruleWithNotNullCondition: Rule = {
+      conditions: [
+        {
+          operator: OperatorType.IS_NULL,
+          attribute: 'country',
+          value: false,
+        },
+      ],
+    };
+
     const semverRule: Rule = {
       conditions: [
         {
@@ -136,6 +156,30 @@ describe('rules', () => {
       expect(matchesRule(ruleWithNotOneOfCondition, { country: null }, false)).toBe(false);
     });
 
+    it('should return true for a rule with IS_NULL condition when subject attribute is null', () => {
+      expect(matchesRule(ruleWithNullCondition, { country: null }, false)).toBe(true);
+    });
+
+    it('should return false for a rule with IS_NULL condition when subject attribute is not null', () => {
+      expect(matchesRule(ruleWithNullCondition, { country: 'UK' }, false)).toBe(false);
+    });
+
+    it('should return true for a rule with IS_NULL condition when subject attribute is missing', () => {
+      expect(matchesRule(ruleWithNullCondition, { age: 10 }, false)).toBe(true);
+    });
+
+    it('should return false for a rule with NOT IS_NULL condition when subject attribute is null', () => {
+      expect(matchesRule(ruleWithNotNullCondition, { country: null }, false)).toBe(false);
+    });
+
+    it('should return true for a rule with NOT IS_NULL condition when subject attribute is not null', () => {
+      expect(matchesRule(ruleWithNotNullCondition, { country: 'UK' }, false)).toBe(true);
+    });
+
+    it('should return false for a rule with NOT IS_NULL condition when subject attribute is missing', () => {
+      expect(matchesRule(ruleWithNotNullCondition, { age: 10 }, false)).toBe(false);
+    });
+
     it('should return true for a semver rule that matches the subject attributes', () => {
       expect(matchesRule(semverRule, subjectAttributes, false)).toBe(true);
     });
@@ -190,6 +234,26 @@ describe('rules', () => {
               'c2aadac2ca30ca8aadfbe331ae180d28',
               '4edfc924721abb774d5447bade86ea5d',
             ], // ['usa', 'canada', 'mexico'].map(getMD5Hash)
+          },
+        ],
+      };
+
+      const obfuscatedRuleWithNullCondition: Rule = {
+        conditions: [
+          {
+            operator: ObfuscatedOperatorType.IS_NULL,
+            attribute: 'e909c2d7067ea37437cf97fe11d91bd0',
+            value: 'b326b5062b2f0e69046810717534cb09',
+          },
+        ],
+      };
+
+      const obfuscatedRuleWithNotNullCondition: Rule = {
+        conditions: [
+          {
+            operator: ObfuscatedOperatorType.IS_NULL,
+            attribute: 'e909c2d7067ea37437cf97fe11d91bd0',
+            value: '68934a3e9455fa72420237eb05902327',
           },
         ],
       };
@@ -276,6 +340,32 @@ describe('rules', () => {
         expect(matchesRule(obfuscatedRuleWithNotOneOfCondition, { country: null }, true)).toBe(
           false,
         );
+      });
+
+      it('should return true for a rule with IS_NULL condition when subject attribute is null', () => {
+        expect(matchesRule(obfuscatedRuleWithNullCondition, { country: null }, true)).toBe(true);
+      });
+
+      it('should return false for a rule with IS_NULL condition when subject attribute is not null', () => {
+        expect(matchesRule(obfuscatedRuleWithNullCondition, { country: 'UK' }, true)).toBe(false);
+      });
+
+      it('should return true for a rule with IS_NULL condition when subject attribute is missing', () => {
+        expect(matchesRule(obfuscatedRuleWithNullCondition, { age: 10 }, true)).toBe(true);
+      });
+
+      it('should return false for a rule with NOT IS_NULL condition when subject attribute is null', () => {
+        expect(matchesRule(obfuscatedRuleWithNotNullCondition, { country: null }, false)).toBe(
+          false,
+        );
+      });
+
+      it('should return true for a rule with NOT IS_NULL condition when subject attribute is not null', () => {
+        expect(matchesRule(obfuscatedRuleWithNotNullCondition, { country: 'UK' }, true)).toBe(true);
+      });
+
+      it('should return false for a rule with NOT IS_NULL condition when subject attribute is missing', () => {
+        expect(matchesRule(obfuscatedRuleWithNotNullCondition, { age: 10 }, true)).toBe(false);
       });
 
       it('should return true for an obfuscated rule with GTE condition that matches the subject attributes', () => {

@@ -1,7 +1,7 @@
-import { Evaluator, hashKey, isInShardRange } from './evaluator';
+import { Evaluator, hashKey, isInShardRange, matchesRules } from './evaluator';
 import { Flag, Variation, Shard, VariationType } from './interfaces';
 import { getMD5Hash } from './obfuscation';
-import { ObfuscatedOperatorType, OperatorType } from './rules';
+import { ObfuscatedOperatorType, OperatorType, Rule } from './rules';
 import { DeterministicSharder } from './sharders';
 
 describe('Evaluator', () => {
@@ -380,7 +380,6 @@ describe('Evaluator', () => {
       allocations: [
         {
           key: 'first',
-          rules: [],
           splits: [
             {
               variationKey: 'a',
@@ -403,7 +402,6 @@ describe('Evaluator', () => {
         },
         {
           key: 'default',
-          rules: [],
           splits: [
             {
               variationKey: 'c',
@@ -454,8 +452,8 @@ describe('Evaluator', () => {
       allocations: [
         {
           key: 'default',
-          startAt: new Date(now.getFullYear() + 1, 0, 1),
-          endAt: new Date(now.getFullYear() + 1, 1, 1),
+          startAt: new Date(now.getFullYear() + 1, 0, 1).toISOString(),
+          endAt: new Date(now.getFullYear() + 1, 1, 1).toISOString(),
           rules: [],
           splits: [
             {
@@ -486,8 +484,8 @@ describe('Evaluator', () => {
       allocations: [
         {
           key: 'default',
-          startAt: new Date(now.getFullYear() - 1, 0, 1),
-          endAt: new Date(now.getFullYear() + 1, 0, 1),
+          startAt: new Date(now.getFullYear() - 1, 0, 1).toISOString(),
+          endAt: new Date(now.getFullYear() + 1, 0, 1).toISOString(),
           rules: [],
           splits: [
             {
@@ -518,8 +516,8 @@ describe('Evaluator', () => {
       allocations: [
         {
           key: 'default',
-          startAt: new Date(now.getFullYear() - 2, 0, 1),
-          endAt: new Date(now.getFullYear() - 1, 0, 1),
+          startAt: new Date(now.getFullYear() - 2, 0, 1).toISOString(),
+          endAt: new Date(now.getFullYear() - 1, 0, 1).toISOString(),
           rules: [],
           splits: [
             {
@@ -552,5 +550,103 @@ describe('Evaluator', () => {
     expect(isInShardRange(0, { start: 0, end: 1 })).toBeTruthy();
     expect(isInShardRange(1, { start: 0, end: 1 })).toBeFalsy();
     expect(isInShardRange(1, { start: 1, end: 1 })).toBeFalsy();
+  });
+});
+
+describe('matchesRules', () => {
+  describe('matchesRules function', () => {
+    it('should return true when there are no rules', () => {
+      const rules: Rule[] = [];
+      const subjectAttributes = { id: 'test-subject' };
+      const obfuscated = false;
+      expect(matchesRules(rules, subjectAttributes, obfuscated)).toBeTruthy();
+    });
+
+    it('should return true when a rule matches', () => {
+      const rules: Rule[] = [
+        {
+          conditions: [
+            {
+              attribute: 'age',
+              operator: OperatorType.GTE,
+              value: 18,
+            },
+          ],
+        },
+      ];
+      const subjectAttributes = { id: 'test-subject', age: 20 };
+      const obfuscated = false;
+      expect(matchesRules(rules, subjectAttributes, obfuscated)).toBeTruthy();
+    });
+
+    it('should return true when one of two rules matches', () => {
+      const rules: Rule[] = [
+        {
+          conditions: [
+            {
+              attribute: 'age',
+              operator: OperatorType.GTE,
+              value: 18,
+            },
+          ],
+        },
+        {
+          conditions: [
+            {
+              attribute: 'age',
+              operator: OperatorType.LTE,
+              value: 10,
+            },
+          ],
+        },
+      ];
+      const subjectAttributes = { id: 'test-subject', age: 10 };
+      const obfuscated = false;
+      expect(matchesRules(rules, subjectAttributes, obfuscated)).toBeTruthy();
+    });
+
+    it('should return true when null or rule is passed', () => {
+      const rules: Rule[] = [
+        {
+          conditions: [
+            {
+              attribute: 'age',
+              operator: OperatorType.IS_NULL,
+              value: true,
+            },
+          ],
+        },
+        {
+          conditions: [
+            {
+              attribute: 'age',
+              operator: OperatorType.GTE,
+              value: 20,
+            },
+          ],
+        },
+      ];
+      const obfuscated = false;
+      expect(matchesRules(rules, { id: 'test-subject', age: 20 }, obfuscated)).toBeTruthy();
+      expect(matchesRules(rules, { id: 'test-subject', age: 10 }, obfuscated)).toBeFalsy();
+      expect(matchesRules(rules, { id: 'test-subject', country: 'UK' }, obfuscated)).toBeTruthy();
+    });
+
+    it('should return false when no rules match', () => {
+      const rules: Rule[] = [
+        {
+          conditions: [
+            {
+              attribute: 'age',
+              operator: OperatorType.GTE,
+              value: 18,
+            },
+          ],
+        },
+      ];
+      const subjectAttributes = { id: 'test-subject', age: 16 };
+      const obfuscated = false;
+      expect(matchesRules(rules, subjectAttributes, obfuscated)).toBeFalsy();
+    });
   });
 });

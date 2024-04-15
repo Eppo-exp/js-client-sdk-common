@@ -2,7 +2,7 @@ import * as fs from 'fs';
 
 import { Flag } from '../src/interfaces';
 import { encodeBase64, getMD5Hash } from '../src/obfuscation';
-import { Rule } from '../src/rules';
+import { Condition, Rule } from '../src/rules';
 
 import {
   MOCK_UFC_RESPONSE_FILE,
@@ -11,6 +11,18 @@ import {
   TEST_DATA_DIR,
 } from './testHelpers';
 
+function encodeRuleValue(condition: Condition) {
+  switch (condition.operator) {
+    case 'ONE_OF':
+    case 'NOT_ONE_OF':
+      return condition.value.map((value) => getMD5Hash(value.toLowerCase()));
+    case 'IS_NULL':
+      return getMD5Hash(`${condition.value}`);
+    default:
+      return encodeBase64(`${condition.value}`);
+  }
+}
+
 function obfuscateRule(rule: Rule) {
   return {
     ...rule,
@@ -18,10 +30,7 @@ function obfuscateRule(rule: Rule) {
       ...condition,
       attribute: getMD5Hash(condition.attribute),
       operator: getMD5Hash(condition.operator),
-      value:
-        ['ONE_OF', 'NOT_ONE_OF'].includes(condition.operator) && typeof condition.value === 'object'
-          ? condition.value.map((value) => getMD5Hash(value.toLowerCase()))
-          : encodeBase64(`${condition.value}`),
+      value: encodeRuleValue(condition),
     })),
   };
 }
@@ -32,7 +41,7 @@ function obfuscateFlag(flag: Flag) {
     key: getMD5Hash(flag.key),
     allocations: flag.allocations.map((allocation) => ({
       ...allocation,
-      rules: allocation.rules.map(obfuscateRule),
+      rules: allocation.rules?.map(obfuscateRule),
     })),
   };
 }

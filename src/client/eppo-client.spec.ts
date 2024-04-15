@@ -16,7 +16,6 @@ import {
 import { IAssignmentLogger } from '../assignment-logger';
 import { IConfigurationStore } from '../configuration-store';
 import { MAX_EVENT_QUEUE_SIZE, POLL_INTERVAL_MS, POLL_JITTER_PCT } from '../constants';
-import { Evaluator } from '../evaluator';
 import FlagConfigurationRequestor from '../flag-configuration-requestor';
 import HttpClient from '../http-client';
 import { Flag, VariationType } from '../interfaces';
@@ -301,7 +300,6 @@ describe('EppoClient E2E test', () => {
       mock.setup();
       mock.get(flagEndpoint, (_req, res) => {
         const ufc = readMockUFCResponse(OBFUSCATED_MOCK_UFC_RESPONSE_FILE);
-        console.log(ufc);
         return res.status(200).body(JSON.stringify(ufc));
       });
       await init(storage);

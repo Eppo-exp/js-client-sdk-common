@@ -19,6 +19,7 @@ export enum OperatorType {
   LT = 'LT',
   ONE_OF = 'ONE_OF',
   NOT_ONE_OF = 'NOT_ONE_OF',
+  IS_NULL = 'IS_NULL',
 }
 
 export enum ObfuscatedOperatorType {
@@ -30,6 +31,7 @@ export enum ObfuscatedOperatorType {
   LT = 'c562607189d77eb9dfb707464c1e7b0b',
   ONE_OF = '27457ce369f2a74203396a35ef537c0b',
   NOT_ONE_OF = '602f5ee0b6e84fe29f43ab48b9e1addf',
+  IS_NULL = 'dbd9c38e0339e6c34bd48cafc59be388',
 }
 
 enum OperatorValueType {
@@ -91,13 +93,28 @@ type ObfuscatedNumericCondition = {
 
 type NumericCondition = StandardNumericCondition | ObfuscatedNumericCondition;
 
+type StandardNullCondition = {
+  operator: OperatorType.IS_NULL;
+  attribute: string;
+  value: boolean;
+};
+
+type ObfuscatedNullCondition = {
+  operator: ObfuscatedOperatorType.IS_NULL;
+  attribute: string;
+  value: string;
+};
+
+type NullCondition = StandardNullCondition | ObfuscatedNullCondition;
+
 export type Condition =
   | MatchesCondition
   | NotMatchesCondition
   | OneOfCondition
   | NotOneOfCondition
   | SemVerCondition
-  | NumericCondition;
+  | NumericCondition
+  | NullCondition;
 
 export interface Rule {
   conditions: Condition[];
@@ -138,6 +155,13 @@ function evaluateCondition(subjectAttributes: Record<string, any>, condition: Co
   const value = subjectAttributes[condition.attribute];
 
   const conditionValueType = targetingRuleConditionValuesTypesFromValues(condition.value);
+
+  if (condition.operator === OperatorType.IS_NULL) {
+    if (condition.value) {
+      return value === null || value === undefined;
+    }
+    return value !== null && value !== undefined;
+  }
 
   if (value != null) {
     switch (condition.operator) {
@@ -184,6 +208,13 @@ function evaluateObfuscatedCondition(
 ): boolean {
   const value = hashedSubjectAttributes[condition.attribute];
   const conditionValueType = targetingRuleConditionValuesTypesFromValues(value);
+
+  if (condition.operator === ObfuscatedOperatorType.IS_NULL) {
+    if (condition.value === getMD5Hash('true')) {
+      return value === null || value === undefined;
+    }
+    return value !== null && value !== undefined;
+  }
 
   if (value != null) {
     switch (condition.operator) {
