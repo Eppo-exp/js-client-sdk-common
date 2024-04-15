@@ -7,6 +7,7 @@ import * as constants from './constants';
 import FlagConfigRequestor from './flag-configuration-requestor';
 import HttpClient from './http-client';
 import { Flag, VariationType } from './interfaces';
+import { AttributeType } from './types';
 import * as validation from './validation';
 
 export {
@@ -24,4 +25,5 @@ export {
   FlagConfigurationRequestParameters,
   Flag,
   VariationType,
+  AttributeType,
 };
