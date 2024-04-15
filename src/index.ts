@@ -6,6 +6,7 @@ import { IConfigurationStore } from './configuration-store';
 import * as constants from './constants';
 import FlagConfigRequestor from './flag-configuration-requestor';
 import HttpClient from './http-client';
+import { Flag, VariationType } from './interfaces';
 import * as validation from './validation';
 
 export {
@@ -21,4 +22,6 @@ export {
   IConfigurationStore,
   AssignmentCache,
   FlagConfigurationRequestParameters,
+  Flag,
+  VariationType,
 };
