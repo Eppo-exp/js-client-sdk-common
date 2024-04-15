@@ -554,99 +554,97 @@ describe('Evaluator', () => {
 });
 
 describe('matchesRules', () => {
-  describe('matchesRules function', () => {
-    it('should return true when there are no rules', () => {
-      const rules: Rule[] = [];
-      const subjectAttributes = { id: 'test-subject' };
-      const obfuscated = false;
-      expect(matchesRules(rules, subjectAttributes, obfuscated)).toBeTruthy();
-    });
+  it('should return true when there are no rules', () => {
+    const rules: Rule[] = [];
+    const subjectAttributes = { id: 'test-subject' };
+    const obfuscated = false;
+    expect(matchesRules(rules, subjectAttributes, obfuscated)).toBeTruthy();
+  });
 
-    it('should return true when a rule matches', () => {
-      const rules: Rule[] = [
-        {
-          conditions: [
-            {
-              attribute: 'age',
-              operator: OperatorType.GTE,
-              value: 18,
-            },
-          ],
-        },
-      ];
-      const subjectAttributes = { id: 'test-subject', age: 20 };
-      const obfuscated = false;
-      expect(matchesRules(rules, subjectAttributes, obfuscated)).toBeTruthy();
-    });
+  it('should return true when a rule matches', () => {
+    const rules: Rule[] = [
+      {
+        conditions: [
+          {
+            attribute: 'age',
+            operator: OperatorType.GTE,
+            value: 18,
+          },
+        ],
+      },
+    ];
+    const subjectAttributes = { id: 'test-subject', age: 20 };
+    const obfuscated = false;
+    expect(matchesRules(rules, subjectAttributes, obfuscated)).toBeTruthy();
+  });
 
-    it('should return true when one of two rules matches', () => {
-      const rules: Rule[] = [
-        {
-          conditions: [
-            {
-              attribute: 'age',
-              operator: OperatorType.GTE,
-              value: 18,
-            },
-          ],
-        },
-        {
-          conditions: [
-            {
-              attribute: 'age',
-              operator: OperatorType.LTE,
-              value: 10,
-            },
-          ],
-        },
-      ];
-      const subjectAttributes = { id: 'test-subject', age: 10 };
-      const obfuscated = false;
-      expect(matchesRules(rules, subjectAttributes, obfuscated)).toBeTruthy();
-    });
+  it('should return true when one of two rules matches', () => {
+    const rules: Rule[] = [
+      {
+        conditions: [
+          {
+            attribute: 'age',
+            operator: OperatorType.GTE,
+            value: 18,
+          },
+        ],
+      },
+      {
+        conditions: [
+          {
+            attribute: 'age',
+            operator: OperatorType.LTE,
+            value: 10,
+          },
+        ],
+      },
+    ];
+    const subjectAttributes = { id: 'test-subject', age: 10 };
+    const obfuscated = false;
+    expect(matchesRules(rules, subjectAttributes, obfuscated)).toBeTruthy();
+  });
 
-    it('should return true when null or rule is passed', () => {
-      const rules: Rule[] = [
-        {
-          conditions: [
-            {
-              attribute: 'age',
-              operator: OperatorType.IS_NULL,
-              value: true,
-            },
-          ],
-        },
-        {
-          conditions: [
-            {
-              attribute: 'age',
-              operator: OperatorType.GTE,
-              value: 20,
-            },
-          ],
-        },
-      ];
-      const obfuscated = false;
-      expect(matchesRules(rules, { id: 'test-subject', age: 20 }, obfuscated)).toBeTruthy();
-      expect(matchesRules(rules, { id: 'test-subject', age: 10 }, obfuscated)).toBeFalsy();
-      expect(matchesRules(rules, { id: 'test-subject', country: 'UK' }, obfuscated)).toBeTruthy();
-    });
+  it('should return true when null or rule is passed', () => {
+    const rules: Rule[] = [
+      {
+        conditions: [
+          {
+            attribute: 'age',
+            operator: OperatorType.IS_NULL,
+            value: true,
+          },
+        ],
+      },
+      {
+        conditions: [
+          {
+            attribute: 'age',
+            operator: OperatorType.GTE,
+            value: 20,
+          },
+        ],
+      },
+    ];
+    const obfuscated = false;
+    expect(matchesRules(rules, { id: 'test-subject', age: 20 }, obfuscated)).toBeTruthy();
+    expect(matchesRules(rules, { id: 'test-subject', age: 10 }, obfuscated)).toBeFalsy();
+    expect(matchesRules(rules, { id: 'test-subject', country: 'UK' }, obfuscated)).toBeTruthy();
+  });
 
-    it('should return false when no rules match', () => {
-      const rules: Rule[] = [
-        {
-          conditions: [
-            {
-              attribute: 'age',
-              operator: OperatorType.GTE,
-              value: 18,
-            },
-          ],
-        },
-      ];
-      const subjectAttributes = { id: 'test-subject', age: 16 };
-      const obfuscated = false;
-      expect(matchesRules(rules, subjectAttributes, obfuscated)).toBeFalsy();
-    });
+  it('should return false when no rules match', () => {
+    const rules: Rule[] = [
+      {
+        conditions: [
+          {
+            attribute: 'age',
+            operator: OperatorType.GTE,
+            value: 18,
+          },
+        ],
+      },
+    ];
+    const subjectAttributes = { id: 'test-subject', age: 16 };
+    const obfuscated = false;
+    expect(matchesRules(rules, subjectAttributes, obfuscated)).toBeFalsy();
   });
 });

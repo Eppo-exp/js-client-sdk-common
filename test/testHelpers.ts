@@ -44,3 +44,48 @@ export function readAssignmentTestData(): IAssignmentTestCase[] {
   });
   return testCaseData;
 }
+
+export function getTestAssignments(
+  testCase: IAssignmentTestCase,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  assignmentFn: any,
+  obfuscated = false,
+): { subject: SubjectTestCase; assignment: string | boolean | number | null | object }[] {
+  const assignments: {
+    subject: SubjectTestCase;
+    assignment: string | boolean | number | null | object;
+  }[] = [];
+  for (const subject of testCase.subjects) {
+    const assignment = assignmentFn(
+      subject.subjectKey,
+      testCase.flag,
+      testCase.defaultValue,
+      subject.subjectAttributes,
+      obfuscated,
+    );
+    assignments.push({ subject: subject, assignment: assignment });
+  }
+  return assignments;
+}
+
+export function validateTestAssignments(
+  assignments: {
+    subject: SubjectTestCase;
+    assignment: string | boolean | number | object | null;
+  }[],
+  flag: string,
+) {
+  for (const { subject, assignment } of assignments) {
+    if (typeof assignment !== 'object') {
+      // the expect works well for objects, but this comparison does not
+      if (assignment !== subject.assignment) {
+        throw new Error(
+          `subject ${
+            subject.subjectKey
+          } was assigned ${assignment?.toString()} when expected ${subject.assignment?.toString()} for flag ${flag}`,
+        );
+      }
+    }
+    expect(subject.assignment).toEqual(assignment);
+  }
+}
