@@ -380,7 +380,6 @@ describe('Evaluator', () => {
       allocations: [
         {
           key: 'first',
-          rules: [],
           splits: [
             {
               variationKey: 'a',
@@ -403,7 +402,6 @@ describe('Evaluator', () => {
         },
         {
           key: 'default',
-          rules: [],
           splits: [
             {
               variationKey: 'c',
@@ -469,6 +467,8 @@ describe('Evaluator', () => {
       ],
       totalShards: 10,
     };
+
+    console.log(flag);
 
     const result = evaluator.evaluateFlag(flag, 'subject_key', {}, false);
     expect(result.flagKey).toEqual('flag');

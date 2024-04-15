@@ -31,7 +31,7 @@ export interface Split {
 
 export interface Allocation {
   key: string;
-  rules: Rule[];
+  rules?: Rule[];
   startAt?: string; // ISO 8601
   endAt?: string; // ISO 8601
   splits: Split[];

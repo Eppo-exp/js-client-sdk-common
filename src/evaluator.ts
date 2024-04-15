@@ -35,7 +35,9 @@ export class Evaluator {
       if (allocation.startAt && now < new Date(allocation.startAt)) continue;
       if (allocation.endAt && now > new Date(allocation.endAt)) continue;
 
-      if (matchesRules(allocation.rules, { id: subjectKey, ...subjectAttributes }, obfuscated)) {
+      if (
+        matchesRules(allocation?.rules ?? [], { id: subjectKey, ...subjectAttributes }, obfuscated)
+      ) {
         for (const split of allocation.splits) {
           if (
             split.shards.every((shard) => this.matchesShard(shard, subjectKey, flag.totalShards))
