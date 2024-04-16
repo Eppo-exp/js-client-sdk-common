@@ -8,7 +8,7 @@ This SDK is for client-side JS applications that run in a web browser. For serve
 
 ## Getting Started
 
-Refer to our [SDK documentation](https://docs.geteppo.com/feature-flags/sdks/client-sdks/javascript) for how to install and use the SDK.
+Refer to our [SDK documentation](https://docs.geteppo.com/sdks/client-sdks/javascript) for how to install and use the SDK.
 
 ## Local development
 
