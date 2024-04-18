@@ -138,34 +138,38 @@ describe('EppoClient E2E test', () => {
     it('returns default value when graceful failure if error encountered', async () => {
       client.setIsGracefulFailureMode(true);
 
-      expect(client.getBoolAssignment('subject-identifer', flagKey, true)).toBe(true);
-      expect(client.getBoolAssignment('subject-identifer', flagKey, false)).toBe(false);
-      expect(client.getNumericAssignment('subject-identifer', flagKey, 1)).toBe(1);
-      expect(client.getNumericAssignment('subject-identifer', flagKey, 0)).toBe(0);
-      expect(client.getJSONAssignment('subject-identifer', flagKey, {})).toEqual({});
-      expect(client.getJSONAssignment('subject-identifer', flagKey, { hello: 'world' })).toEqual({
+      expect(client.getBoolAssignment(flagKey, 'subject-identifer', {}, true)).toBe(true);
+      expect(client.getBoolAssignment(flagKey, 'subject-identifer', {}, false)).toBe(false);
+      expect(client.getNumericAssignment(flagKey, 'subject-identifer', {}, 1)).toBe(1);
+      expect(client.getNumericAssignment(flagKey, 'subject-identifer', {}, 0)).toBe(0);
+      expect(client.getJSONAssignment(flagKey, 'subject-identifer', {}, {})).toEqual({});
+      expect(
+        client.getJSONAssignment(flagKey, 'subject-identifer', {}, { hello: 'world' }),
+      ).toEqual({
         hello: 'world',
       });
-      expect(client.getStringAssignment('subject-identifer', flagKey, 'default')).toBe('default');
+      expect(client.getStringAssignment(flagKey, 'subject-identifer', {}, 'default')).toBe(
+        'default',
+      );
     });
 
     it('throws error when graceful failure is false', async () => {
       client.setIsGracefulFailureMode(false);
 
       expect(() => {
-        client.getBoolAssignment('subject-identifer', flagKey, true);
+        client.getBoolAssignment(flagKey, 'subject-identifer', {}, true);
       }).toThrow();
 
       expect(() => {
-        client.getJSONAssignment('subject-identifer', flagKey, {});
+        client.getJSONAssignment(flagKey, 'subject-identifer', {}, {});
       }).toThrow();
 
       expect(() => {
-        client.getNumericAssignment('subject-identifer', flagKey, 1);
+        client.getNumericAssignment(flagKey, 'subject-identifer', {}, 1);
       }).toThrow();
 
       expect(() => {
-        client.getStringAssignment('subject-identifer', flagKey, 'default');
+        client.getStringAssignment(flagKey, 'subject-identifer', {}, 'default');
       }).toThrow();
     });
   });
@@ -179,7 +183,7 @@ describe('EppoClient E2E test', () => {
       const mockLogger = td.object<IAssignmentLogger>();
 
       const client = new EppoClient(storage);
-      client.getStringAssignment('subject-to-be-logged', flagKey, 'default-value');
+      client.getStringAssignment(flagKey, 'subject-to-be-logged', {}, 'default-value');
       client.setLogger(mockLogger);
 
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
@@ -193,7 +197,7 @@ describe('EppoClient E2E test', () => {
 
       const client = new EppoClient(storage);
 
-      client.getStringAssignment('subject-to-be-logged', flagKey, 'default-value');
+      client.getStringAssignment(flagKey, 'subject-to-be-logged', {}, 'default-value');
       client.setLogger(mockLogger);
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
 
@@ -207,7 +211,7 @@ describe('EppoClient E2E test', () => {
       const client = new EppoClient(storage);
 
       for (let i = 0; i < MAX_EVENT_QUEUE_SIZE + 100; i++) {
-        client.getStringAssignment(`subject-to-be-logged-${i}`, flagKey, 'default-value');
+        client.getStringAssignment(flagKey, `subject-to-be-logged-${i}`, {}, 'default-value');
       }
       client.setLogger(mockLogger);
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(MAX_EVENT_QUEUE_SIZE);
@@ -296,7 +300,7 @@ describe('EppoClient E2E test', () => {
 
   it('returns null if getStringAssignment was called for the subject before any UFC was loaded', () => {
     const localClient = new EppoClient(new TestConfigurationStore());
-    expect(localClient.getStringAssignment('subject-1', flagKey, 'hello world')).toEqual(
+    expect(localClient.getStringAssignment(flagKey, 'subject-1', {}, 'hello world')).toEqual(
       'hello world',
     );
     expect(localClient.isInitialized()).toBe(false);
@@ -307,10 +311,10 @@ describe('EppoClient E2E test', () => {
 
     const nonExistentFlag = 'non-existent-flag';
 
-    expect(client.getBoolAssignment('subject-identifer', nonExistentFlag, true, {})).toBe(true);
-    expect(client.getNumericAssignment('subject-identifer', nonExistentFlag, 1, {})).toBe(1);
-    expect(client.getJSONAssignment('subject-identifer', nonExistentFlag, {}, {})).toEqual({});
-    expect(client.getStringAssignment('subject-identifer', nonExistentFlag, 'default', {})).toBe(
+    expect(client.getBoolAssignment(nonExistentFlag, 'subject-identifer', {}, true)).toBe(true);
+    expect(client.getNumericAssignment(nonExistentFlag, 'subject-identifer', {}, 1)).toBe(1);
+    expect(client.getJSONAssignment(nonExistentFlag, 'subject-identifer', {}, {})).toEqual({});
+    expect(client.getStringAssignment(nonExistentFlag, 'subject-identifer', {}, 'default')).toBe(
       'default',
     );
   });
@@ -324,10 +328,10 @@ describe('EppoClient E2E test', () => {
 
     const subjectAttributes = { foo: 3 };
     const assignment = client.getStringAssignment(
-      'subject-10',
       flagKey,
-      'default',
+      'subject-10',
       subjectAttributes,
+      'default',
     );
 
     expect(assignment).toEqual(variationA.value);
@@ -350,10 +354,10 @@ describe('EppoClient E2E test', () => {
 
     const subjectAttributes = { foo: 3 };
     const assignment = client.getStringAssignment(
-      'subject-10',
       flagKey,
-      'default',
+      'subject-10',
       subjectAttributes,
+      'default',
     );
 
     expect(assignment).toEqual('variation-a');
@@ -374,8 +378,8 @@ describe('EppoClient E2E test', () => {
     it('logs duplicate assignments without an assignment cache', () => {
       client.disableAssignmentCache();
 
-      client.getStringAssignment('subject-10', flagKey, 'default');
-      client.getStringAssignment('subject-10', flagKey, 'default');
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
 
       // call count should be 2 because there is no cache.
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(2);
@@ -384,8 +388,8 @@ describe('EppoClient E2E test', () => {
     it('does not log duplicate assignments', () => {
       client.useNonExpiringInMemoryAssignmentCache();
 
-      client.getStringAssignment('subject-10', flagKey, 'default');
-      client.getStringAssignment('subject-10', flagKey, 'default');
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
 
       // call count should be 1 because the second call is a cache hit and not logged.
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
@@ -394,15 +398,15 @@ describe('EppoClient E2E test', () => {
     it('logs assignment again after the lru cache is full', () => {
       client.useLRUInMemoryAssignmentCache(2);
 
-      client.getStringAssignment('subject-10', flagKey, 'default'); // logged
-      client.getStringAssignment('subject-10', flagKey, 'default'); // cached
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // logged
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // cached
 
-      client.getStringAssignment('subject-11', flagKey, 'default'); // logged
-      client.getStringAssignment('subject-11', flagKey, 'default'); // cached
+      client.getStringAssignment(flagKey, 'subject-11', {}, 'default'); // logged
+      client.getStringAssignment(flagKey, 'subject-11', {}, 'default'); // cached
 
-      client.getStringAssignment('subject-12', flagKey, 'default'); // cache evicted subject-10, logged
-      client.getStringAssignment('subject-10', flagKey, 'default'); // previously evicted, logged
-      client.getStringAssignment('subject-12', flagKey, 'default'); // cached
+      client.getStringAssignment(flagKey, 'subject-12', {}, 'default'); // cache evicted subject-10, logged
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // previously evicted, logged
+      client.getStringAssignment(flagKey, 'subject-12', {}, 'default'); // cached
 
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(4);
     });
@@ -414,8 +418,8 @@ describe('EppoClient E2E test', () => {
 
       client.setLogger(mockLogger);
 
-      client.getStringAssignment('subject-10', flagKey, 'default');
-      client.getStringAssignment('subject-10', flagKey, 'default');
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
 
       // call count should be 2 because the first call had an exception
       // therefore we are not sure the logger was successful and try again.
@@ -437,15 +441,15 @@ describe('EppoClient E2E test', () => {
 
       client.useNonExpiringInMemoryAssignmentCache();
 
-      client.getStringAssignment('subject-10', flagKey, 'default');
-      client.getStringAssignment('subject-10', flagKey, 'default');
-      client.getStringAssignment('subject-10', 'flag-2', 'default');
-      client.getStringAssignment('subject-10', 'flag-2', 'default');
-      client.getStringAssignment('subject-10', 'flag-3', 'default');
-      client.getStringAssignment('subject-10', 'flag-3', 'default');
-      client.getStringAssignment('subject-10', flagKey, 'default');
-      client.getStringAssignment('subject-10', 'flag-2', 'default');
-      client.getStringAssignment('subject-10', 'flag-3', 'default');
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
+      client.getStringAssignment('flag-2', 'subject-10', {}, 'default');
+      client.getStringAssignment('flag-2', 'subject-10', {}, 'default');
+      client.getStringAssignment('flag-3', 'subject-10', {}, 'default');
+      client.getStringAssignment('flag-3', 'subject-10', {}, 'default');
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
+      client.getStringAssignment('flag-2', 'subject-10', {}, 'default');
+      client.getStringAssignment('flag-3', 'subject-10', {}, 'default');
 
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(3);
     });
@@ -472,7 +476,7 @@ describe('EppoClient E2E test', () => {
           ],
         },
       });
-      client.getStringAssignment('subject-10', flagKey, 'default');
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
 
       storage.setEntries({
         [flagKey]: {
@@ -492,7 +496,7 @@ describe('EppoClient E2E test', () => {
           ],
         },
       });
-      client.getStringAssignment('subject-10', flagKey, 'default');
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(2);
     });
 
@@ -502,8 +506,8 @@ describe('EppoClient E2E test', () => {
       // original configuration version
       storage.setEntries({ [flagKey]: mockFlag });
 
-      client.getStringAssignment('subject-10', flagKey, 'default'); // log this assignment
-      client.getStringAssignment('subject-10', flagKey, 'default'); // cache hit, don't log
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // log this assignment
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // cache hit, don't log
 
       // change the variation
       storage.setEntries({
@@ -525,14 +529,14 @@ describe('EppoClient E2E test', () => {
         },
       });
 
-      client.getStringAssignment('subject-10', flagKey, 'default'); // log this assignment
-      client.getStringAssignment('subject-10', flagKey, 'default'); // cache hit, don't log
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // log this assignment
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // cache hit, don't log
 
       // change the flag again, back to the original
       storage.setEntries({ [flagKey]: mockFlag });
 
-      client.getStringAssignment('subject-10', flagKey, 'default'); // important: log this assignment
-      client.getStringAssignment('subject-10', flagKey, 'default'); // cache hit, don't log
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // important: log this assignment
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // cache hit, don't log
 
       // change the allocation
       storage.setEntries({
@@ -554,8 +558,8 @@ describe('EppoClient E2E test', () => {
         },
       });
 
-      client.getStringAssignment('subject-10', flagKey, 'default'); // log this assignment
-      client.getStringAssignment('subject-10', flagKey, 'default'); // cache hit, don't log
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // log this assignment
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // cache hit, don't log
 
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(4);
     });
@@ -624,11 +628,11 @@ describe('EppoClient E2E test', () => {
       client = new EppoClient(storage, requestConfiguration);
       client.setIsGracefulFailureMode(false);
       // no configuration loaded
-      let variation = client.getNumericAssignment(subject, flagKey, 123.4);
+      let variation = client.getNumericAssignment(flagKey, subject, {}, 123.4);
       expect(variation).toBe(123.4);
       // have client fetch configurations
       await client.fetchFlagConfigurations();
-      variation = client.getNumericAssignment(subject, flagKey, 0.0);
+      variation = client.getNumericAssignment(flagKey, subject, {}, 0.0);
       expect(variation).toBe(pi);
     });
 
@@ -637,11 +641,11 @@ describe('EppoClient E2E test', () => {
       client.setIsGracefulFailureMode(false);
       client.setConfigurationRequestParameters(requestConfiguration);
       // no configuration loaded
-      let variation = client.getNumericAssignment(subject, flagKey, 0.0);
+      let variation = client.getNumericAssignment(flagKey, subject, {}, 0.0);
       expect(variation).toBe(0.0);
       // have client fetch configurations
       await client.fetchFlagConfigurations();
-      variation = client.getNumericAssignment(subject, flagKey, 0.0);
+      variation = client.getNumericAssignment(flagKey, subject, {}, 0.0);
       expect(variation).toBe(pi);
     });
 
@@ -668,7 +672,7 @@ describe('EppoClient E2E test', () => {
       client = new EppoClient(storage, requestConfiguration);
       client.setIsGracefulFailureMode(false);
       // no configuration loaded
-      let variation = client.getNumericAssignment(subject, flagKey, 0.0);
+      let variation = client.getNumericAssignment(flagKey, subject, {}, 0.0);
       expect(variation).toBe(0.0);
 
       // By not awaiting (yet) only the first attempt should be fired off before test execution below resumes
@@ -680,7 +684,7 @@ describe('EppoClient E2E test', () => {
       // Await so it can finish its initialization before this test proceeds
       await fetchPromise;
 
-      variation = client.getNumericAssignment(subject, flagKey, 0.0);
+      variation = client.getNumericAssignment(flagKey, subject, {}, 0.0);
       expect(variation).toBe(pi);
       expect(callCount).toBe(2);
 
@@ -724,7 +728,7 @@ describe('EppoClient E2E test', () => {
       client = new EppoClient(storage, requestConfiguration);
       client.setIsGracefulFailureMode(false);
       // no configuration loaded
-      expect(client.getNumericAssignment(subject, flagKey, 0.0)).toBe(0.0);
+      expect(client.getNumericAssignment(flagKey, subject, {}, 0.0)).toBe(0.0);
 
       // By not awaiting (yet) only the first attempt should be fired off before test execution below resumes
       if (throwOnFailedInitialization) {
@@ -734,14 +738,14 @@ describe('EppoClient E2E test', () => {
       }
       expect(callCount).toBe(1);
       // still no configuration loaded
-      expect(client.getNumericAssignment(subject, flagKey, 10.0)).toBe(10.0);
+      expect(client.getNumericAssignment(flagKey, subject, {}, 10.0)).toBe(10.0);
 
       // Advance timers so a post-init poll can take place
       await jest.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 1.5);
 
       // if pollAfterFailedInitialization = true, we will poll later and get a config, otherwise not
       expect(callCount).toBe(pollAfterFailedInitialization ? 2 : 1);
-      expect(client.getNumericAssignment(subject, flagKey, 0.0)).toBe(
+      expect(client.getNumericAssignment(flagKey, subject, {}, 0.0)).toBe(
         pollAfterFailedInitialization ? pi : 0.0,
       );
     });

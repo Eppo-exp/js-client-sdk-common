@@ -57,10 +57,10 @@ export function getTestAssignments(
   }[] = [];
   for (const subject of testCase.subjects) {
     const assignment = assignmentFn(
-      subject.subjectKey,
       testCase.flag,
-      testCase.defaultValue,
+      subject.subjectKey,
       subject.subjectAttributes,
+      testCase.defaultValue,
       obfuscated,
     );
     assignments.push({ subject: subject, assignment: assignment });

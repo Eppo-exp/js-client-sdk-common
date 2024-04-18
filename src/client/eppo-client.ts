@@ -43,38 +43,38 @@ export interface IEppoClient {
    * @public
    */
   getStringAssignment(
-    subjectKey: string,
     flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
     defaultValue: string,
-    subjectAttributes?: Record<string, AttributeType>,
   ): string;
 
   getBoolAssignment(
-    subjectKey: string,
     flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
     defaultValue: boolean,
-    subjectAttributes?: Record<string, AttributeType>,
   ): boolean;
 
   getIntegerAssignment(
-    subjectKey: string,
     flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
     defaultValue: number,
-    subjectAttributes?: Record<string, AttributeType>,
   ): number;
 
   getNumericAssignment(
-    subjectKey: string,
     flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
     defaultValue: number,
-    subjectAttributes?: Record<string, AttributeType>,
   ): number;
 
   getJSONAssignment(
-    subjectKey: string,
     flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
     defaultValue: object,
-    subjectAttributes?: Record<string, AttributeType>,
   ): object;
 
   setLogger(logger: IAssignmentLogger): void;
@@ -194,101 +194,101 @@ export default class EppoClient implements IEppoClient {
   }
 
   public getStringAssignment(
-    subjectKey: string,
     flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
     defaultValue: string,
-    subjectAttributes: Record<string, AttributeType> = {},
   ): string {
     return (
       this.getAssignmentVariation(
-        subjectKey,
         flagKey,
-        EppoValue.String(defaultValue),
+        subjectKey,
         subjectAttributes,
+        EppoValue.String(defaultValue),
         VariationType.STRING,
       ).stringValue ?? defaultValue
     );
   }
 
   getBoolAssignment(
-    subjectKey: string,
     flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
     defaultValue: boolean,
-    subjectAttributes: Record<string, AttributeType> = {},
   ): boolean {
     return (
       this.getAssignmentVariation(
-        subjectKey,
         flagKey,
-        EppoValue.Bool(defaultValue),
+        subjectKey,
         subjectAttributes,
+        EppoValue.Bool(defaultValue),
         VariationType.BOOLEAN,
       ).boolValue ?? defaultValue
     );
   }
 
   getIntegerAssignment(
-    subjectKey: string,
     flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
     defaultValue: number,
-    subjectAttributes?: Record<string, AttributeType>,
   ): number {
     return (
       this.getAssignmentVariation(
-        subjectKey,
         flagKey,
-        EppoValue.Numeric(defaultValue),
+        subjectKey,
         subjectAttributes,
+        EppoValue.Numeric(defaultValue),
         VariationType.INTEGER,
       ).numericValue ?? defaultValue
     );
   }
 
   getNumericAssignment(
-    subjectKey: string,
     flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
     defaultValue: number,
-    subjectAttributes?: Record<string, AttributeType>,
   ): number {
     return (
       this.getAssignmentVariation(
-        subjectKey,
         flagKey,
-        EppoValue.Numeric(defaultValue),
+        subjectKey,
         subjectAttributes,
+        EppoValue.Numeric(defaultValue),
         VariationType.NUMERIC,
       ).numericValue ?? defaultValue
     );
   }
 
   public getJSONAssignment(
-    subjectKey: string,
     flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
     defaultValue: object,
-    subjectAttributes: Record<string, AttributeType> = {},
   ): object {
     return (
       this.getAssignmentVariation(
-        subjectKey,
         flagKey,
-        EppoValue.JSON(defaultValue),
+        subjectKey,
         subjectAttributes,
+        EppoValue.JSON(defaultValue),
         VariationType.JSON,
       ).objectValue ?? defaultValue
     );
   }
 
   private getAssignmentVariation(
-    subjectKey: string,
     flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
     defaultValue: EppoValue,
-    subjectAttributes: Record<string, AttributeType> = {},
     expectedVariationType: VariationType,
   ): EppoValue {
     try {
       const result = this.getAssignmentDetail(
-        subjectKey,
         flagKey,
+        subjectKey,
         subjectAttributes,
         expectedVariationType,
       );
@@ -325,8 +325,8 @@ export default class EppoClient implements IEppoClient {
    * @returns A detailed return of assignment for a particular subject and flag
    */
   public getAssignmentDetail(
-    subjectKey: string,
     flagKey: string,
+    subjectKey: string,
     subjectAttributes: Record<string, AttributeType> = {},
     expectedVariationType?: VariationType,
   ): FlagEvaluation {
