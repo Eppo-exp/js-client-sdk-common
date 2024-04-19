@@ -389,7 +389,6 @@ export default class EppoClient implements IEppoClient {
 
   private getObfuscatedFlag(flagKey: string): Flag | null {
     const flag: ObfuscatedFlag | null = this.configurationStore.get(getMD5Hash(flagKey));
-    if (flag) console.log('flag:', JSON.stringify(decodeFlag(flag)));
     return flag ? decodeFlag(flag) : null;
   }
 

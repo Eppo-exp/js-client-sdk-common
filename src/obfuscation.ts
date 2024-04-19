@@ -10,6 +10,5 @@ export function encodeBase64(input: string) {
 }
 
 export function decodeBase64(input: string) {
-  if (typeof input !== 'string') throw new Error(`Expect string, found ${JSON.stringify(input)}`);
   return decode(input);
 }
