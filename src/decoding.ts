@@ -25,7 +25,7 @@ export function decodeVariations(
   variationType: VariationType,
 ): Record<string, Variation> {
   return Object.fromEntries(
-    Object.entries(variations).map(([_, variation]) => {
+    Object.entries(variations).map(([, variation]) => {
       const decodedKey = decodeBase64(variation.key);
       return [decodedKey, { key: decodedKey, value: decodeValue(variation.value, variationType) }];
     }),
