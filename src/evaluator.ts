@@ -1,4 +1,14 @@
-import { Flag, Shard, Range, Variation } from './interfaces';
+import {
+  Flag,
+  Shard,
+  Range,
+  Variation,
+  VariationType,
+  Allocation,
+  Split,
+  ObfuscatedFlag,
+} from './interfaces';
+import { decodeBase64 } from './obfuscation';
 import { Rule, matchesRule } from './rules';
 import { MD5Sharder, Sharder } from './sharders';
 import { SubjectAttributes } from './types';

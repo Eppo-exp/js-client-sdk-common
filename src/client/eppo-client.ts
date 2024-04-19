@@ -16,11 +16,12 @@ import {
   MAX_EVENT_QUEUE_SIZE,
   POLL_INTERVAL_MS,
 } from '../constants';
+import { decodeFlag } from '../decoding';
 import { EppoValue } from '../eppo_value';
 import { Evaluator, FlagEvaluation, noneResult } from '../evaluator';
 import ExperimentConfigurationRequestor from '../flag-configuration-requestor';
 import HttpClient from '../http-client';
-import { Flag, VariationType } from '../interfaces';
+import { Flag, ObfuscatedFlag, VariationType } from '../interfaces';
 import { getMD5Hash } from '../obfuscation';
 import initPoller, { IPoller } from '../poller';
 import { AttributeType, ValueType } from '../types';
@@ -383,10 +384,16 @@ export default class EppoClient implements IEppoClient {
   }
 
   private getFlag(flagKey: string): Flag | null {
-    const flag: Flag = this.configurationStore.get(
-      this.isObfuscated ? getMD5Hash(flagKey) : flagKey,
-    );
-    return flag;
+    if (this.isObfuscated) {
+      return this.getObfuscatedFlag(flagKey);
+    }
+    return this.configurationStore.get(flagKey);
+  }
+
+  private getObfuscatedFlag(flagKey: string): Flag | null {
+    const flag: ObfuscatedFlag | null = this.configurationStore.get(getMD5Hash(flagKey));
+    if (flag) console.log('flag:', decodeFlag(flag));
+    return flag ? decodeFlag(flag) : null;
   }
 
   private checkTypeMatch(expectedType?: VariationType, actualType?: VariationType): boolean {
