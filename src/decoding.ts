@@ -27,10 +27,7 @@ export function decodeVariations(
   return Object.fromEntries(
     Object.entries(variations).map(([_, variation]) => {
       const decodedKey = decodeBase64(variation.key);
-      return [
-        decodedKey,
-        { key: decodedKey, value: decodeValue(variation.value as string, variationType) },
-      ];
+      return [decodedKey, { key: decodedKey, value: decodeValue(variation.value, variationType) }];
     }),
   );
 }
@@ -61,7 +58,7 @@ export function decodeAllocation(allocation: ObfuscatedAllocation): Allocation {
 
 export function decodeSplit(split: ObfuscatedSplit): Split {
   return {
-    extraLogging: split.extraLogging ? JSON.parse(decodeBase64(split.extraLogging)) : undefined,
+    extraLogging: split.extraLogging ? decodeObject(split.extraLogging) : undefined,
     variationKey: decodeBase64(split.variationKey),
     shards: split.shards.map(decodeShard),
   };
@@ -72,4 +69,10 @@ export function decodeShard(shard: Shard): Shard {
     ...shard,
     salt: decodeBase64(shard.salt),
   };
+}
+
+export function decodeObject(obj: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(obj).map(([key, value]) => [decodeBase64(key), decodeBase64(value)]),
+  );
 }

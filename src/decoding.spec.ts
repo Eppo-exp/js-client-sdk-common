@@ -1,5 +1,5 @@
-import { decodeFlag, decodeSplit, decodeValue, decodeVariations } from './decoding';
-import { ObfuscatedFlag, Flag, VariationType, ObfuscatedVariation, Variation } from './interfaces';
+import { decodeAllocation, decodeSplit, decodeValue, decodeVariations } from './decoding';
+import { VariationType, ObfuscatedVariation, Variation } from './interfaces';
 
 describe('decoding', () => {
   describe('decodeVariations', () => {
@@ -108,7 +108,7 @@ describe('decoding', () => {
           },
         ],
         variationKey: 'Y29udHJvbA==',
-        extraLogging: 'eyJoZWxsbyI6ICJ3b3JsZCIsICJieWUiOiAid29ybGQifQ==',
+        extraLogging: { 'aGVsbG8=': 'd29ybGQ=', Ynll: 'd29ybGQ=' },
       };
 
       const expectedSplit = {
@@ -131,6 +131,48 @@ describe('decoding', () => {
       };
 
       expect(decodeSplit(obfuscatedSplit)).toEqual(expectedSplit);
+    });
+  });
+
+  describe('decodeAllocation', () => {
+    it('should correctly decode allocation without startAt and endAt', () => {
+      const obfuscatedAllocation = {
+        key: 'ZXhwZXJpbWVudA==',
+        rules: [],
+        splits: [], // tested in decodeSplit
+        doLog: true,
+      };
+
+      const expectedAllocation = {
+        key: 'experiment',
+        rules: [],
+        splits: [],
+        doLog: true,
+      };
+
+      expect(decodeAllocation(obfuscatedAllocation)).toEqual(expectedAllocation);
+    });
+
+    it('should correctly decode allocation with startAt and endAt', () => {
+      const obfuscatedAllocation = {
+        key: 'ZXhwZXJpbWVudA==',
+        startAt: 'MjAyMC0wNC0wMVQxODo1ODo1NS44Mjla',
+        endAt: 'MjAyNS0wNy0yOVQwOTowMDoxMy4yMDVa',
+        rules: [],
+        splits: [], // tested in decodeSplit
+        doLog: true,
+      };
+
+      const expectedAllocation = {
+        key: 'experiment',
+        rules: [],
+        splits: [],
+        doLog: true,
+        startAt: '2020-04-01T18:58:55.829Z',
+        endAt: '2025-07-29T09:00:13.205Z',
+      };
+
+      expect(decodeAllocation(obfuscatedAllocation)).toEqual(expectedAllocation);
     });
   });
 });

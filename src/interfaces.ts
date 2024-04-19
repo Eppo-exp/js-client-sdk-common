@@ -73,7 +73,7 @@ export interface ObfuscatedAllocation {
 export interface ObfuscatedSplit {
   shards: ObfuscatedShard[];
   variationKey: string;
-  extraLogging?: string;
+  extraLogging?: Record<string, string>;
 }
 
 export interface ObfuscatedShard {

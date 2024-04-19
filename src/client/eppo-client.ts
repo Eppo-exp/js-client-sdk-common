@@ -342,9 +342,9 @@ export default class EppoClient implements IEppoClient {
       return noneResult(flagKey, subjectKey, subjectAttributes);
     }
 
-    if (!this.checkTypeMatch(expectedVariationType, flag.variationType)) {
+    if (!checkTypeMatch(expectedVariationType, flag.variationType)) {
       throw new TypeError(
-        `Variation value does not have the correct type. Found: ${flag.variationType} != ${expectedVariationType}`,
+        `Variation value does not have the correct type. Found: ${flag.variationType} != ${expectedVariationType} for flag ${flagKey}`,
       );
     }
 
@@ -365,10 +365,7 @@ export default class EppoClient implements IEppoClient {
       result.flagKey = flagKey;
     }
 
-    if (
-      result?.variation &&
-      !this.checkValueTypeMatch(expectedVariationType, result.variation.value)
-    ) {
+    if (result?.variation && !checkValueTypeMatch(expectedVariationType, result.variation.value)) {
       return noneResult(flagKey, subjectKey, subjectAttributes);
     }
 
@@ -392,34 +389,8 @@ export default class EppoClient implements IEppoClient {
 
   private getObfuscatedFlag(flagKey: string): Flag | null {
     const flag: ObfuscatedFlag | null = this.configurationStore.get(getMD5Hash(flagKey));
-    if (flag) console.log('flag:', decodeFlag(flag));
+    if (flag) console.log('flag:', JSON.stringify(decodeFlag(flag)));
     return flag ? decodeFlag(flag) : null;
-  }
-
-  private checkTypeMatch(expectedType?: VariationType, actualType?: VariationType): boolean {
-    return expectedType === undefined || actualType === expectedType;
-  }
-
-  private checkValueTypeMatch(expectedType: VariationType | undefined, value: ValueType): boolean {
-    if (expectedType == undefined) {
-      return true;
-    }
-
-    switch (expectedType) {
-      case VariationType.STRING:
-        return typeof value === 'string';
-      case VariationType.BOOLEAN:
-        return typeof value === 'boolean';
-      case VariationType.INTEGER:
-        return typeof value === 'number' && Number.isInteger(value);
-      case VariationType.NUMERIC:
-        return typeof value === 'number';
-      case VariationType.JSON:
-        // note: converting to object downstream
-        return typeof value === 'string';
-      default:
-        return false;
-    }
   }
 
   public getFlagKeys() {
@@ -522,5 +493,34 @@ export default class EppoClient implements IEppoClient {
     } catch (error) {
       console.error(`[Eppo SDK] Error logging assignment event: ${error.message}`);
     }
+  }
+}
+
+export function checkTypeMatch(expectedType?: VariationType, actualType?: VariationType): boolean {
+  return expectedType === undefined || actualType === expectedType;
+}
+
+export function checkValueTypeMatch(
+  expectedType: VariationType | undefined,
+  value: ValueType,
+): boolean {
+  if (expectedType == undefined) {
+    return true;
+  }
+
+  switch (expectedType) {
+    case VariationType.STRING:
+      return typeof value === 'string';
+    case VariationType.BOOLEAN:
+      return typeof value === 'boolean';
+    case VariationType.INTEGER:
+      return typeof value === 'number' && Number.isInteger(value);
+    case VariationType.NUMERIC:
+      return typeof value === 'number';
+    case VariationType.JSON:
+      // note: converting to object downstream
+      return typeof value === 'string';
+    default:
+      return false;
   }
 }
