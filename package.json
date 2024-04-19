@@ -1,6 +1,6 @@
 {
   "name": "@eppo/js-client-sdk-common",
-  "version": "2.3.0",
+  "version": "3.0.0",
   "description": "Eppo SDK for client-side JavaScript applications (base for both web and react native)",
   "main": "dist/index.js",
   "files": [
@@ -25,7 +25,7 @@
     "typecheck": "tsc",
     "test": "yarn test:unit",
     "test:unit": "NODE_ENV=test jest '.*\\.spec\\.ts'",
-    "obfuscate-mock-rac": "ts-node test/writeObfuscatedMockRac"
+    "obfuscate-mock-ufc": "ts-node test/writeObfuscatedMockUFC"
   },
   "jsdelivr": "dist/eppo-sdk.js",
   "repository": {

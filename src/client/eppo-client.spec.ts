@@ -1,40 +1,37 @@
 /**
  * @jest-environment jsdom
  */
-import axios from "axios";
-import * as td from "testdouble";
-import mock, { MockResponse } from "xhr-mock";
+import axios from 'axios';
+import * as td from 'testdouble';
+import mock, { MockResponse } from 'xhr-mock';
 
 import {
   IAssignmentTestCase,
-  MOCK_RAC_RESPONSE_FILE,
-  OBFUSCATED_MOCK_RAC_RESPONSE_FILE,
-  ValueTestType,
+  MOCK_UFC_RESPONSE_FILE,
+  OBFUSCATED_MOCK_UFC_RESPONSE_FILE,
+  SubjectTestCase,
+  getTestAssignments,
   readAssignmentTestData,
-  readMockRacResponse,
-} from "../../test/testHelpers";
-import { IAssignmentHooks } from "../assignment-hooks";
-import { IAssignmentLogger } from "../assignment-logger";
-import { IConfigurationStore } from "../configuration-store";
-import {
-  MAX_EVENT_QUEUE_SIZE,
-  POLL_INTERVAL_MS,
-  POLL_JITTER_PCT,
-} from "../constants";
-import { OperatorType } from "../dto/rule-dto";
-import { EppoValue } from "../eppo_value";
-import ExperimentConfigurationRequestor from "../experiment-configuration-requestor";
-import HttpClient from "../http-client";
+  readMockUFCResponse,
+  validateTestAssignments,
+} from '../../test/testHelpers';
+import { IAssignmentLogger } from '../assignment-logger';
+import { IConfigurationStore } from '../configuration-store';
+import { MAX_EVENT_QUEUE_SIZE, POLL_INTERVAL_MS, POLL_JITTER_PCT } from '../constants';
+import FlagConfigurationRequestor from '../flag-configuration-requestor';
+import HttpClient from '../http-client';
+import { Flag, VariationType } from '../interfaces';
 
-import EppoClient, {
-  ExperimentConfigurationRequestParameters,
-} from "./eppo-client";
+import EppoClient, { FlagConfigurationRequestParameters, checkTypeMatch } from './eppo-client';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const packageJson = require("../../package.json");
+const packageJson = require('../../package.json');
+
+const flagEndpoint = /flag-config\/v1\/config*/;
 
 class TestConfigurationStore implements IConfigurationStore {
   private store: Record<string, string> = {};
+  private _isInitialized = false;
 
   public get<T>(key: string): T {
     const rval = this.store[key];
@@ -45,40 +42,41 @@ class TestConfigurationStore implements IConfigurationStore {
     Object.entries(entries).forEach(([key, val]) => {
       this.store[key] = JSON.stringify(val);
     });
+    this._isInitialized = true;
+  }
+
+  public getKeys(): string[] {
+    return Object.keys(this.store);
+  }
+
+  public isInitialized(): boolean {
+    return this._isInitialized;
   }
 }
-
 export async function init(configurationStore: IConfigurationStore) {
   const axiosInstance = axios.create({
-    baseURL: "http://127.0.0.1:4000",
+    baseURL: 'http://127.0.0.1:4000',
     timeout: 1000,
   });
 
   const httpClient = new HttpClient(axiosInstance, {
-    apiKey: "dummy",
-    sdkName: "js-client-sdk-common",
+    apiKey: 'dummy',
+    sdkName: 'js-client-sdk-common',
     sdkVersion: packageJson.version,
   });
 
-  const configurationRequestor = new ExperimentConfigurationRequestor(
-    configurationStore,
-    httpClient
-  );
+  const configurationRequestor = new FlagConfigurationRequestor(configurationStore, httpClient);
   await configurationRequestor.fetchAndStoreConfigurations();
 }
 
-describe("EppoClient E2E test", () => {
-  const sessionOverrideSubject = "subject-14";
-  const sessionOverrideExperiment = "exp-100";
-
+describe('EppoClient E2E test', () => {
   const storage = new TestConfigurationStore();
-  const globalClient = new EppoClient(storage);
 
   beforeAll(async () => {
     mock.setup();
-    mock.get(/randomized_assignment\/v3\/config*/, (_req, res) => {
-      const rac = readMockRacResponse(MOCK_RAC_RESPONSE_FILE);
-      return res.status(200).body(JSON.stringify(rac));
+    mock.get(flagEndpoint, (_req, res) => {
+      const ufc = readMockUFCResponse(MOCK_UFC_RESPONSE_FILE);
+      return res.status(200).body(JSON.stringify(ufc));
     });
 
     await init(storage);
@@ -88,69 +86,48 @@ describe("EppoClient E2E test", () => {
     mock.teardown();
   });
 
-  const flagKey = "mock-experiment";
+  const flagKey = 'mock-flag';
 
-  const mockExperimentConfig = {
-    name: flagKey,
-    enabled: true,
-    subjectShards: 10000,
-    overrides: {},
-    typedOverrides: {},
-    rules: [
-      {
-        allocationKey: "allocation1",
-        conditions: [],
-      },
-    ],
-    allocations: {
-      allocation1: {
-        percentExposure: 1,
-        statusQuoVariationKey: null,
-        shippedVariationKey: null,
-        holdouts: [],
-        variations: [
-          {
-            name: "control",
-            value: "control",
-            typedValue: "control",
-            shardRange: {
-              start: 0,
-              end: 3333,
-            },
-          },
-          {
-            name: "variant-1",
-            value: "variant-1",
-            typedValue: "variant-1",
-            shardRange: {
-              start: 3333,
-              end: 6667,
-            },
-          },
-          {
-            name: "variant-2",
-            value: "variant-2",
-            typedValue: "variant-2",
-            shardRange: {
-              start: 6667,
-              end: 10000,
-            },
-          },
-        ],
-      },
-    },
+  const variationA = {
+    key: 'a',
+    value: 'variation-a',
   };
 
-  describe("error encountered", () => {
+  const variationB = {
+    key: 'b',
+    value: 'variation-b',
+  };
+
+  const mockFlag: Flag = {
+    key: flagKey,
+    enabled: true,
+    variationType: VariationType.STRING,
+    variations: { a: variationA, b: variationB },
+    allocations: [
+      {
+        key: 'allocation-a',
+        rules: [],
+        splits: [
+          {
+            shards: [],
+            variationKey: 'a',
+          },
+        ],
+        doLog: true,
+      },
+    ],
+    totalShards: 10000,
+  };
+
+  describe('error encountered', () => {
     let client: EppoClient;
-    const mockHooks = td.object<IAssignmentHooks>();
 
     beforeAll(() => {
-      storage.setEntries({ [flagKey]: mockExperimentConfig });
+      storage.setEntries({ [flagKey]: mockFlag });
       client = new EppoClient(storage);
 
-      td.replace(EppoClient.prototype, "getAssignmentVariation", function () {
-        throw new Error("So Graceful Error");
+      td.replace(EppoClient.prototype, 'getAssignmentDetail', function () {
+        throw new Error('Mock test error');
       });
     });
 
@@ -158,1153 +135,532 @@ describe("EppoClient E2E test", () => {
       td.reset();
     });
 
-    it("returns null when graceful failure if error encountered", async () => {
+    it('returns default value when graceful failure if error encountered', async () => {
       client.setIsGracefulFailureMode(true);
 
+      expect(client.getBoolAssignment(flagKey, 'subject-identifer', {}, true)).toBe(true);
+      expect(client.getBoolAssignment(flagKey, 'subject-identifer', {}, false)).toBe(false);
+      expect(client.getNumericAssignment(flagKey, 'subject-identifer', {}, 1)).toBe(1);
+      expect(client.getNumericAssignment(flagKey, 'subject-identifer', {}, 0)).toBe(0);
+      expect(client.getJSONAssignment(flagKey, 'subject-identifer', {}, {})).toEqual({});
       expect(
-        client.getAssignment("subject-identifer", flagKey, {}, mockHooks)
-      ).toBeNull();
-      expect(
-        client.getBoolAssignment("subject-identifer", flagKey, {}, mockHooks)
-      ).toBeNull();
-      expect(
-        client.getJSONStringAssignment(
-          "subject-identifer",
-          flagKey,
-          {},
-          mockHooks
-        )
-      ).toBeNull();
-      expect(
-        client.getNumericAssignment("subject-identifer", flagKey, {}, mockHooks)
-      ).toBeNull();
-      expect(
-        client.getParsedJSONAssignment(
-          "subject-identifer",
-          flagKey,
-          {},
-          mockHooks
-        )
-      ).toBeNull();
-      expect(
-        client.getStringAssignment("subject-identifer", flagKey, {}, mockHooks)
-      ).toBeNull();
+        client.getJSONAssignment(flagKey, 'subject-identifer', {}, { hello: 'world' }),
+      ).toEqual({
+        hello: 'world',
+      });
+      expect(client.getStringAssignment(flagKey, 'subject-identifer', {}, 'default')).toBe(
+        'default',
+      );
     });
 
-    it("throws error when graceful failure is false", async () => {
+    it('throws error when graceful failure is false', async () => {
       client.setIsGracefulFailureMode(false);
 
       expect(() => {
-        client.getAssignment("subject-identifer", flagKey, {}, mockHooks);
+        client.getBoolAssignment(flagKey, 'subject-identifer', {}, true);
       }).toThrow();
 
       expect(() => {
-        client.getBoolAssignment("subject-identifer", flagKey, {}, mockHooks);
+        client.getJSONAssignment(flagKey, 'subject-identifer', {}, {});
       }).toThrow();
 
       expect(() => {
-        client.getJSONStringAssignment(
-          "subject-identifer",
-          flagKey,
-          {},
-          mockHooks
-        );
+        client.getNumericAssignment(flagKey, 'subject-identifer', {}, 1);
       }).toThrow();
 
       expect(() => {
-        client.getParsedJSONAssignment(
-          "subject-identifer",
-          flagKey,
-          {},
-          mockHooks
-        );
-      }).toThrow();
-
-      expect(() => {
-        client.getNumericAssignment(
-          "subject-identifer",
-          flagKey,
-          {},
-          mockHooks
-        );
-      }).toThrow();
-
-      expect(() => {
-        client.getStringAssignment("subject-identifer", flagKey, {}, mockHooks);
+        client.getStringAssignment(flagKey, 'subject-identifer', {}, 'default');
       }).toThrow();
     });
   });
 
-  describe("setLogger", () => {
+  describe('setLogger', () => {
     beforeAll(() => {
-      storage.setEntries({ [flagKey]: mockExperimentConfig });
+      storage.setEntries({ [flagKey]: mockFlag });
     });
 
-    it("Invokes logger for queued events", () => {
+    it('Invokes logger for queued events', () => {
       const mockLogger = td.object<IAssignmentLogger>();
 
       const client = new EppoClient(storage);
-      client.getAssignment("subject-to-be-logged", flagKey);
+      client.getStringAssignment(flagKey, 'subject-to-be-logged', {}, 'default-value');
       client.setLogger(mockLogger);
 
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
-      expect(
-        td.explain(mockLogger.logAssignment).calls[0].args[0].subject
-      ).toEqual("subject-to-be-logged");
-    });
-
-    it("Does not log same queued event twice", () => {
-      const mockLogger = td.object<IAssignmentLogger>();
-
-      const client = new EppoClient(storage);
-
-      client.getAssignment("subject-to-be-logged", flagKey);
-      client.setLogger(mockLogger);
-      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
-
-      client.setLogger(mockLogger);
-      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
-    });
-
-    it("Does not invoke logger for events that exceed queue size", () => {
-      const mockLogger = td.object<IAssignmentLogger>();
-
-      const client = new EppoClient(storage);
-      for (let i = 0; i < MAX_EVENT_QUEUE_SIZE + 100; i++) {
-        client.getAssignment(`subject-to-be-logged-${i}`, flagKey);
-      }
-      client.setLogger(mockLogger);
-      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(
-        MAX_EVENT_QUEUE_SIZE
+      expect(td.explain(mockLogger.logAssignment).calls[0].args[0].subject).toEqual(
+        'subject-to-be-logged',
       );
     });
+
+    it('Does not log same queued event twice', () => {
+      const mockLogger = td.object<IAssignmentLogger>();
+
+      const client = new EppoClient(storage);
+
+      client.getStringAssignment(flagKey, 'subject-to-be-logged', {}, 'default-value');
+      client.setLogger(mockLogger);
+      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
+
+      client.setLogger(mockLogger);
+      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
+    });
+
+    it('Does not invoke logger for events that exceed queue size', () => {
+      const mockLogger = td.object<IAssignmentLogger>();
+
+      const client = new EppoClient(storage);
+
+      for (let i = 0; i < MAX_EVENT_QUEUE_SIZE + 100; i++) {
+        client.getStringAssignment(flagKey, `subject-to-be-logged-${i}`, {}, 'default-value');
+      }
+      client.setLogger(mockLogger);
+      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(MAX_EVENT_QUEUE_SIZE);
+    });
   });
 
-  describe("getAssignment", () => {
-    it.each(readAssignmentTestData())(
-      "test variation assignment splits",
-      async ({
-        experiment,
-        valueType = ValueTestType.StringType,
-        subjects,
-        subjectsWithAttributes,
-        expectedAssignments,
-      }: IAssignmentTestCase) => {
-        `---- Test Case for ${experiment} Experiment ----`;
+  describe('check type match', () => {
+    it('returns false when types do not match', () => {
+      expect(checkTypeMatch(VariationType.JSON, VariationType.STRING)).toBe(false);
+    });
+  });
 
-        const assignments = getAssignmentsWithSubjectAttributes(
-          subjectsWithAttributes
-            ? subjectsWithAttributes
-            : subjects.map((subject) => ({ subjectKey: subject })),
-          experiment,
-          valueType
+  describe('UFC General Test Cases', () => {
+    it.each(readAssignmentTestData())(
+      'test variation assignment splits',
+      async ({ flag, variationType, defaultValue, subjects }: IAssignmentTestCase) => {
+        const client = new EppoClient(storage);
+        client.setIsGracefulFailureMode(false);
+
+        let assignments: {
+          subject: SubjectTestCase;
+          assignment: string | boolean | number | null | object;
+        }[] = [];
+
+        const typeAssignmentFunctions = {
+          [VariationType.BOOLEAN]: client.getBoolAssignment.bind(client),
+          [VariationType.NUMERIC]: client.getNumericAssignment.bind(client),
+          [VariationType.INTEGER]: client.getIntegerAssignment.bind(client),
+          [VariationType.STRING]: client.getStringAssignment.bind(client),
+          [VariationType.JSON]: client.getJSONAssignment.bind(client),
+        };
+
+        const assignmentFn = typeAssignmentFunctions[variationType];
+        if (!assignmentFn) {
+          throw new Error(`Unknown variation type: ${variationType}`);
+        }
+
+        assignments = getTestAssignments(
+          { flag, variationType, defaultValue, subjects },
+          assignmentFn,
+          false,
         );
 
-        switch (valueType) {
-          case ValueTestType.BoolType: {
-            const boolAssignments = assignments.map(
-              (a) => a?.boolValue ?? null
-            );
-            expect(boolAssignments).toEqual(expectedAssignments);
-            break;
-          }
-          case ValueTestType.NumericType: {
-            const numericAssignments = assignments.map(
-              (a) => a?.numericValue ?? null
-            );
-            expect(numericAssignments).toEqual(expectedAssignments);
-            break;
-          }
-          case ValueTestType.StringType: {
-            const stringAssignments = assignments.map(
-              (a) => a?.stringValue ?? null
-            );
-            expect(stringAssignments).toEqual(expectedAssignments);
-            break;
-          }
-          case ValueTestType.JSONType: {
-            const jsonStringAssignments = assignments.map(
-              (a) => a?.stringValue ?? null
-            );
-            expect(jsonStringAssignments).toEqual(expectedAssignments);
-            break;
-          }
+        validateTestAssignments(assignments, flag);
+      },
+    );
+  });
+
+  describe('UFC Obfuscated Test Cases', () => {
+    const storage = new TestConfigurationStore();
+
+    beforeAll(async () => {
+      mock.setup();
+      mock.get(flagEndpoint, (_req, res) => {
+        const ufc = readMockUFCResponse(OBFUSCATED_MOCK_UFC_RESPONSE_FILE);
+        return res.status(200).body(JSON.stringify(ufc));
+      });
+      await init(storage);
+    });
+
+    afterAll(() => {
+      mock.teardown();
+    });
+
+    it.each(readAssignmentTestData())(
+      'test variation assignment splits',
+      async ({ flag, variationType, defaultValue, subjects }: IAssignmentTestCase) => {
+        const client = new EppoClient(storage, undefined, true);
+        client.setIsGracefulFailureMode(false);
+
+        const typeAssignmentFunctions = {
+          [VariationType.BOOLEAN]: client.getBoolAssignment.bind(client),
+          [VariationType.NUMERIC]: client.getNumericAssignment.bind(client),
+          [VariationType.INTEGER]: client.getIntegerAssignment.bind(client),
+          [VariationType.STRING]: client.getStringAssignment.bind(client),
+          [VariationType.JSON]: client.getJSONAssignment.bind(client),
+        };
+
+        const assignmentFn = typeAssignmentFunctions[variationType];
+        if (!assignmentFn) {
+          throw new Error(`Unknown variation type: ${variationType}`);
         }
-      }
+
+        const assignments = getTestAssignments(
+          { flag, variationType, defaultValue, subjects },
+          assignmentFn,
+          true,
+        );
+
+        validateTestAssignments(assignments, flag);
+      },
     );
   });
 
-  it("returns null if getAssignment was called for the subject before any RAC was loaded", () => {
-    expect(
-      globalClient.getAssignment(
-        sessionOverrideSubject,
-        sessionOverrideExperiment
-      )
-    ).toEqual(null);
+  it('returns null if getStringAssignment was called for the subject before any UFC was loaded', () => {
+    const localClient = new EppoClient(new TestConfigurationStore());
+    expect(localClient.getStringAssignment(flagKey, 'subject-1', {}, 'hello world')).toEqual(
+      'hello world',
+    );
+    expect(localClient.isInitialized()).toBe(false);
   });
 
-  it("returns subject from overrides when enabled is true", () => {
-    const entry = {
-      ...mockExperimentConfig,
-      enabled: false,
-      overrides: {
-        "1b50f33aef8f681a13f623963da967ed": "override",
-      },
-      typedOverrides: {
-        "1b50f33aef8f681a13f623963da967ed": "override",
-      },
-    };
-
-    storage.setEntries({ [flagKey]: entry });
-
+  it('returns default value when key does not exist', async () => {
     const client = new EppoClient(storage);
-    const mockLogger = td.object<IAssignmentLogger>();
-    client.setLogger(mockLogger);
 
-    const assignment = client.getAssignment("subject-10", flagKey);
-    expect(assignment).toEqual("override");
-    expect(td.explain(mockLogger.logAssignment).callCount).toEqual(0);
+    const nonExistentFlag = 'non-existent-flag';
+
+    expect(client.getBoolAssignment(nonExistentFlag, 'subject-identifer', {}, true)).toBe(true);
+    expect(client.getNumericAssignment(nonExistentFlag, 'subject-identifer', {}, 1)).toBe(1);
+    expect(client.getJSONAssignment(nonExistentFlag, 'subject-identifer', {}, {})).toEqual({});
+    expect(client.getStringAssignment(nonExistentFlag, 'subject-identifer', {}, 'default')).toBe(
+      'default',
+    );
   });
 
-  it("returns subject from overrides when enabled is false", () => {
-    const entry = {
-      ...mockExperimentConfig,
-      enabled: false,
-      overrides: {
-        "1b50f33aef8f681a13f623963da967ed": "override",
-      },
-      typedOverrides: {
-        "1b50f33aef8f681a13f623963da967ed": "override",
-      },
-    };
-
-    storage.setEntries({ [flagKey]: entry });
-
-    const client = new EppoClient(storage);
-    const mockLogger = td.object<IAssignmentLogger>();
-    client.setLogger(mockLogger);
-    const assignment = client.getAssignment("subject-10", flagKey);
-    expect(assignment).toEqual("override");
-    expect(td.explain(mockLogger.logAssignment).callCount).toEqual(0);
-  });
-
-  it("logs variation assignment and experiment key", () => {
+  it('logs variation assignment and experiment key', () => {
     const mockLogger = td.object<IAssignmentLogger>();
 
-    storage.setEntries({ [flagKey]: mockExperimentConfig });
+    storage.setEntries({ [flagKey]: mockFlag });
     const client = new EppoClient(storage);
     client.setLogger(mockLogger);
 
     const subjectAttributes = { foo: 3 };
-    const assignment = client.getAssignment(
-      "subject-10",
+    const assignment = client.getStringAssignment(
       flagKey,
-      subjectAttributes
+      'subject-10',
+      subjectAttributes,
+      'default',
     );
 
-    expect(assignment).toEqual("control");
+    expect(assignment).toEqual(variationA.value);
     expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
-    expect(
-      td.explain(mockLogger.logAssignment).calls[0].args[0].subject
-    ).toEqual("subject-10");
-    expect(
-      td.explain(mockLogger.logAssignment).calls[0].args[0].featureFlag
-    ).toEqual(flagKey);
-    expect(
-      td.explain(mockLogger.logAssignment).calls[0].args[0].experiment
-    ).toEqual(`${flagKey}-${mockExperimentConfig.rules[0].allocationKey}`);
-    expect(
-      td.explain(mockLogger.logAssignment).calls[0].args[0].allocation
-    ).toEqual(`${mockExperimentConfig.rules[0].allocationKey}`);
+
+    const loggedAssignmentEvent = td.explain(mockLogger.logAssignment).calls[0].args[0];
+    expect(loggedAssignmentEvent.subject).toEqual('subject-10');
+    expect(loggedAssignmentEvent.featureFlag).toEqual(flagKey);
+    expect(loggedAssignmentEvent.experiment).toEqual(`${flagKey}-${mockFlag.allocations[0].key}`);
+    expect(loggedAssignmentEvent.allocation).toEqual(mockFlag.allocations[0].key);
   });
 
-  it("handles logging exception", () => {
+  it('handles logging exception', () => {
     const mockLogger = td.object<IAssignmentLogger>();
-    td.when(mockLogger.logAssignment(td.matchers.anything())).thenThrow(
-      new Error("logging error")
-    );
+    td.when(mockLogger.logAssignment(td.matchers.anything())).thenThrow(new Error('logging error'));
 
-    storage.setEntries({ [flagKey]: mockExperimentConfig });
+    storage.setEntries({ [flagKey]: mockFlag });
     const client = new EppoClient(storage);
     client.setLogger(mockLogger);
 
     const subjectAttributes = { foo: 3 };
-    const assignment = client.getAssignment(
-      "subject-10",
+    const assignment = client.getStringAssignment(
       flagKey,
-      subjectAttributes
+      'subject-10',
+      subjectAttributes,
+      'default',
     );
 
-    expect(assignment).toEqual("control");
+    expect(assignment).toEqual('variation-a');
   });
 
-  describe("assignment logging deduplication", () => {
+  describe('assignment logging deduplication', () => {
     let client: EppoClient;
     let mockLogger: IAssignmentLogger;
 
     beforeEach(() => {
       mockLogger = td.object<IAssignmentLogger>();
 
-      storage.setEntries({ [flagKey]: mockExperimentConfig });
+      storage.setEntries({ [flagKey]: mockFlag });
       client = new EppoClient(storage);
       client.setLogger(mockLogger);
     });
 
-    it("logs duplicate assignments without an assignment cache", () => {
+    it('logs duplicate assignments without an assignment cache', () => {
       client.disableAssignmentCache();
 
-      client.getAssignment("subject-10", flagKey);
-      client.getAssignment("subject-10", flagKey);
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
 
       // call count should be 2 because there is no cache.
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(2);
     });
 
-    it("does not log duplicate assignments", () => {
+    it('does not log duplicate assignments', () => {
       client.useNonExpiringInMemoryAssignmentCache();
 
-      client.getAssignment("subject-10", flagKey);
-      client.getAssignment("subject-10", flagKey);
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
 
       // call count should be 1 because the second call is a cache hit and not logged.
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
     });
 
-    it("logs assignment again after the lru cache is full", () => {
+    it('logs assignment again after the lru cache is full', () => {
       client.useLRUInMemoryAssignmentCache(2);
 
-      client.getAssignment("subject-10", flagKey); // logged
-      client.getAssignment("subject-10", flagKey); // cached
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // logged
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // cached
 
-      client.getAssignment("subject-11", flagKey); // logged
-      client.getAssignment("subject-11", flagKey); // cached
+      client.getStringAssignment(flagKey, 'subject-11', {}, 'default'); // logged
+      client.getStringAssignment(flagKey, 'subject-11', {}, 'default'); // cached
 
-      client.getAssignment("subject-12", flagKey); // cache evicted subject-10, logged
-      client.getAssignment("subject-10", flagKey); // previously evicted, logged
-      client.getAssignment("subject-12", flagKey); // cached
+      client.getStringAssignment(flagKey, 'subject-12', {}, 'default'); // cache evicted subject-10, logged
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // previously evicted, logged
+      client.getStringAssignment(flagKey, 'subject-12', {}, 'default'); // cached
 
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(4);
     });
 
-    it("does not cache assignments if the logger had an exception", () => {
+    it('does not cache assignments if the logger had an exception', () => {
       td.when(mockLogger.logAssignment(td.matchers.anything())).thenThrow(
-        new Error("logging error")
+        new Error('logging error'),
       );
 
-      const client = new EppoClient(storage);
       client.setLogger(mockLogger);
 
-      client.getAssignment("subject-10", flagKey);
-      client.getAssignment("subject-10", flagKey);
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
 
       // call count should be 2 because the first call had an exception
       // therefore we are not sure the logger was successful and try again.
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(2);
     });
 
-    it("logs for each unique flag", () => {
+    it('logs for each unique flag', () => {
       storage.setEntries({
-        [flagKey]: mockExperimentConfig,
-        "flag-2": {
-          ...mockExperimentConfig,
-          name: "flag-2",
+        [flagKey]: mockFlag,
+        'flag-2': {
+          ...mockFlag,
+          key: 'flag-2',
         },
-        "flag-3": {
-          ...mockExperimentConfig,
-          name: "flag-3",
+        'flag-3': {
+          ...mockFlag,
+          key: 'flag-3',
         },
       });
 
       client.useNonExpiringInMemoryAssignmentCache();
 
-      client.getAssignment("subject-10", flagKey);
-      client.getAssignment("subject-10", flagKey);
-      client.getAssignment("subject-10", "flag-2");
-      client.getAssignment("subject-10", "flag-2");
-      client.getAssignment("subject-10", "flag-3");
-      client.getAssignment("subject-10", "flag-3");
-      client.getAssignment("subject-10", flagKey);
-      client.getAssignment("subject-10", "flag-2");
-      client.getAssignment("subject-10", "flag-3");
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
+      client.getStringAssignment('flag-2', 'subject-10', {}, 'default');
+      client.getStringAssignment('flag-2', 'subject-10', {}, 'default');
+      client.getStringAssignment('flag-3', 'subject-10', {}, 'default');
+      client.getStringAssignment('flag-3', 'subject-10', {}, 'default');
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
+      client.getStringAssignment('flag-2', 'subject-10', {}, 'default');
+      client.getStringAssignment('flag-3', 'subject-10', {}, 'default');
 
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(3);
     });
 
-    it("logs twice for the same flag when rollout increases/flag changes", () => {
+    it('logs twice for the same flag when allocations change', () => {
       client.useNonExpiringInMemoryAssignmentCache();
 
       storage.setEntries({
         [flagKey]: {
-          ...mockExperimentConfig,
-          allocations: {
-            allocation1: {
-              percentExposure: 1,
-              statusQuoVariationKey: null,
-              shippedVariationKey: null,
-              holdouts: [],
-              variations: [
+          ...mockFlag,
+
+          allocations: [
+            {
+              key: 'allocation-a-2',
+              rules: [],
+              splits: [
                 {
-                  name: "control",
-                  value: "control",
-                  typedValue: "control",
-                  shardRange: {
-                    start: 0,
-                    end: 10000,
-                  },
-                },
-                {
-                  name: "treatment",
-                  value: "treatment",
-                  typedValue: "treatment",
-                  shardRange: {
-                    start: 0,
-                    end: 0,
-                  },
+                  shards: [],
+                  variationKey: 'a',
                 },
               ],
+              doLog: true,
             },
-          },
+          ],
         },
       });
-      client.getAssignment("subject-10", flagKey);
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
 
       storage.setEntries({
         [flagKey]: {
-          ...mockExperimentConfig,
-          allocations: {
-            allocation1: {
-              percentExposure: 1,
-              statusQuoVariationKey: null,
-              shippedVariationKey: null,
-              holdouts: [],
-              variations: [
+          ...mockFlag,
+          allocations: [
+            {
+              key: 'allocation-a-3',
+              rules: [],
+              splits: [
                 {
-                  name: "control",
-                  value: "control",
-                  typedValue: "control",
-                  shardRange: {
-                    start: 0,
-                    end: 0,
-                  },
-                },
-                {
-                  name: "treatment",
-                  value: "treatment",
-                  typedValue: "treatment",
-                  shardRange: {
-                    start: 0,
-                    end: 10000,
-                  },
+                  shards: [],
+                  variationKey: 'a',
                 },
               ],
+              doLog: true,
             },
-          },
+          ],
         },
       });
-      client.getAssignment("subject-10", flagKey);
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(2);
     });
 
-    it("logs the same subject/flag/variation after two changes", () => {
+    it('logs the same subject/flag/variation after two changes', () => {
       client.useNonExpiringInMemoryAssignmentCache();
 
       // original configuration version
-      storage.setEntries({ [flagKey]: mockExperimentConfig });
+      storage.setEntries({ [flagKey]: mockFlag });
 
-      client.getAssignment("subject-10", flagKey); // log this assignment
-      client.getAssignment("subject-10", flagKey); // cache hit, don't log
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // log this assignment
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // cache hit, don't log
 
-      // change the flag
+      // change the variation
       storage.setEntries({
         [flagKey]: {
-          ...mockExperimentConfig,
-          allocations: {
-            allocation1: {
-              percentExposure: 1,
-              statusQuoVariationKey: null,
-              shippedVariationKey: null,
-              holdouts: [],
-              variations: [
+          ...mockFlag,
+          allocations: [
+            {
+              key: 'allocation-a', // note: same key
+              rules: [],
+              splits: [
                 {
-                  name: "some-new-treatment",
-                  value: "some-new-treatment",
-                  typedValue: "some-new-treatment",
-                  shardRange: {
-                    start: 0,
-                    end: 10000,
-                  },
+                  shards: [],
+                  variationKey: 'b', // but different variation!
                 },
               ],
+              doLog: true,
             },
-          },
+          ],
         },
       });
 
-      client.getAssignment("subject-10", flagKey); // log this assignment
-      client.getAssignment("subject-10", flagKey); // cache hit, don't log
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // log this assignment
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // cache hit, don't log
 
       // change the flag again, back to the original
-      storage.setEntries({ [flagKey]: mockExperimentConfig });
+      storage.setEntries({ [flagKey]: mockFlag });
 
-      client.getAssignment("subject-10", flagKey); // important: log this assignment
-      client.getAssignment("subject-10", flagKey); // cache hit, don't log
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // important: log this assignment
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // cache hit, don't log
 
-      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(3);
-    });
-  });
-
-  it("only returns variation if subject matches rules", () => {
-    const entry = {
-      ...mockExperimentConfig,
-      rules: [
-        {
-          allocationKey: "allocation1",
-          conditions: [
+      // change the allocation
+      storage.setEntries({
+        [flagKey]: {
+          ...mockFlag,
+          allocations: [
             {
-              operator: OperatorType.GT,
-              attribute: "appVersion",
-              value: 10,
+              key: 'allocation-b', // note: different key
+              rules: [],
+              splits: [
+                {
+                  shards: [],
+                  variationKey: 'b', // variation has been seen before
+                },
+              ],
+              doLog: true,
             },
           ],
         },
-      ],
-    };
+      });
 
-    storage.setEntries({ [flagKey]: entry });
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // log this assignment
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // cache hit, don't log
 
-    const client = new EppoClient(storage);
-    let assignment = client.getAssignment("subject-10", flagKey, {
-      appVersion: 9,
+      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(4);
     });
-    expect(assignment).toBeNull();
-    assignment = client.getAssignment("subject-10", flagKey);
-    expect(assignment).toBeNull();
-    assignment = client.getAssignment("subject-10", flagKey, {
-      appVersion: 11,
-    });
-    expect(assignment).toEqual("control");
   });
 
-  it("returns control variation and logs holdout key if subject is in holdout in an experiment allocation", () => {
-    const entry = {
-      ...mockExperimentConfig,
-      allocations: {
-        allocation1: {
-          percentExposure: 1,
-          statusQuoVariationKey: "variation-7",
-          shippedVariationKey: null,
-          holdouts: [
-            {
-              holdoutKey: "holdout-2",
-              statusQuoShardRange: {
-                start: 0,
-                end: 200,
-              },
-              shippedShardRange: null, // this is an experiment allocation because shippedShardRange is null
-            },
-            {
-              holdoutKey: "holdout-3",
-              statusQuoShardRange: {
-                start: 200,
-                end: 400,
-              },
-              shippedShardRange: null,
-            },
-          ],
-          variations: [
-            {
-              name: "control",
-              value: "control",
-              typedValue: "control",
-              shardRange: {
-                start: 0,
-                end: 3333,
-              },
-              variationKey: "variation-7",
-            },
-            {
-              name: "variant-1",
-              value: "variant-1",
-              typedValue: "variant-1",
-              shardRange: {
-                start: 3333,
-                end: 6667,
-              },
-              variationKey: "variation-8",
-            },
-            {
-              name: "variant-2",
-              value: "variant-2",
-              typedValue: "variant-2",
-              shardRange: {
-                start: 6667,
-                end: 10000,
-              },
-              variationKey: "variation-9",
-            },
-          ],
-        },
-      },
-    };
-
-    storage.setEntries({ [flagKey]: entry });
-
-    const mockLogger = td.object<IAssignmentLogger>();
-    const client = new EppoClient(storage);
-    client.setLogger(mockLogger);
-    td.reset();
-
-    // subject-79 --> holdout shard is 186
-    let assignment = client.getAssignment("subject-79", flagKey);
-    expect(assignment).toEqual("control");
-    // Only log holdout key (not variation) if this is an experiment allocation
-    expect(
-      td.explain(mockLogger.logAssignment).calls[0].args[0].holdoutVariation
-    ).toBeNull();
-    expect(
-      td.explain(mockLogger.logAssignment).calls[0].args[0].holdout
-    ).toEqual("holdout-2");
-
-    // subject-8 --> holdout shard is 201
-    assignment = client.getAssignment("subject-8", flagKey);
-    expect(assignment).toEqual("control");
-    // Only log holdout key (not variation) if this is an experiment allocation
-    expect(
-      td.explain(mockLogger.logAssignment).calls[1].args[0].holdoutVariation
-    ).toBeNull();
-    expect(
-      td.explain(mockLogger.logAssignment).calls[1].args[0].holdout
-    ).toEqual("holdout-3");
-
-    // subject-11 --> holdout shard is 9137 (outside holdout), non-holdout assignment shard is 8414
-    assignment = client.getAssignment("subject-11", flagKey);
-    expect(assignment).toEqual("variant-2");
-    expect(
-      td.explain(mockLogger.logAssignment).calls[2].args[0].holdoutVariation
-    ).toBeNull();
-    expect(
-      td.explain(mockLogger.logAssignment).calls[2].args[0].holdout
-    ).toBeNull();
-  });
-
-  it("returns the shipped variation and logs holdout key and variation if subject is in holdout in a rollout allocation", () => {
-    const entry = {
-      ...mockExperimentConfig,
-      allocations: {
-        allocation1: {
-          percentExposure: 1,
-          statusQuoVariationKey: "variation-7",
-          shippedVariationKey: "variation-8",
-          holdouts: [
-            {
-              holdoutKey: "holdout-2",
-              statusQuoShardRange: {
-                start: 0,
-                end: 100,
-              },
-              shippedShardRange: {
-                start: 100,
-                end: 200,
-              },
-            },
-            {
-              holdoutKey: "holdout-3",
-              statusQuoShardRange: {
-                start: 200,
-                end: 300,
-              },
-              shippedShardRange: {
-                start: 300,
-                end: 400,
-              },
-            },
-          ],
-          variations: [
-            {
-              name: "control",
-              value: "control",
-              typedValue: "control",
-              shardRange: {
-                start: 0,
-                end: 0,
-              },
-              variationKey: "variation-7",
-            },
-            {
-              name: "variant-1",
-              value: "variant-1",
-              typedValue: "variant-1",
-              shardRange: {
-                start: 0,
-                end: 0,
-              },
-              variationKey: "variation-8",
-            },
-            {
-              name: "variant-2",
-              value: "variant-2",
-              typedValue: "variant-2",
-              shardRange: {
-                start: 0,
-                end: 10000,
-              },
-              variationKey: "variation-9",
-            },
-          ],
-        },
-      },
-    };
-
-    storage.setEntries({ [flagKey]: entry });
-
-    const mockLogger = td.object<IAssignmentLogger>();
-    const client = new EppoClient(storage);
-    client.setLogger(mockLogger);
-    td.reset();
-
-    // subject-227 --> holdout shard is 57
-    let assignment = client.getAssignment("subject-227", flagKey);
-    expect(assignment).toEqual("control");
-    // Log both holdout key and variation if this is a rollout allocation
-    expect(
-      td.explain(mockLogger.logAssignment).calls[0].args[0].holdoutVariation
-    ).toEqual("status_quo");
-    expect(
-      td.explain(mockLogger.logAssignment).calls[0].args[0].holdout
-    ).toEqual("holdout-2");
-
-    // subject-79 --> holdout shard is 186
-    assignment = client.getAssignment("subject-79", flagKey);
-    expect(assignment).toEqual("variant-1");
-    // Log both holdout key and variation if this is a rollout allocation
-    expect(
-      td.explain(mockLogger.logAssignment).calls[1].args[0].holdoutVariation
-    ).toEqual("all_shipped_variants");
-    expect(
-      td.explain(mockLogger.logAssignment).calls[1].args[0].holdout
-    ).toEqual("holdout-2");
-
-    // subject-8 --> holdout shard is 201
-    assignment = client.getAssignment("subject-8", flagKey);
-    expect(assignment).toEqual("control");
-    // Log both holdout key and variation if this is a rollout allocation
-    expect(
-      td.explain(mockLogger.logAssignment).calls[2].args[0].holdoutVariation
-    ).toEqual("status_quo");
-    expect(
-      td.explain(mockLogger.logAssignment).calls[2].args[0].holdout
-    ).toEqual("holdout-3");
-
-    // subject-50 --> holdout shard is 347
-    assignment = client.getAssignment("subject-50", flagKey);
-    expect(assignment).toEqual("variant-1");
-    // Log both holdout key and variation if this is a rollout allocation
-    expect(
-      td.explain(mockLogger.logAssignment).calls[3].args[0].holdoutVariation
-    ).toEqual("all_shipped_variants");
-    expect(
-      td.explain(mockLogger.logAssignment).calls[3].args[0].holdout
-    ).toEqual("holdout-3");
-
-    // subject-7 --> holdout shard is 9483 (outside holdout), non-holdout assignment shard is 8673
-    assignment = client.getAssignment("subject-7", flagKey);
-    expect(assignment).toEqual("variant-2");
-    expect(
-      td.explain(mockLogger.logAssignment).calls[4].args[0].holdoutVariation
-    ).toBeNull();
-    expect(
-      td.explain(mockLogger.logAssignment).calls[4].args[0].holdout
-    ).toBeNull();
-  });
-
-  function getAssignmentsWithSubjectAttributes(
-    subjectsWithAttributes: {
-      subjectKey: string;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      subjectAttributes?: Record<string, any>;
-    }[],
-    experiment: string,
-    valueTestType: ValueTestType = ValueTestType.StringType,
-    obfuscated = false
-  ): (EppoValue | null)[] {
-    return subjectsWithAttributes.map((subject) => {
-      switch (valueTestType) {
-        case ValueTestType.BoolType: {
-          const ba = globalClient.getBoolAssignment(
-            subject.subjectKey,
-            experiment,
-            subject.subjectAttributes,
-            undefined,
-            obfuscated
-          );
-          if (ba === null) return null;
-          return EppoValue.Bool(ba);
-        }
-        case ValueTestType.NumericType: {
-          const na = globalClient.getNumericAssignment(
-            subject.subjectKey,
-            experiment,
-            subject.subjectAttributes
-          );
-          if (na === null) return null;
-          return EppoValue.Numeric(na);
-        }
-        case ValueTestType.StringType: {
-          const sa = globalClient.getStringAssignment(
-            subject.subjectKey,
-            experiment,
-            subject.subjectAttributes
-          );
-          if (sa === null) return null;
-          return EppoValue.String(sa);
-        }
-        case ValueTestType.JSONType: {
-          const sa = globalClient.getJSONStringAssignment(
-            subject.subjectKey,
-            experiment,
-            subject.subjectAttributes
-          );
-          const oa = globalClient.getParsedJSONAssignment(
-            subject.subjectKey,
-            experiment,
-            subject.subjectAttributes
-          );
-          if (oa == null || sa === null) return null;
-          return EppoValue.JSON(sa, oa);
-        }
-      }
-    });
-  }
-
-  describe("getAssignment with hooks", () => {
+  describe('Eppo Client constructed with configuration request parameters', () => {
     let client: EppoClient;
+    let storage: IConfigurationStore;
+    let requestConfiguration: FlagConfigurationRequestParameters;
+    let mockServerResponseFunc: (res: MockResponse) => MockResponse;
+
+    const ufcBody = JSON.stringify(readMockUFCResponse(MOCK_UFC_RESPONSE_FILE));
+    const flagKey = 'numeric_flag';
+    const subject = 'alice';
+    const pi = 3.1415926;
+
+    const maxRetryDelay = POLL_INTERVAL_MS * POLL_JITTER_PCT;
 
     beforeAll(() => {
-      storage.setEntries({ [flagKey]: mockExperimentConfig });
+      mock.setup();
+      mock.get(flagEndpoint, (_req, res) => {
+        return mockServerResponseFunc(res);
+      });
+    });
+
+    beforeEach(() => {
+      storage = new TestConfigurationStore();
+      requestConfiguration = {
+        apiKey: 'dummy key',
+        sdkName: 'js-client-sdk-common',
+        sdkVersion: packageJson.version,
+      };
+      mockServerResponseFunc = (res) => res.status(200).body(ufcBody);
+
+      // We only want to fake setTimeout() and clearTimeout()
+      jest.useFakeTimers({
+        advanceTimers: true,
+        doNotFake: [
+          'Date',
+          'hrtime',
+          'nextTick',
+          'performance',
+          'queueMicrotask',
+          'requestAnimationFrame',
+          'cancelAnimationFrame',
+          'requestIdleCallback',
+          'cancelIdleCallback',
+          'setImmediate',
+          'clearImmediate',
+          'setInterval',
+          'clearInterval',
+        ],
+      });
+    });
+
+    afterEach(() => {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    });
+
+    afterAll(() => {
+      mock.teardown();
+    });
+
+    it('Fetches initial configuration with parameters in constructor', async () => {
+      client = new EppoClient(storage, requestConfiguration);
+      client.setIsGracefulFailureMode(false);
+      // no configuration loaded
+      let variation = client.getNumericAssignment(flagKey, subject, {}, 123.4);
+      expect(variation).toBe(123.4);
+      // have client fetch configurations
+      await client.fetchFlagConfigurations();
+      variation = client.getNumericAssignment(flagKey, subject, {}, 0.0);
+      expect(variation).toBe(pi);
+    });
+
+    it('Fetches initial configuration with parameters provided later', async () => {
       client = new EppoClient(storage);
+      client.setIsGracefulFailureMode(false);
+      client.setConfigurationRequestParameters(requestConfiguration);
+      // no configuration loaded
+      let variation = client.getNumericAssignment(flagKey, subject, {}, 0.0);
+      expect(variation).toBe(0.0);
+      // have client fetch configurations
+      await client.fetchFlagConfigurations();
+      variation = client.getNumericAssignment(flagKey, subject, {}, 0.0);
+      expect(variation).toBe(pi);
     });
 
-    describe("onPreAssignment", () => {
-      it("called with experiment key and subject id", () => {
-        const mockHooks = td.object<IAssignmentHooks>();
-        client.getAssignment("subject-identifer", flagKey, {}, mockHooks);
-        expect(td.explain(mockHooks.onPreAssignment).callCount).toEqual(1);
-        expect(td.explain(mockHooks.onPreAssignment).calls[0].args[0]).toEqual(
-          flagKey
-        );
-        expect(td.explain(mockHooks.onPreAssignment).calls[0].args[1]).toEqual(
-          "subject-identifer"
-        );
-      });
-
-      it("overrides returned assignment", async () => {
-        const mockLogger = td.object<IAssignmentLogger>();
-        client.setLogger(mockLogger);
-        td.reset();
-        const variation = await client.getAssignment(
-          "subject-identifer",
-          flagKey,
-          {},
-          {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            onPreAssignment(
-              experimentKey: string,
-              subject: string
-            ): EppoValue | null {
-              return EppoValue.String("my-overridden-variation");
-            },
-
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            onPostAssignment(
-              experimentKey: string, // eslint-disable-line @typescript-eslint/no-unused-vars
-              subject: string, // eslint-disable-line @typescript-eslint/no-unused-vars
-              variation: EppoValue | null // eslint-disable-line @typescript-eslint/no-unused-vars
-            ): void {
-              // no-op
-            },
-          }
-        );
-
-        expect(variation).toEqual("my-overridden-variation");
-        expect(td.explain(mockLogger.logAssignment).callCount).toEqual(0);
-      });
-
-      it("uses regular assignment logic if onPreAssignment returns null", async () => {
-        const mockLogger = td.object<IAssignmentLogger>();
-        client.setLogger(mockLogger);
-        td.reset();
-        const variation = await client.getAssignment(
-          "subject-identifer",
-          flagKey,
-          {},
-          {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            onPreAssignment(
-              experimentKey: string,
-              subject: string
-            ): EppoValue | null {
-              return null;
-            },
-
-            onPostAssignment(
-              experimentKey: string, // eslint-disable-line @typescript-eslint/no-unused-vars
-              subject: string, // eslint-disable-line @typescript-eslint/no-unused-vars
-              variation: EppoValue | null // eslint-disable-line @typescript-eslint/no-unused-vars
-            ): void {
-              // no-op
-            },
-          }
-        );
-
-        expect(variation).not.toBeNull();
-        expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
-      });
-    });
-
-    describe("onPostAssignment", () => {
-      it("called with assigned variation after assignment", async () => {
-        const mockHooks = td.object<IAssignmentHooks>();
-        const subject = "subject-identifier";
-        const variation = client.getAssignment(subject, flagKey, {}, mockHooks);
-        expect(td.explain(mockHooks.onPostAssignment).callCount).toEqual(1);
-        expect(td.explain(mockHooks.onPostAssignment).callCount).toEqual(1);
-        expect(td.explain(mockHooks.onPostAssignment).calls[0].args[0]).toEqual(
-          flagKey
-        );
-        expect(td.explain(mockHooks.onPostAssignment).calls[0].args[1]).toEqual(
-          subject
-        );
-        expect(td.explain(mockHooks.onPostAssignment).calls[0].args[2]).toEqual(
-          EppoValue.String(variation ?? "")
-        );
-      });
-    });
-  });
-});
-
-describe(" EppoClient getAssignment From Obfuscated RAC", () => {
-  const storage = new TestConfigurationStore();
-  const globalClient = new EppoClient(storage);
-
-  beforeAll(async () => {
-    mock.setup();
-    mock.get(/randomized_assignment\/v3\/config*/, (_req, res) => {
-      const rac = readMockRacResponse(OBFUSCATED_MOCK_RAC_RESPONSE_FILE);
-      return res.status(200).body(JSON.stringify(rac));
-    });
-    await init(storage);
-  });
-
-  afterAll(() => {
-    mock.teardown();
-  });
-
-  it.each(readAssignmentTestData())(
-    "test variation assignment splits",
-    async ({
-      experiment,
-      valueType = ValueTestType.StringType,
-      subjects,
-      subjectsWithAttributes,
-      expectedAssignments,
-    }: IAssignmentTestCase) => {
-      `---- Test Case for ${experiment} Experiment ----`;
-
-      const assignments = getAssignmentsWithSubjectAttributes(
-        subjectsWithAttributes
-          ? subjectsWithAttributes
-          : subjects.map((subject) => ({ subjectKey: subject })),
-        experiment,
-        valueType
-      );
-
-      switch (valueType) {
-        case ValueTestType.BoolType: {
-          const boolAssignments = assignments.map((a) => a?.boolValue ?? null);
-          expect(boolAssignments).toEqual(expectedAssignments);
-          break;
-        }
-        case ValueTestType.NumericType: {
-          const numericAssignments = assignments.map(
-            (a) => a?.numericValue ?? null
-          );
-          expect(numericAssignments).toEqual(expectedAssignments);
-          break;
-        }
-        case ValueTestType.StringType: {
-          const stringAssignments = assignments.map(
-            (a) => a?.stringValue ?? null
-          );
-          expect(stringAssignments).toEqual(expectedAssignments);
-          break;
-        }
-        case ValueTestType.JSONType: {
-          const jsonStringAssignments = assignments.map(
-            (a) => a?.stringValue ?? null
-          );
-          expect(jsonStringAssignments).toEqual(expectedAssignments);
-          break;
-        }
-      }
-    }
-  );
-
-  function getAssignmentsWithSubjectAttributes(
-    subjectsWithAttributes: {
-      subjectKey: string;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      subjectAttributes?: Record<string, any>;
-    }[],
-    experiment: string,
-    valueTestType: ValueTestType = ValueTestType.StringType
-  ): (EppoValue | null)[] {
-    return subjectsWithAttributes.map((subject) => {
-      switch (valueTestType) {
-        case ValueTestType.BoolType: {
-          const ba = globalClient.getBoolAssignment(
-            subject.subjectKey,
-            experiment,
-            subject.subjectAttributes,
-            undefined,
-            true
-          );
-          if (ba === null) return null;
-          return EppoValue.Bool(ba);
-        }
-        case ValueTestType.NumericType: {
-          const na = globalClient.getNumericAssignment(
-            subject.subjectKey,
-            experiment,
-            subject.subjectAttributes,
-            undefined,
-            true
-          );
-          if (na === null) return null;
-          return EppoValue.Numeric(na);
-        }
-        case ValueTestType.StringType: {
-          const sa = globalClient.getStringAssignment(
-            subject.subjectKey,
-            experiment,
-            subject.subjectAttributes,
-            undefined,
-            true
-          );
-          if (sa === null) return null;
-          return EppoValue.String(sa);
-        }
-        case ValueTestType.JSONType: {
-          const sa = globalClient.getJSONStringAssignment(
-            subject.subjectKey,
-            experiment,
-            subject.subjectAttributes,
-            undefined,
-            true
-          );
-          const oa = globalClient.getParsedJSONAssignment(
-            subject.subjectKey,
-            experiment,
-            subject.subjectAttributes,
-            undefined,
-            true
-          );
-          if (oa == null || sa === null) return null;
-          return EppoValue.JSON(sa, oa);
-        }
-      }
-    });
-  }
-});
-
-describe("Eppo Client constructed with configuration request parameters", () => {
-  let client: EppoClient;
-  let storage: IConfigurationStore;
-  let requestConfiguration: ExperimentConfigurationRequestParameters;
-  let mockServerResponseFunc: (res: MockResponse) => MockResponse;
-
-  const racBody = JSON.stringify(readMockRacResponse(MOCK_RAC_RESPONSE_FILE));
-  const flagKey = "randomization_algo";
-  const subjectForGreenVariation = "subject-identiferA";
-
-  const maxRetryDelay = POLL_INTERVAL_MS * POLL_JITTER_PCT;
-
-  beforeAll(() => {
-    mock.setup();
-    mock.get(/randomized_assignment\/v3\/config*/, (_req, res) => {
-      return mockServerResponseFunc(res);
-    });
-  });
-
-  beforeEach(() => {
-    storage = new TestConfigurationStore();
-    requestConfiguration = {
-      apiKey: "dummy key",
-      sdkName: "js-client-sdk-common",
-      sdkVersion: packageJson.version,
-    };
-    mockServerResponseFunc = (res) => res.status(200).body(racBody);
-
-    // We only want to fake setTimeout() and clearTimeout()
-    jest.useFakeTimers({
-      advanceTimers: true,
-      doNotFake: [
-        "Date",
-        "hrtime",
-        "nextTick",
-        "performance",
-        "queueMicrotask",
-        "requestAnimationFrame",
-        "cancelAnimationFrame",
-        "requestIdleCallback",
-        "cancelIdleCallback",
-        "setImmediate",
-        "clearImmediate",
-        "setInterval",
-        "clearInterval",
-      ],
-    });
-  });
-
-  afterEach(() => {
-    jest.clearAllTimers();
-    jest.useRealTimers();
-  });
-
-  afterAll(() => {
-    mock.teardown();
-  });
-
-  it("Fetches initial configuration with parameters in constructor", async () => {
-    client = new EppoClient(storage, requestConfiguration);
-    client.setIsGracefulFailureMode(false);
-    // no configuration loaded
-    let variation = client.getAssignment(subjectForGreenVariation, flagKey);
-    expect(variation).toBeNull();
-    // have client fetch configurations
-    await client.fetchFlagConfigurations();
-    variation = client.getAssignment(subjectForGreenVariation, flagKey);
-    expect(variation).toBe("green");
-  });
-
-  it("Fetches initial configuration with parameters provided later", async () => {
-    client = new EppoClient(storage);
-    client.setIsGracefulFailureMode(false);
-    client.setConfigurationRequestParameters(requestConfiguration);
-    // no configuration loaded
-    let variation = client.getAssignment(subjectForGreenVariation, flagKey);
-    expect(variation).toBeNull();
-    // have client fetch configurations
-    await client.fetchFlagConfigurations();
-    variation = client.getAssignment(subjectForGreenVariation, flagKey);
-    expect(variation).toBe("green");
-  });
-
-  it.each([
-    { pollAfterSuccessfulInitialization: false },
-    { pollAfterSuccessfulInitialization: true },
-  ])(
-    "retries initial configuration request with config %p",
-    async (configModification) => {
+    it.each([
+      { pollAfterSuccessfulInitialization: false },
+      { pollAfterSuccessfulInitialization: true },
+    ])('retries initial configuration request with config %p', async (configModification) => {
       let callCount = 0;
       mockServerResponseFunc = (res) => {
         if (++callCount === 1) {
@@ -1312,7 +668,7 @@ describe("Eppo Client constructed with configuration request parameters", () => 
           return res.status(500);
         } else {
           // Return a mock object for subsequent calls
-          return res.status(200).body(racBody);
+          return res.status(200).body(ufcBody);
         }
       };
 
@@ -1324,8 +680,8 @@ describe("Eppo Client constructed with configuration request parameters", () => 
       client = new EppoClient(storage, requestConfiguration);
       client.setIsGracefulFailureMode(false);
       // no configuration loaded
-      let variation = client.getAssignment(subjectForGreenVariation, flagKey);
-      expect(variation).toBeNull();
+      let variation = client.getNumericAssignment(flagKey, subject, {}, 0.0);
+      expect(variation).toBe(0.0);
 
       // By not awaiting (yet) only the first attempt should be fired off before test execution below resumes
       const fetchPromise = client.fetchFlagConfigurations();
@@ -1336,27 +692,24 @@ describe("Eppo Client constructed with configuration request parameters", () => 
       // Await so it can finish its initialization before this test proceeds
       await fetchPromise;
 
-      variation = client.getAssignment(subjectForGreenVariation, flagKey);
-      expect(variation).toBe("green");
+      variation = client.getNumericAssignment(flagKey, subject, {}, 0.0);
+      expect(variation).toBe(pi);
       expect(callCount).toBe(2);
 
       await jest.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
       // By default, no more polling
       expect(callCount).toBe(pollAfterSuccessfulInitialization ? 3 : 2);
-    }
-  );
+    });
 
-  it.each([
-    {
-      pollAfterFailedInitialization: false,
-      throwOnFailedInitialization: false,
-    },
-    { pollAfterFailedInitialization: false, throwOnFailedInitialization: true },
-    { pollAfterFailedInitialization: true, throwOnFailedInitialization: false },
-    { pollAfterFailedInitialization: true, throwOnFailedInitialization: true },
-  ])(
-    "initial configuration request fails with config %p",
-    async (configModification) => {
+    it.each([
+      {
+        pollAfterFailedInitialization: false,
+        throwOnFailedInitialization: false,
+      },
+      { pollAfterFailedInitialization: false, throwOnFailedInitialization: true },
+      { pollAfterFailedInitialization: true, throwOnFailedInitialization: false },
+      { pollAfterFailedInitialization: true, throwOnFailedInitialization: true },
+    ])('initial configuration request fails with config %p', async (configModification) => {
       let callCount = 0;
       mockServerResponseFunc = (res) => {
         if (++callCount === 1) {
@@ -1364,12 +717,11 @@ describe("Eppo Client constructed with configuration request parameters", () => 
           return res.status(500);
         } else {
           // Return a mock object for subsequent calls
-          return res.status(200).body(racBody);
+          return res.status(200).body(ufcBody);
         }
       };
 
-      const { pollAfterFailedInitialization, throwOnFailedInitialization } =
-        configModification;
+      const { pollAfterFailedInitialization, throwOnFailedInitialization } = configModification;
 
       // Note: fake time does not play well with errors bubbled up after setTimeout (event loop,
       // timeout queue, message queue stuff) so we don't allow retries when rethrowing.
@@ -1384,9 +736,7 @@ describe("Eppo Client constructed with configuration request parameters", () => 
       client = new EppoClient(storage, requestConfiguration);
       client.setIsGracefulFailureMode(false);
       // no configuration loaded
-      expect(
-        client.getAssignment(subjectForGreenVariation, flagKey)
-      ).toBeNull();
+      expect(client.getNumericAssignment(flagKey, subject, {}, 0.0)).toBe(0.0);
 
       // By not awaiting (yet) only the first attempt should be fired off before test execution below resumes
       if (throwOnFailedInitialization) {
@@ -1396,18 +746,16 @@ describe("Eppo Client constructed with configuration request parameters", () => 
       }
       expect(callCount).toBe(1);
       // still no configuration loaded
-      expect(
-        client.getAssignment(subjectForGreenVariation, flagKey)
-      ).toBeNull();
+      expect(client.getNumericAssignment(flagKey, subject, {}, 10.0)).toBe(10.0);
 
       // Advance timers so a post-init poll can take place
       await jest.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 1.5);
 
       // if pollAfterFailedInitialization = true, we will poll later and get a config, otherwise not
       expect(callCount).toBe(pollAfterFailedInitialization ? 2 : 1);
-      expect(client.getAssignment(subjectForGreenVariation, flagKey)).toBe(
-        pollAfterFailedInitialization ? "green" : null
+      expect(client.getNumericAssignment(flagKey, subject, {}, 0.0)).toBe(
+        pollAfterFailedInitialization ? pi : 0.0,
       );
-    }
-  );
+    });
+  });
 });

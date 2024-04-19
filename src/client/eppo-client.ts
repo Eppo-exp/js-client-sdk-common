@@ -1,5 +1,4 @@
 import axios from 'axios';
-import * as md5 from 'md5';
 
 import {
   AssignmentCache,
@@ -7,13 +6,7 @@ import {
   LRUInMemoryAssignmentCache,
   NonExpiringInMemoryAssignmentCache,
 } from '../assignment-cache';
-import { IAssignmentHooks } from '../assignment-hooks';
-import {
-  IAssignmentEvent,
-  IAssignmentLogger,
-  HoldoutVariationEnum,
-  NullableHoldoutVariationType,
-} from '../assignment-logger';
+import { IAssignmentEvent, IAssignmentLogger } from '../assignment-logger';
 import { IConfigurationStore } from '../configuration-store';
 import {
   BASE_URL as DEFAULT_BASE_URL,
@@ -23,17 +16,17 @@ import {
   MAX_EVENT_QUEUE_SIZE,
   POLL_INTERVAL_MS,
 } from '../constants';
-import { IAllocation } from '../dto/allocation-dto';
-import { IExperimentConfiguration } from '../dto/experiment-configuration-dto';
-import { IVariation } from '../dto/variation-dto';
-import { EppoValue, ValueType } from '../eppo_value';
-import ExperimentConfigurationRequestor from '../experiment-configuration-requestor';
+import { decodeFlag } from '../decoding';
+import { EppoValue } from '../eppo_value';
+import { Evaluator, FlagEvaluation, noneResult } from '../evaluator';
+import ExperimentConfigurationRequestor from '../flag-configuration-requestor';
 import HttpClient from '../http-client';
+import { Flag, ObfuscatedFlag, VariationType } from '../interfaces';
 import { getMD5Hash } from '../obfuscation';
 import initPoller, { IPoller } from '../poller';
-import { findMatchingRule } from '../rule_evaluator';
-import { getShard, isShardInRange } from '../shard';
+import { AttributeType, ValueType } from '../types';
 import { validateNotBlank } from '../validation';
+import { LIB_VERSION } from '../version';
 
 /**
  * Client for assigning experiment variations.
@@ -47,67 +40,43 @@ export interface IEppoClient {
    * @param flagKey feature flag identifier
    * @param subjectAttributes optional attributes associated with the subject, for example name and email.
    * The subject attributes are used for evaluating any targeting rules tied to the experiment.
-   * @param assignmentHooks optional interface for pre and post assignment hooks
-   * @returns a variation value if the subject is part of the experiment sample, otherwise null
-   * @public
-   */
-  getAssignment(
-    subjectKey: string,
-    flagKey: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes?: Record<string, any>,
-    assignmentHooks?: IAssignmentHooks,
-  ): string | null;
-
-  /**
-   * Maps a subject to a variation for a given experiment.
-   *
-   * @param subjectKey an identifier of the experiment subject, for example a user ID.
-   * @param flagKey feature flag identifier
-   * @param subjectAttributes optional attributes associated with the subject, for example name and email.
-   * The subject attributes are used for evaluating any targeting rules tied to the experiment.
    * @returns a variation value if the subject is part of the experiment sample, otherwise null
    * @public
    */
   getStringAssignment(
-    subjectKey: string,
     flagKey: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes?: Record<string, any>,
-    assignmentHooks?: IAssignmentHooks,
-  ): string | null;
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
+    defaultValue: string,
+  ): string;
 
   getBoolAssignment(
-    subjectKey: string,
     flagKey: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes?: Record<string, any>,
-    assignmentHooks?: IAssignmentHooks,
-  ): boolean | null;
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
+    defaultValue: boolean,
+  ): boolean;
+
+  getIntegerAssignment(
+    flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
+    defaultValue: number,
+  ): number;
 
   getNumericAssignment(
-    subjectKey: string,
     flagKey: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes?: Record<string, any>,
-    assignmentHooks?: IAssignmentHooks,
-  ): number | null;
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
+    defaultValue: number,
+  ): number;
 
-  getJSONStringAssignment(
-    subjectKey: string,
+  getJSONAssignment(
     flagKey: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes?: Record<string, any>,
-    assignmentHooks?: IAssignmentHooks,
-  ): string | null;
-
-  getParsedJSONAssignment(
     subjectKey: string,
-    flagKey: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes?: Record<string, any>,
-    assignmentHooks?: IAssignmentHooks,
-  ): object | null;
+    subjectAttributes: Record<string, AttributeType>,
+    defaultValue: object,
+  ): object;
 
   setLogger(logger: IAssignmentLogger): void;
 
@@ -116,7 +85,7 @@ export interface IEppoClient {
   useCustomAssignmentCache(cache: AssignmentCache<Cacheable>): void;
 
   setConfigurationRequestParameters(
-    configurationRequestParameters: ExperimentConfigurationRequestParameters,
+    configurationRequestParameters: FlagConfigurationRequestParameters,
   ): void;
 
   fetchFlagConfigurations(): void;
@@ -124,9 +93,13 @@ export interface IEppoClient {
   stopPolling(): void;
 
   setIsGracefulFailureMode(gracefulFailureMode: boolean): void;
+
+  getFlagKeys(): string[];
+
+  isInitialized(): boolean;
 }
 
-export type ExperimentConfigurationRequestParameters = {
+export type FlagConfigurationRequestParameters = {
   apiKey: string;
   sdkVersion: string;
   sdkName: string;
@@ -143,21 +116,26 @@ export default class EppoClient implements IEppoClient {
   private queuedEvents: IAssignmentEvent[] = [];
   private assignmentLogger: IAssignmentLogger | undefined;
   private isGracefulFailureMode = true;
+  private isObfuscated = false;
   private assignmentCache: AssignmentCache<Cacheable> | undefined;
   private configurationStore: IConfigurationStore;
-  private configurationRequestParameters: ExperimentConfigurationRequestParameters | undefined;
+  private configurationRequestParameters: FlagConfigurationRequestParameters | undefined;
   private requestPoller: IPoller | undefined;
+  private evaluator: Evaluator;
 
   constructor(
     configurationStore: IConfigurationStore,
-    configurationRequestParameters?: ExperimentConfigurationRequestParameters,
+    configurationRequestParameters?: FlagConfigurationRequestParameters,
+    obfuscated = false,
   ) {
+    this.evaluator = new Evaluator();
     this.configurationStore = configurationStore;
     this.configurationRequestParameters = configurationRequestParameters;
+    this.isObfuscated = obfuscated;
   }
 
   public setConfigurationRequestParameters(
-    configurationRequestParameters: ExperimentConfigurationRequestParameters,
+    configurationRequestParameters: FlagConfigurationRequestParameters,
   ) {
     this.configurationRequestParameters = configurationRequestParameters;
   }
@@ -216,303 +194,216 @@ export default class EppoClient implements IEppoClient {
     }
   }
 
-  // @deprecated getAssignment is deprecated in favor of the typed get<Type>Assignment methods
-  public getAssignment(
-    subjectKey: string,
-    flagKey: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes: Record<string, any> = {},
-    assignmentHooks?: IAssignmentHooks | undefined,
-    obfuscated = false,
-  ): string | null {
-    try {
-      return (
-        this.getAssignmentVariation(
-          subjectKey,
-          flagKey,
-          subjectAttributes,
-          assignmentHooks,
-          obfuscated,
-        ).stringValue ?? null
-      );
-    } catch (error) {
-      return this.rethrowIfNotGraceful(error);
-    }
-  }
-
   public getStringAssignment(
-    subjectKey: string,
     flagKey: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes: Record<string, any> = {},
-    assignmentHooks?: IAssignmentHooks | undefined,
-    obfuscated = false,
-  ): string | null {
-    try {
-      return (
-        this.getAssignmentVariation(
-          subjectKey,
-          flagKey,
-          subjectAttributes,
-          assignmentHooks,
-          obfuscated,
-          ValueType.StringType,
-        ).stringValue ?? null
-      );
-    } catch (error) {
-      return this.rethrowIfNotGraceful(error);
-    }
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
+    defaultValue: string,
+  ): string {
+    return (
+      this.getAssignmentVariation(
+        flagKey,
+        subjectKey,
+        subjectAttributes,
+        EppoValue.String(defaultValue),
+        VariationType.STRING,
+      ).stringValue ?? defaultValue
+    );
   }
 
   getBoolAssignment(
-    subjectKey: string,
     flagKey: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes: Record<string, any> = {},
-    assignmentHooks?: IAssignmentHooks | undefined,
-    obfuscated = false,
-  ): boolean | null {
-    try {
-      return (
-        this.getAssignmentVariation(
-          subjectKey,
-          flagKey,
-          subjectAttributes,
-          assignmentHooks,
-          obfuscated,
-          ValueType.BoolType,
-        ).boolValue ?? null
-      );
-    } catch (error) {
-      return this.rethrowIfNotGraceful(error);
-    }
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
+    defaultValue: boolean,
+  ): boolean {
+    return (
+      this.getAssignmentVariation(
+        flagKey,
+        subjectKey,
+        subjectAttributes,
+        EppoValue.Bool(defaultValue),
+        VariationType.BOOLEAN,
+      ).boolValue ?? defaultValue
+    );
+  }
+
+  getIntegerAssignment(
+    flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
+    defaultValue: number,
+  ): number {
+    return (
+      this.getAssignmentVariation(
+        flagKey,
+        subjectKey,
+        subjectAttributes,
+        EppoValue.Numeric(defaultValue),
+        VariationType.INTEGER,
+      ).numericValue ?? defaultValue
+    );
   }
 
   getNumericAssignment(
-    subjectKey: string,
     flagKey: string,
-    subjectAttributes?: Record<string, EppoValue>,
-    assignmentHooks?: IAssignmentHooks | undefined,
-    obfuscated = false,
-  ): number | null {
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
+    defaultValue: number,
+  ): number {
+    return (
+      this.getAssignmentVariation(
+        flagKey,
+        subjectKey,
+        subjectAttributes,
+        EppoValue.Numeric(defaultValue),
+        VariationType.NUMERIC,
+      ).numericValue ?? defaultValue
+    );
+  }
+
+  public getJSONAssignment(
+    flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
+    defaultValue: object,
+  ): object {
+    return (
+      this.getAssignmentVariation(
+        flagKey,
+        subjectKey,
+        subjectAttributes,
+        EppoValue.JSON(defaultValue),
+        VariationType.JSON,
+      ).objectValue ?? defaultValue
+    );
+  }
+
+  private getAssignmentVariation(
+    flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
+    defaultValue: EppoValue,
+    expectedVariationType: VariationType,
+  ): EppoValue {
     try {
-      return (
-        this.getAssignmentVariation(
-          subjectKey,
-          flagKey,
-          subjectAttributes,
-          assignmentHooks,
-          obfuscated,
-          ValueType.NumericType,
-        ).numericValue ?? null
+      const result = this.getAssignmentDetail(
+        flagKey,
+        subjectKey,
+        subjectAttributes,
+        expectedVariationType,
       );
+
+      if (!result.variation) {
+        return defaultValue;
+      }
+
+      return EppoValue.valueOf(result.variation.value, expectedVariationType);
     } catch (error) {
-      return this.rethrowIfNotGraceful(error);
+      return this.rethrowIfNotGraceful(error, defaultValue);
     }
   }
 
-  public getJSONStringAssignment(
-    subjectKey: string,
-    flagKey: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes: Record<string, any> = {},
-    assignmentHooks?: IAssignmentHooks | undefined,
-    obfuscated = false,
-  ): string | null {
-    try {
-      return (
-        this.getAssignmentVariation(
-          subjectKey,
-          flagKey,
-          subjectAttributes,
-          assignmentHooks,
-          obfuscated,
-          ValueType.JSONType,
-        ).stringValue ?? null
-      );
-    } catch (error) {
-      return this.rethrowIfNotGraceful(error);
-    }
-  }
-
-  public getParsedJSONAssignment(
-    subjectKey: string,
-    flagKey: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes: Record<string, any> = {},
-    assignmentHooks?: IAssignmentHooks | undefined,
-    obfuscated = false,
-  ): object | null {
-    try {
-      return (
-        this.getAssignmentVariation(
-          subjectKey,
-          flagKey,
-          subjectAttributes,
-          assignmentHooks,
-          obfuscated,
-          ValueType.JSONType,
-        ).objectValue ?? null
-      );
-    } catch (error) {
-      return this.rethrowIfNotGraceful(error);
-    }
-  }
-
-  private rethrowIfNotGraceful(err: Error): null {
+  private rethrowIfNotGraceful(err: Error, defaultValue?: EppoValue): EppoValue {
     if (this.isGracefulFailureMode) {
       console.error(`[Eppo SDK] Error getting assignment: ${err.message}`);
-      return null;
+      return defaultValue ?? EppoValue.Null();
     }
     throw err;
   }
 
-  private getAssignmentVariation(
-    subjectKey: string,
+  /**
+   * [Experimental] Get a detailed return of assignment for a particular subject and flag.
+   *
+   * Note: This method is experimental and may change in future versions.
+   * Please only use for debugging purposes, and not in production.
+   *
+   * @param subjectKey The subject key
+   * @param flagKey The flag key
+   * @param subjectAttributes The subject attributes
+   * @param expectedVariationType The expected variation type
+   * @param obfuscated Whether the flag key is obfuscated
+   * @returns A detailed return of assignment for a particular subject and flag
+   */
+  public getAssignmentDetail(
     flagKey: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes: Record<string, any> = {},
-    assignmentHooks: IAssignmentHooks | undefined,
-    obfuscated: boolean,
-    valueType?: ValueType,
-  ): EppoValue {
-    const { allocationKey, assignment, holdoutKey, holdoutVariation } = this.getAssignmentInternal(
-      subjectKey,
-      flagKey,
-      subjectAttributes,
-      assignmentHooks,
-      obfuscated,
-      valueType,
-    );
-    assignmentHooks?.onPostAssignment(flagKey, subjectKey, assignment, allocationKey);
-
-    if (!assignment.isNullType() && allocationKey !== null)
-      this.logAssignment(
-        flagKey,
-        allocationKey,
-        assignment,
-        subjectKey,
-        holdoutKey,
-        holdoutVariation,
-        subjectAttributes,
-      );
-
-    return assignment;
-  }
-
-  private getAssignmentInternal(
     subjectKey: string,
-    flagKey: string,
-    subjectAttributes = {},
-    assignmentHooks: IAssignmentHooks | undefined,
-    obfuscated: boolean,
-    expectedValueType?: ValueType,
-  ): {
-    allocationKey: string | null;
-    assignment: EppoValue;
-    holdoutKey: string | null;
-    holdoutVariation: NullableHoldoutVariationType;
-  } {
+    subjectAttributes: Record<string, AttributeType> = {},
+    expectedVariationType?: VariationType,
+  ): FlagEvaluation {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
     validateNotBlank(flagKey, 'Invalid argument: flagKey cannot be blank');
 
-    const nullAssignment = {
-      allocationKey: null,
-      assignment: EppoValue.Null(),
-      holdoutKey: null,
-      holdoutVariation: null,
-    };
+    const flag = this.getFlag(flagKey);
 
-    const experimentConfig = this.configurationStore.get<IExperimentConfiguration>(
-      obfuscated ? getMD5Hash(flagKey) : flagKey,
-    );
-    const allowListOverride = this.getSubjectVariationOverride(
-      subjectKey,
-      experimentConfig,
-      expectedValueType,
-    );
-
-    if (!allowListOverride.isNullType()) {
-      if (!allowListOverride.isExpectedType()) {
-        return nullAssignment;
-      }
-      return { ...nullAssignment, assignment: allowListOverride };
+    if (flag === null) {
+      console.warn(`[Eppo SDK] No assigned variation. Flag not found: ${flagKey}`);
+      // note: this is different from the Python SDK, which returns None instead
+      return noneResult(flagKey, subjectKey, subjectAttributes);
     }
 
-    // Check for disabled flag.
-    if (!experimentConfig?.enabled) return nullAssignment;
-
-    // check for overridden assignment via hook
-    const overriddenAssignment = assignmentHooks?.onPreAssignment(flagKey, subjectKey);
-    if (overriddenAssignment !== null && overriddenAssignment !== undefined) {
-      if (!overriddenAssignment.isExpectedType()) return nullAssignment;
-      return { ...nullAssignment, assignment: overriddenAssignment };
-    }
-
-    // Attempt to match a rule from the list.
-    const matchedRule = findMatchingRule(
-      subjectAttributes || {},
-      experimentConfig.rules,
-      obfuscated,
-    );
-    if (!matchedRule) return nullAssignment;
-
-    // Check if subject is in allocation sample.
-    const allocation = experimentConfig.allocations[matchedRule.allocationKey];
-    if (!this.isInExperimentSample(subjectKey, flagKey, experimentConfig, allocation))
-      return nullAssignment;
-
-    // Compute variation for subject.
-    const { subjectShards } = experimentConfig;
-    const { variations, holdouts, statusQuoVariationKey, shippedVariationKey } = allocation;
-
-    let assignedVariation: IVariation | undefined;
-    let holdoutVariation = null;
-
-    const holdoutShard = getShard(`holdout-${subjectKey}`, subjectShards);
-    const matchingHoldout = holdouts?.find((holdout) => {
-      const { statusQuoShardRange, shippedShardRange } = holdout;
-      if (isShardInRange(holdoutShard, statusQuoShardRange)) {
-        assignedVariation = variations.find(
-          (variation) => variation.variationKey === statusQuoVariationKey,
-        );
-        // Only log the holdout variation if this is a rollout allocation
-        // Only rollout allocations have shippedShardRange specified
-        if (shippedShardRange) {
-          holdoutVariation = HoldoutVariationEnum.STATUS_QUO;
-        }
-      } else if (shippedShardRange && isShardInRange(holdoutShard, shippedShardRange)) {
-        assignedVariation = variations.find(
-          (variation) => variation.variationKey === shippedVariationKey,
-        );
-        holdoutVariation = HoldoutVariationEnum.ALL_SHIPPED;
-      }
-      return assignedVariation;
-    });
-    const holdoutKey = matchingHoldout?.holdoutKey ?? null;
-    if (!matchingHoldout) {
-      const assignmentShard = getShard(`assignment-${subjectKey}-${flagKey}`, subjectShards);
-      assignedVariation = variations.find((variation) =>
-        isShardInRange(assignmentShard, variation.shardRange),
+    if (!checkTypeMatch(expectedVariationType, flag.variationType)) {
+      throw new TypeError(
+        `Variation value does not have the correct type. Found: ${flag.variationType} != ${expectedVariationType} for flag ${flagKey}`,
       );
     }
 
-    const internalAssignment: {
-      allocationKey: string;
-      assignment: EppoValue;
-      holdoutKey: string | null;
-      holdoutVariation: NullableHoldoutVariationType;
-    } = {
-      allocationKey: matchedRule.allocationKey,
-      assignment: EppoValue.generateEppoValue(
-        expectedValueType,
-        assignedVariation?.value,
-        assignedVariation?.typedValue,
-      ),
-      holdoutKey,
-      holdoutVariation: holdoutVariation as NullableHoldoutVariationType,
-    };
-    return internalAssignment.assignment.isExpectedType() ? internalAssignment : nullAssignment;
+    if (!flag.enabled) {
+      console.info(`[Eppo SDK] No assigned variation. Flag is disabled: ${flagKey}`);
+      // note: this is different from the Python SDK, which returns None instead
+      return noneResult(flagKey, subjectKey, subjectAttributes);
+    }
+
+    const result = this.evaluator.evaluateFlag(
+      flag,
+      subjectKey,
+      subjectAttributes,
+      this.isObfuscated,
+    );
+    if (this.isObfuscated) {
+      // flag.key is obfuscated, replace with requested flag key
+      result.flagKey = flagKey;
+    }
+
+    if (result?.variation && !checkValueTypeMatch(expectedVariationType, result.variation.value)) {
+      return noneResult(flagKey, subjectKey, subjectAttributes);
+    }
+
+    try {
+      if (result?.doLog) {
+        this.logAssignment(result);
+      }
+    } catch (error) {
+      console.error(`[Eppo SDK] Error logging assignment event: ${error}`);
+    }
+
+    return result;
+  }
+
+  private getFlag(flagKey: string): Flag | null {
+    if (this.isObfuscated) {
+      return this.getObfuscatedFlag(flagKey);
+    }
+    return this.configurationStore.get(flagKey);
+  }
+
+  private getObfuscatedFlag(flagKey: string): Flag | null {
+    const flag: ObfuscatedFlag | null = this.configurationStore.get(getMD5Hash(flagKey));
+    return flag ? decodeFlag(flag) : null;
+  }
+
+  public getFlagKeys() {
+    /**
+     * Returns a list of all flag keys that have been initialized.
+     * This can be useful to debug the initialization process.
+     *
+     * Note that it is generally not a good idea to pre-load all flag configurations.
+     */
+    return this.configurationStore.getKeys();
+  }
+
+  public isInitialized() {
+    return this.configurationStore.isInitialized();
   }
 
   public setLogger(logger: IAssignmentLogger) {
@@ -555,38 +446,36 @@ export default class EppoClient implements IEppoClient {
     }
   }
 
-  private logAssignment(
-    flagKey: string,
-    allocationKey: string,
-    variation: EppoValue,
-    subjectKey: string,
-    holdout: string | null,
-    holdoutVariation: NullableHoldoutVariationType,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subjectAttributes: Record<string, any> | undefined = {},
-  ) {
+  private logAssignment(result: FlagEvaluation) {
+    const event: IAssignmentEvent = {
+      ...(result.extraLogging ?? {}),
+      allocation: result.allocationKey ?? null,
+      experiment: result.allocationKey ? `${result.flagKey}-${result.allocationKey}` : null,
+      featureFlag: result.flagKey,
+      variation: result.variation?.key ?? null,
+      subject: result.subjectKey,
+      timestamp: new Date().toISOString(),
+      subjectAttributes: result.subjectAttributes,
+      metaData: {
+        obfuscated: this.isObfuscated,
+        sdkLanguage: 'javascript',
+        sdkLibVersion: LIB_VERSION,
+      },
+    };
+
     if (
+      result.variation &&
+      result.allocationKey &&
       this.assignmentCache?.hasLoggedAssignment({
-        flagKey,
-        subjectKey,
-        allocationKey,
-        variationValue: variation,
+        flagKey: result.flagKey,
+        subjectKey: result.subjectKey,
+        allocationKey: result.allocationKey,
+        variationKey: result.variation.key,
       })
     ) {
       return;
     }
 
-    const event: IAssignmentEvent = {
-      allocation: allocationKey,
-      experiment: `${flagKey}-${allocationKey}`,
-      featureFlag: flagKey,
-      variation: variation.toString(), // return the string representation to the logging callback
-      timestamp: new Date().toISOString(),
-      subject: subjectKey,
-      holdout,
-      holdoutVariation,
-      subjectAttributes,
-    };
     // assignment logger may be null while waiting for initialization
     if (this.assignmentLogger == null) {
       this.queuedEvents.length < MAX_EVENT_QUEUE_SIZE && this.queuedEvents.push(event);
@@ -595,42 +484,42 @@ export default class EppoClient implements IEppoClient {
     try {
       this.assignmentLogger.logAssignment(event);
       this.assignmentCache?.setLastLoggedAssignment({
-        flagKey,
-        subjectKey,
-        allocationKey,
-        variationValue: variation,
+        flagKey: result.flagKey,
+        subjectKey: result.subjectKey,
+        allocationKey: result.allocationKey ?? '__eppo_no_allocation',
+        variationKey: result.variation?.key ?? '__eppo_no_variation',
       });
     } catch (error) {
       console.error(`[Eppo SDK] Error logging assignment event: ${error.message}`);
     }
   }
+}
 
-  private getSubjectVariationOverride(
-    subjectKey: string,
-    experimentConfig: IExperimentConfiguration,
-    expectedValueType?: ValueType,
-  ): EppoValue {
-    const subjectHash = md5(subjectKey);
-    const override = experimentConfig?.overrides && experimentConfig.overrides[subjectHash];
-    const typedOverride =
-      experimentConfig?.typedOverrides && experimentConfig.typedOverrides[subjectHash];
-    return EppoValue.generateEppoValue(expectedValueType, override, typedOverride);
+export function checkTypeMatch(expectedType?: VariationType, actualType?: VariationType): boolean {
+  return expectedType === undefined || actualType === expectedType;
+}
+
+export function checkValueTypeMatch(
+  expectedType: VariationType | undefined,
+  value: ValueType,
+): boolean {
+  if (expectedType == undefined) {
+    return true;
   }
 
-  /**
-   * This checks whether the subject is included in the experiment sample.
-   * It is used to determine whether the subject should be assigned to a variant.
-   * Given a hash function output (bucket), check whether the bucket is between 0 and exposure_percent * total_buckets.
-   */
-  private isInExperimentSample(
-    subjectKey: string,
-    flagKey: string,
-    experimentConfig: IExperimentConfiguration,
-    allocation: IAllocation,
-  ): boolean {
-    const { subjectShards } = experimentConfig;
-    const { percentExposure } = allocation;
-    const shard = getShard(`exposure-${subjectKey}-${flagKey}`, subjectShards);
-    return shard <= percentExposure * subjectShards;
+  switch (expectedType) {
+    case VariationType.STRING:
+      return typeof value === 'string';
+    case VariationType.BOOLEAN:
+      return typeof value === 'boolean';
+    case VariationType.INTEGER:
+      return typeof value === 'number' && Number.isInteger(value);
+    case VariationType.NUMERIC:
+      return typeof value === 'number';
+    case VariationType.JSON:
+      // note: converting to object downstream
+      return typeof value === 'string';
+    default:
+      return false;
   }
 }

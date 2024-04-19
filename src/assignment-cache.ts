@@ -1,11 +1,11 @@
-import { EppoValue } from './eppo_value';
 import { LRUCache } from './lru-cache';
+import { getMD5Hash } from './obfuscation';
 
 export interface AssignmentCacheKey {
   subjectKey: string;
   flagKey: string;
   allocationKey: string;
-  variationValue: EppoValue;
+  variationKey: string;
 }
 
 export interface Cacheable {
@@ -31,7 +31,7 @@ export abstract class AssignmentCache<T extends Cacheable> {
     // the subject has been assigned to a different variation
     // than was previously logged.
     // in this case we need to log the assignment again.
-    if (this.cache.get(this.getCacheKey(key)) !== key.variationValue.toHashedString()) {
+    if (this.cache.get(this.getCacheKey(key)) !== getMD5Hash(key.variationKey)) {
       return false;
     }
 
@@ -39,7 +39,7 @@ export abstract class AssignmentCache<T extends Cacheable> {
   }
 
   setLastLoggedAssignment(key: AssignmentCacheKey): void {
-    this.cache.set(this.getCacheKey(key), key.variationValue.toHashedString());
+    this.cache.set(this.getCacheKey(key), getMD5Hash(key.variationKey));
   }
 
   protected getCacheKey({ subjectKey, flagKey, allocationKey }: AssignmentCacheKey): string {

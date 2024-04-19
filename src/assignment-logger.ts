@@ -9,16 +9,17 @@ export type NullableHoldoutVariationType = HoldoutVariationEnum | null;
  * Holds data about the variation a subject was assigned to.
  * @public
  */
+
 export interface IAssignmentEvent {
   /**
    * An Eppo allocation key
    */
-  allocation: string;
+  allocation: string | null;
 
   /**
    * An Eppo experiment key
    */
-  experiment: string;
+  experiment: string | null;
 
   /**
    * An Eppo feature flag key
@@ -28,7 +29,7 @@ export interface IAssignmentEvent {
   /**
    * The assigned variation
    */
-  variation: string;
+  variation: string | null;
 
   /**
    * The entity or user that was assigned to a variation
@@ -40,18 +41,11 @@ export interface IAssignmentEvent {
    */
   timestamp: string;
 
-  /**
-   * An Eppo holdout key
-   */
-  holdout: string | null;
-
-  /**
-   * The Eppo holdout variation for the assigned variation
-   */
-  holdoutVariation: NullableHoldoutVariationType;
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   subjectAttributes: Record<string, any>;
+  [propName: string]: unknown;
+
+  metaData?: Record<string, unknown>;
 }
 
 /**
