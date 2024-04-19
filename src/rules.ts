@@ -188,15 +188,9 @@ function evaluateCondition(subjectAttributes: Record<string, any>, condition: Co
       case OperatorType.MATCHES:
         return new RegExp(condition.value as string).test(value as string);
       case OperatorType.ONE_OF:
-        return isOneOf(
-          value.toString().toLowerCase(),
-          condition.value.map((value: string) => value.toLowerCase()),
-        );
+        return isOneOf(value.toString(), condition.value);
       case OperatorType.NOT_ONE_OF:
-        return isNotOneOf(
-          value.toString().toLowerCase(),
-          condition.value.map((value: string) => value.toLowerCase()),
-        );
+        return isNotOneOf(value.toString(), condition.value);
     }
   }
   return false;
@@ -259,15 +253,9 @@ function evaluateObfuscatedCondition(
       case ObfuscatedOperatorType.NOT_MATCHES:
         return !new RegExp(decodeBase64(condition.value as string)).test(value as string);
       case ObfuscatedOperatorType.ONE_OF:
-        return isOneOf(
-          getMD5Hash(value.toString().toLowerCase()),
-          condition.value.map((value: string) => value.toLowerCase()),
-        );
+        return isOneOf(getMD5Hash(value.toString()), condition.value);
       case ObfuscatedOperatorType.NOT_ONE_OF:
-        return isNotOneOf(
-          getMD5Hash(value.toString().toLowerCase()),
-          condition.value.map((value: string) => value.toLowerCase()),
-        );
+        return isNotOneOf(getMD5Hash(value.toString()), condition.value);
     }
   }
   return false;

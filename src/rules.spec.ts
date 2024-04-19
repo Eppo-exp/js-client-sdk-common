@@ -216,10 +216,10 @@ describe('rules', () => {
             operator: ObfuscatedOperatorType.ONE_OF,
             attribute: 'e909c2d7067ea37437cf97fe11d91bd0', // getMD5Hash('country')
             value: [
-              'ada53304c5b9e4a839615b6e8f908eb6',
-              'c2aadac2ca30ca8aadfbe331ae180d28',
-              '4edfc924721abb774d5447bade86ea5d',
-            ], // ['usa', 'canada', 'mexico'].map(getMD5Hash)
+              'f75d91cdd36b85cc4a8dfeca4f24fa14',
+              '445d337b5cd5de476f99333df6b0c2a7',
+              '8dbb07a18d46f63d8b3c8994d5ccc351',
+            ], // ['USA', 'Canada', 'Mexico'].map(getMD5Hash)
           },
         ],
       };
@@ -230,10 +230,10 @@ describe('rules', () => {
             operator: ObfuscatedOperatorType.NOT_ONE_OF,
             attribute: 'e909c2d7067ea37437cf97fe11d91bd0', // getMD5Hash('country')
             value: [
-              'ada53304c5b9e4a839615b6e8f908eb6',
-              'c2aadac2ca30ca8aadfbe331ae180d28',
-              '4edfc924721abb774d5447bade86ea5d',
-            ], // ['usa', 'canada', 'mexico'].map(getMD5Hash)
+              'f75d91cdd36b85cc4a8dfeca4f24fa14',
+              '445d337b5cd5de476f99333df6b0c2a7',
+              '8dbb07a18d46f63d8b3c8994d5ccc351',
+            ], // ['USA', 'Canada', 'Mexico'].map(getMD5Hash)
           },
         ],
       };

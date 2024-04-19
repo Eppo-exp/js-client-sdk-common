@@ -10,3 +10,5 @@ yarn-error.log
 
 test/data
 .vscode/settings.json
+
+.DS_Store

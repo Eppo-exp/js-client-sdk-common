@@ -22,7 +22,7 @@ import FlagConfigurationRequestor from '../flag-configuration-requestor';
 import HttpClient from '../http-client';
 import { Flag, VariationType } from '../interfaces';
 
-import EppoClient, { FlagConfigurationRequestParameters } from './eppo-client';
+import EppoClient, { FlagConfigurationRequestParameters, checkTypeMatch } from './eppo-client';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const packageJson = require('../../package.json');
@@ -218,11 +218,18 @@ describe('EppoClient E2E test', () => {
     });
   });
 
+  describe('check type match', () => {
+    it('returns false when types do not match', () => {
+      expect(checkTypeMatch(VariationType.JSON, VariationType.STRING)).toBe(false);
+    });
+  });
+
   describe('UFC General Test Cases', () => {
     it.each(readAssignmentTestData())(
       'test variation assignment splits',
       async ({ flag, variationType, defaultValue, subjects }: IAssignmentTestCase) => {
         const client = new EppoClient(storage);
+        client.setIsGracefulFailureMode(false);
 
         let assignments: {
           subject: SubjectTestCase;
@@ -273,6 +280,7 @@ describe('EppoClient E2E test', () => {
       'test variation assignment splits',
       async ({ flag, variationType, defaultValue, subjects }: IAssignmentTestCase) => {
         const client = new EppoClient(storage, undefined, true);
+        client.setIsGracefulFailureMode(false);
 
         const typeAssignmentFunctions = {
           [VariationType.BOOLEAN]: client.getBoolAssignment.bind(client),
