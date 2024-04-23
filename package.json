@@ -1,6 +1,6 @@
 {
   "name": "@eppo/js-client-sdk-common",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Eppo SDK for client-side JavaScript applications (base for both web and react native)",
   "main": "dist/index.js",
   "files": [
@@ -8,7 +8,7 @@
   ],
   "types": "./dist/index.d.ts",
   "engines": {
-    "node": ">=18.20"
+    "node": ">=18.x"
   },
   "exports": {
     ".": {
