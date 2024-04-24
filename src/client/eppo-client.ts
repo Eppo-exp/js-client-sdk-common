@@ -525,6 +525,10 @@ export default class EppoClient implements IEppoClient {
     this.flushQueuedEvents(); // log any events that may have been queued while initializing
   }
 
+  public setConfigurationStore(configurationStore: IConfigurationStore) {
+    this.configurationStore = configurationStore;
+  }
+
   /**
    * Assignment cache methods.
    */
