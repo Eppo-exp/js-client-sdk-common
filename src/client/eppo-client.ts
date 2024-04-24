@@ -190,7 +190,12 @@ export default class EppoClient implements IEppoClient {
 
     this.requestPoller = initPoller(
       POLL_INTERVAL_MS,
-      configurationRequestor.fetchAndStoreConfigurations.bind(configurationRequestor),
+      async () => {
+        // If the configuration store is expired, we refetch the configurations
+        if (this.configurationStore.isExpired()) {
+          await configurationRequestor.fetchAndStoreConfigurations();
+        }
+      },
       {
         maxStartRetries:
           this.configurationRequestParameters.numInitialRequestRetries ??
