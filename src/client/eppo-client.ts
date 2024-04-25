@@ -211,7 +211,7 @@ export default class EppoClient implements IEppoClient {
     );
   }
 
-  getBoolAssignment(
+  public getBoolAssignment(
     flagKey: string,
     subjectKey: string,
     subjectAttributes: Record<string, AttributeType>,
@@ -228,7 +228,7 @@ export default class EppoClient implements IEppoClient {
     );
   }
 
-  getIntegerAssignment(
+  public getIntegerAssignment(
     flagKey: string,
     subjectKey: string,
     subjectAttributes: Record<string, AttributeType>,
@@ -245,7 +245,7 @@ export default class EppoClient implements IEppoClient {
     );
   }
 
-  getNumericAssignment(
+  public getNumericAssignment(
     flagKey: string,
     subjectKey: string,
     subjectAttributes: Record<string, AttributeType>,
