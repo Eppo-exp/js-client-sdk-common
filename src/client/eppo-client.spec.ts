@@ -1,9 +1,4 @@
-/**
- * @jest-environment jsdom
- */
-import axios from 'axios';
 import * as td from 'testdouble';
-import mock, { MockResponse } from 'xhr-mock';
 
 import {
   IAssignmentTestCase,
@@ -19,15 +14,10 @@ import { IAssignmentLogger } from '../assignment-logger';
 import { IConfigurationStore } from '../configuration-store';
 import { MAX_EVENT_QUEUE_SIZE, POLL_INTERVAL_MS, POLL_JITTER_PCT } from '../constants';
 import FlagConfigurationRequestor from '../flag-configuration-requestor';
-import HttpClient from '../http-client';
+import FetchHttpClient from '../http-client';
 import { Flag, VariationType } from '../interfaces';
 
 import EppoClient, { FlagConfigurationRequestParameters, checkTypeMatch } from './eppo-client';
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const packageJson = require('../../package.json');
-
-const flagEndpoint = /flag-config\/v1\/config*/;
 
 class TestConfigurationStore implements IConfigurationStore {
   private store: Record<string, string> = {};
@@ -53,37 +43,35 @@ class TestConfigurationStore implements IConfigurationStore {
     return this._isInitialized;
   }
 }
+
 export async function init(configurationStore: IConfigurationStore) {
-  const axiosInstance = axios.create({
-    baseURL: 'http://127.0.0.1:4000',
-    timeout: 1000,
-  });
-
-  const httpClient = new HttpClient(axiosInstance, {
-    apiKey: 'dummy',
-    sdkName: 'js-client-sdk-common',
-    sdkVersion: packageJson.version,
-  });
-
+  const httpClient = new FetchHttpClient(
+    'http://127.0.0.1:4000',
+    {
+      apiKey: 'dummy',
+      sdkName: 'js-client-sdk-common',
+      sdkVersion: '1.0.0',
+    },
+    1000,
+  );
   const configurationRequestor = new FlagConfigurationRequestor(configurationStore, httpClient);
   await configurationRequestor.fetchAndStoreConfigurations();
 }
 
 describe('EppoClient E2E test', () => {
+  global.fetch = jest.fn(() => {
+    const ufc = readMockUFCResponse(MOCK_UFC_RESPONSE_FILE);
+
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(ufc),
+    });
+  }) as jest.Mock;
   const storage = new TestConfigurationStore();
 
   beforeAll(async () => {
-    mock.setup();
-    mock.get(flagEndpoint, (_req, res) => {
-      const ufc = readMockUFCResponse(MOCK_UFC_RESPONSE_FILE);
-      return res.status(200).body(JSON.stringify(ufc));
-    });
-
     await init(storage);
-  });
-
-  afterAll(() => {
-    mock.teardown();
   });
 
   const flagKey = 'mock-flag';
@@ -225,6 +213,22 @@ describe('EppoClient E2E test', () => {
   });
 
   describe('UFC General Test Cases', () => {
+    beforeAll(async () => {
+      global.fetch = jest.fn(() => {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(readMockUFCResponse(MOCK_UFC_RESPONSE_FILE)),
+        });
+      }) as jest.Mock;
+
+      await init(storage);
+    });
+
+    afterAll(() => {
+      jest.restoreAllMocks();
+    });
+
     it.each(readAssignmentTestData())(
       'test variation assignment splits',
       async ({ flag, variationType, defaultValue, subjects }: IAssignmentTestCase) => {
@@ -261,19 +265,20 @@ describe('EppoClient E2E test', () => {
   });
 
   describe('UFC Obfuscated Test Cases', () => {
-    const storage = new TestConfigurationStore();
-
     beforeAll(async () => {
-      mock.setup();
-      mock.get(flagEndpoint, (_req, res) => {
-        const ufc = readMockUFCResponse(OBFUSCATED_MOCK_UFC_RESPONSE_FILE);
-        return res.status(200).body(JSON.stringify(ufc));
-      });
+      global.fetch = jest.fn(() => {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(readMockUFCResponse(OBFUSCATED_MOCK_UFC_RESPONSE_FILE)),
+        });
+      }) as jest.Mock;
+
       await init(storage);
     });
 
     afterAll(() => {
-      mock.teardown();
+      jest.restoreAllMocks();
     });
 
     it.each(readAssignmentTestData())(
@@ -575,32 +580,33 @@ describe('EppoClient E2E test', () => {
 
   describe('Eppo Client constructed with configuration request parameters', () => {
     let client: EppoClient;
-    let storage: IConfigurationStore;
+    let thisStorage: IConfigurationStore;
     let requestConfiguration: FlagConfigurationRequestParameters;
-    let mockServerResponseFunc: (res: MockResponse) => MockResponse;
 
-    const ufcBody = JSON.stringify(readMockUFCResponse(MOCK_UFC_RESPONSE_FILE));
     const flagKey = 'numeric_flag';
     const subject = 'alice';
     const pi = 3.1415926;
 
     const maxRetryDelay = POLL_INTERVAL_MS * POLL_JITTER_PCT;
 
-    beforeAll(() => {
-      mock.setup();
-      mock.get(flagEndpoint, (_req, res) => {
-        return mockServerResponseFunc(res);
-      });
+    beforeAll(async () => {
+      global.fetch = jest.fn(() => {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(readMockUFCResponse(MOCK_UFC_RESPONSE_FILE)),
+        });
+      }) as jest.Mock;
     });
 
-    beforeEach(() => {
-      storage = new TestConfigurationStore();
+    beforeEach(async () => {
       requestConfiguration = {
         apiKey: 'dummy key',
         sdkName: 'js-client-sdk-common',
-        sdkVersion: packageJson.version,
+        sdkVersion: '1.0.0',
       };
-      mockServerResponseFunc = (res) => res.status(200).body(ufcBody);
+
+      thisStorage = new TestConfigurationStore();
 
       // We only want to fake setTimeout() and clearTimeout()
       jest.useFakeTimers({
@@ -629,11 +635,11 @@ describe('EppoClient E2E test', () => {
     });
 
     afterAll(() => {
-      mock.teardown();
+      jest.restoreAllMocks();
     });
 
     it('Fetches initial configuration with parameters in constructor', async () => {
-      client = new EppoClient(storage, requestConfiguration);
+      client = new EppoClient(thisStorage, requestConfiguration);
       client.setIsGracefulFailureMode(false);
       // no configuration loaded
       let variation = client.getNumericAssignment(flagKey, subject, {}, 123.4);
@@ -645,7 +651,7 @@ describe('EppoClient E2E test', () => {
     });
 
     it('Fetches initial configuration with parameters provided later', async () => {
-      client = new EppoClient(storage);
+      client = new EppoClient(thisStorage);
       client.setIsGracefulFailureMode(false);
       client.setConfigurationRequestParameters(requestConfiguration);
       // no configuration loaded
@@ -662,22 +668,33 @@ describe('EppoClient E2E test', () => {
       { pollAfterSuccessfulInitialization: true },
     ])('retries initial configuration request with config %p', async (configModification) => {
       let callCount = 0;
-      mockServerResponseFunc = (res) => {
+
+      global.fetch = jest.fn(() => {
         if (++callCount === 1) {
-          // Throw an error for the first call
-          return res.status(500);
+          // Simulate an error for the first call
+          return Promise.resolve({
+            ok: false,
+            status: 500,
+            json: () => Promise.reject(new Error('Server error')),
+          });
         } else {
-          // Return a mock object for subsequent calls
-          return res.status(200).body(ufcBody);
+          // Return a successful response for subsequent calls
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => {
+              return readMockUFCResponse(MOCK_UFC_RESPONSE_FILE);
+            },
+          });
         }
-      };
+      }) as jest.Mock;
 
       const { pollAfterSuccessfulInitialization } = configModification;
       requestConfiguration = {
         ...requestConfiguration,
         pollAfterSuccessfulInitialization,
       };
-      client = new EppoClient(storage, requestConfiguration);
+      client = new EppoClient(thisStorage, requestConfiguration);
       client.setIsGracefulFailureMode(false);
       // no configuration loaded
       let variation = client.getNumericAssignment(flagKey, subject, {}, 0.0);
@@ -711,15 +728,24 @@ describe('EppoClient E2E test', () => {
       { pollAfterFailedInitialization: true, throwOnFailedInitialization: true },
     ])('initial configuration request fails with config %p', async (configModification) => {
       let callCount = 0;
-      mockServerResponseFunc = (res) => {
+
+      global.fetch = jest.fn(() => {
         if (++callCount === 1) {
-          // Throw an error for initialization call
-          return res.status(500);
+          // Simulate an error for the first call
+          return Promise.resolve({
+            ok: false,
+            status: 500,
+            json: () => Promise.reject(new Error('Server error')),
+          } as Response);
         } else {
-          // Return a mock object for subsequent calls
-          return res.status(200).body(ufcBody);
+          // Return a successful response for subsequent calls
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve(readMockUFCResponse(MOCK_UFC_RESPONSE_FILE)),
+          } as Response);
         }
-      };
+      });
 
       const { pollAfterFailedInitialization, throwOnFailedInitialization } = configModification;
 
@@ -733,7 +759,7 @@ describe('EppoClient E2E test', () => {
         throwOnFailedInitialization,
         pollAfterFailedInitialization,
       };
-      client = new EppoClient(storage, requestConfiguration);
+      client = new EppoClient(thisStorage, requestConfiguration);
       client.setIsGracefulFailureMode(false);
       // no configuration loaded
       expect(client.getNumericAssignment(flagKey, subject, {}, 0.0)).toBe(0.0);
