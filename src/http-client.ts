@@ -5,8 +5,11 @@ export interface ISdkParams {
 }
 
 export class HttpRequestError extends Error {
-  constructor(public message: string, public status: number) {
+  constructor(public message: string, public status: number, public cause?: Error) {
     super(message);
+    if (cause) {
+      this.cause = cause;
+    }
   }
 }
 
@@ -19,9 +22,7 @@ export default class FetchHttpClient implements IHttpClient {
 
   async get<T>(resource: string): Promise<T | undefined> {
     const url = new URL(this.baseUrl + resource);
-    Object.keys(this.sdkParams).forEach((key) =>
-      url.searchParams.append(key, this.sdkParams[key as keyof ISdkParams]),
-    );
+    Object.entries(this.sdkParams).forEach(([key, value]) => url.searchParams.append(key, value));
 
     try {
       // Canonical implementation of abortable fetch for interrupting when request takes longer than desired.
@@ -39,12 +40,12 @@ export default class FetchHttpClient implements IHttpClient {
       return response.json() as Promise<T>;
     } catch (error) {
       if (error.name === 'AbortError') {
-        throw new HttpRequestError('Request timed out', 408);
+        throw new HttpRequestError('Request timed out', 408, error);
       } else if (error instanceof HttpRequestError) {
         throw error;
       }
 
-      throw new HttpRequestError('Network error', 0);
+      throw new HttpRequestError('Network error', 0, error);
     }
   }
 }
