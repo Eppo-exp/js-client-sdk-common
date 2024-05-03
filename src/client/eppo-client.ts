@@ -5,7 +5,7 @@ import {
   NonExpiringInMemoryAssignmentCache,
 } from '../assignment-cache';
 import { IAssignmentEvent, IAssignmentLogger } from '../assignment-logger';
-import { IConfigurationStore } from '../configuration-store';
+import { IConfigurationStore } from '../configuration-store/configuration-store';
 import {
   BASE_URL as DEFAULT_BASE_URL,
   DEFAULT_INITIAL_CONFIG_REQUEST_RETRIES,
@@ -116,13 +116,13 @@ export default class EppoClient implements IEppoClient {
   private isGracefulFailureMode = true;
   private isObfuscated = false;
   private assignmentCache: AssignmentCache<Cacheable> | undefined;
-  private configurationStore: IConfigurationStore;
+  private configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>;
   private configurationRequestParameters: FlagConfigurationRequestParameters | undefined;
   private requestPoller: IPoller | undefined;
   private evaluator: Evaluator;
 
   constructor(
-    configurationStore: IConfigurationStore,
+    configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>,
     configurationRequestParameters?: FlagConfigurationRequestParameters,
     obfuscated = false,
   ) {
@@ -387,7 +387,9 @@ export default class EppoClient implements IEppoClient {
   }
 
   private getObfuscatedFlag(flagKey: string): Flag | null {
-    const flag: ObfuscatedFlag | null = this.configurationStore.get(getMD5Hash(flagKey));
+    const flag: ObfuscatedFlag | null = this.configurationStore.get(
+      getMD5Hash(flagKey),
+    ) as ObfuscatedFlag;
     return flag ? decodeFlag(flag) : null;
   }
 

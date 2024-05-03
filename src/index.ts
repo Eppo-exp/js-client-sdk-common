@@ -2,7 +2,8 @@ import { AssignmentCache } from './assignment-cache';
 import { IAssignmentHooks } from './assignment-hooks';
 import { IAssignmentLogger, IAssignmentEvent } from './assignment-logger';
 import EppoClient, { FlagConfigurationRequestParameters, IEppoClient } from './client/eppo-client';
-import { IConfigurationStore } from './configuration-store';
+import { IConfigurationStore } from './configuration-store/configuration-store';
+import { HybridConfigurationStore } from './configuration-store/hybrid.store';
 import * as constants from './constants';
 import FlagConfigRequestor from './flag-configuration-requestor';
 import HttpClient from './http-client';
@@ -21,6 +22,7 @@ export {
   HttpClient,
   validation,
   IConfigurationStore,
+  HybridConfigurationStore,
   AssignmentCache,
   FlagConfigurationRequestParameters,
   Flag,
