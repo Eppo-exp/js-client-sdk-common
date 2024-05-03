@@ -15,23 +15,25 @@ export class HybridConfigurationStore<T> implements IConfigurationStore<T> {
    * Initialize the configuration store by loading the entries from the persistent store into the serving store.
    */
   async init(): Promise<void> {
-    if (this.persistentStore) {
-      if (!this.persistentStore.isInitialized()) {
-        /**
-         * The initial remote request to the remote API failed
-         * or never happened because we are in the cool down period.
-         *
-         * Shows a log message that the assignments served from the serving store
-         * may be stale.
-         */
-        logger.warn(
-          'Persistent store is not initialized from remote configuration. Serving assignments that may be stale.',
-        );
-      }
-
-      const entries = await this.persistentStore.getEntries();
-      this.servingStore.setEntries(entries);
+    if (!this.persistentStore) {
+      return;
     }
+
+    if (!this.persistentStore.isInitialized()) {
+      /**
+       * The initial remote request to the remote API failed
+       * or never happened because we are in the cool down period.
+       *
+       * Shows a log message that the assignments served from the serving store
+       * may be stale.
+       */
+      logger.warn(
+        'Persistent store is not initialized from remote configuration. Serving assignments that may be stale.',
+      );
+    }
+
+    const entries = await this.persistentStore.getEntries();
+    this.servingStore.setEntries(entries);
   }
 
   public isInitialized(): boolean {
