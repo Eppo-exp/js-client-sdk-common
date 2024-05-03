@@ -25,14 +25,14 @@ export interface IConfigurationStore<T> {
   persistentStore: IAsyncStore<T> | null;
 
   init(): Promise<void>;
-  get(key: string): T;
+  get(key: string): T | null;
   getKeys(): string[];
   isInitialized(): boolean;
   setEntries(entries: Record<string, T>): Promise<void>;
 }
 
 export interface ISyncStore<T> {
-  get(key: string): T;
+  get(key: string): T | null;
   getKeys(): string[];
   isInitialized(): boolean;
   setEntries(entries: Record<string, T>): void;

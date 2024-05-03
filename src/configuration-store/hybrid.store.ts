@@ -40,7 +40,7 @@ export class HybridConfigurationStore<T> implements IConfigurationStore<T> {
     return this.servingStore.isInitialized() && (this.persistentStore?.isInitialized() ?? true);
   }
 
-  public get(key: string): T {
+  public get(key: string): T | null {
     if (!this.servingStore.isInitialized()) {
       logger.warn('getting a value from a ServingStore that is not initialized.');
     }
@@ -51,7 +51,7 @@ export class HybridConfigurationStore<T> implements IConfigurationStore<T> {
     return this.servingStore.getKeys();
   }
 
-  public async setEntries(entries: Record<string, any>): Promise<void> {
+  public async setEntries(entries: Record<string, T>): Promise<void> {
     if (this.persistentStore) {
       // Persistence store is now initialized and should mark itself accordingly.
       await this.persistentStore.setEntries(entries);

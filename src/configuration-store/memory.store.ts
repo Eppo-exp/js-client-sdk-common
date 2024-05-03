@@ -1,12 +1,11 @@
 import { IAsyncStore, IConfigurationStore, ISyncStore } from './configuration-store';
 
 export class MemoryStore<T> implements ISyncStore<T> {
-  private store: Record<string, string> = {};
+  private store: Record<string, T> = {};
   private initialized = false;
 
-  get<T>(key: string): T {
-    const rval = this.store[key];
-    return rval ? JSON.parse(rval) : null;
+  get(key: string): T | null {
+    return this.store[key] ?? null;
   }
 
   getKeys(): string[] {
@@ -17,9 +16,9 @@ export class MemoryStore<T> implements ISyncStore<T> {
     return this.initialized;
   }
 
-  setEntries<T>(entries: Record<string, T>): void {
+  setEntries(entries: Record<string, T>): void {
     Object.entries(entries).forEach(([key, val]) => {
-      this.store[key] = JSON.stringify(val);
+      this.store[key] = val;
     });
     this.initialized = true;
   }
@@ -41,7 +40,7 @@ export class MemoryOnlyConfigurationStore<T> implements IConfigurationStore<T> {
     return Promise.resolve();
   }
 
-  get(key: string): T {
+  get(key: string): T | null {
     return this.servingStore.get(key);
   }
 

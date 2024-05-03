@@ -1,5 +1,6 @@
 import { IAsyncStore, ISyncStore } from './configuration-store';
 import { HybridConfigurationStore } from './hybrid.store';
+
 describe('HybridConfigurationStore', () => {
   let syncStoreMock: ISyncStore<string>;
   let asyncStoreMock: IAsyncStore<string>;
