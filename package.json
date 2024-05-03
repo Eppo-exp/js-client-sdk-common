@@ -65,6 +65,7 @@
   "dependencies": {
     "md5": "^2.3.0",
     "pino": "^8.19.0",
+    "pino-pretty": "^11.0.0",
     "semver": "^7.5.4",
     "universal-base64": "^2.1.0"
   }
