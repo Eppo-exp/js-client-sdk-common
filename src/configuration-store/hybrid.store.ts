@@ -1,4 +1,4 @@
-import { logger } from '../application-logger';
+import { logger, loggerPrefix } from '../application-logger';
 
 import { IAsyncStore, IConfigurationStore, ISyncStore } from './configuration-store';
 
@@ -28,7 +28,7 @@ export class HybridConfigurationStore<T> implements IConfigurationStore<T> {
        * may be stale.
        */
       logger.warn(
-        'Persistent store is not initialized from remote configuration. Serving assignments that may be stale.',
+        `${loggerPrefix} Persistent store is not initialized from remote configuration. Serving assignments that may be stale.`,
       );
     }
 
@@ -42,7 +42,7 @@ export class HybridConfigurationStore<T> implements IConfigurationStore<T> {
 
   public get(key: string): T | null {
     if (!this.servingStore.isInitialized()) {
-      logger.warn('getting a value from a ServingStore that is not initialized.');
+      logger.warn(`${loggerPrefix} getting a value from a ServingStore that is not initialized.`);
     }
     return this.servingStore.get(key);
   }
