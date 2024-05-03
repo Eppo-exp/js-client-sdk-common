@@ -1,4 +1,4 @@
-import { IConfigurationStore } from './configuration-store';
+import { IConfigurationStore } from './configuration-store/configuration-store';
 import { IHttpClient } from './http-client';
 import { Flag } from './interfaces';
 
@@ -9,14 +9,17 @@ interface IUniversalFlagConfig {
 }
 
 export default class FlagConfigurationRequestor {
-  constructor(private configurationStore: IConfigurationStore, private httpClient: IHttpClient) {}
+  constructor(
+    private configurationStore: IConfigurationStore<Flag>,
+    private httpClient: IHttpClient,
+  ) {}
 
   async fetchAndStoreConfigurations(): Promise<Record<string, Flag>> {
     const responseData = await this.httpClient.get<IUniversalFlagConfig>(UFC_ENDPOINT);
     if (!responseData) {
       return {};
     }
-    this.configurationStore.setEntries<Flag>(responseData.flags);
+    await this.configurationStore.setEntries(responseData.flags);
     return responseData.flags;
   }
 }

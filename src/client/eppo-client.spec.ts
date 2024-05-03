@@ -11,40 +11,16 @@ import {
   validateTestAssignments,
 } from '../../test/testHelpers';
 import { IAssignmentLogger } from '../assignment-logger';
-import { IConfigurationStore } from '../configuration-store';
+import { IConfigurationStore } from '../configuration-store/configuration-store';
+import { MemoryOnlyConfigurationStore } from '../configuration-store/memory.store';
 import { MAX_EVENT_QUEUE_SIZE, POLL_INTERVAL_MS, POLL_JITTER_PCT } from '../constants';
 import FlagConfigurationRequestor from '../flag-configuration-requestor';
 import FetchHttpClient from '../http-client';
-import { Flag, VariationType } from '../interfaces';
+import { Flag, ObfuscatedFlag, VariationType } from '../interfaces';
 
 import EppoClient, { FlagConfigurationRequestParameters, checkTypeMatch } from './eppo-client';
 
-class TestConfigurationStore implements IConfigurationStore {
-  private store: Record<string, string> = {};
-  private _isInitialized = false;
-
-  public get<T>(key: string): T {
-    const rval = this.store[key];
-    return rval ? JSON.parse(rval) : null;
-  }
-
-  public setEntries<T>(entries: Record<string, T>) {
-    Object.entries(entries).forEach(([key, val]) => {
-      this.store[key] = JSON.stringify(val);
-    });
-    this._isInitialized = true;
-  }
-
-  public getKeys(): string[] {
-    return Object.keys(this.store);
-  }
-
-  public isInitialized(): boolean {
-    return this._isInitialized;
-  }
-}
-
-export async function init(configurationStore: IConfigurationStore) {
+export async function init(configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>) {
   const httpClient = new FetchHttpClient(
     'http://127.0.0.1:4000',
     {
@@ -68,7 +44,7 @@ describe('EppoClient E2E test', () => {
       json: () => Promise.resolve(ufc),
     });
   }) as jest.Mock;
-  const storage = new TestConfigurationStore();
+  const storage = new MemoryOnlyConfigurationStore<Flag | ObfuscatedFlag>();
 
   beforeAll(async () => {
     await init(storage);
@@ -312,7 +288,7 @@ describe('EppoClient E2E test', () => {
   });
 
   it('returns null if getStringAssignment was called for the subject before any UFC was loaded', () => {
-    const localClient = new EppoClient(new TestConfigurationStore());
+    const localClient = new EppoClient(new MemoryOnlyConfigurationStore());
     expect(localClient.getStringAssignment(flagKey, 'subject-1', {}, 'hello world')).toEqual(
       'hello world',
     );
@@ -580,7 +556,7 @@ describe('EppoClient E2E test', () => {
 
   describe('Eppo Client constructed with configuration request parameters', () => {
     let client: EppoClient;
-    let thisStorage: IConfigurationStore;
+    let thisStorage: IConfigurationStore<Flag | ObfuscatedFlag>;
     let requestConfiguration: FlagConfigurationRequestParameters;
 
     const flagKey = 'numeric_flag';
@@ -606,7 +582,7 @@ describe('EppoClient E2E test', () => {
         sdkVersion: '1.0.0',
       };
 
-      thisStorage = new TestConfigurationStore();
+      thisStorage = new MemoryOnlyConfigurationStore();
 
       // We only want to fake setTimeout() and clearTimeout()
       jest.useFakeTimers({
