@@ -40,6 +40,11 @@ export class HybridConfigurationStore<T> implements IConfigurationStore<T> {
     return this.servingStore.isInitialized() && (this.persistentStore?.isInitialized() ?? true);
   }
 
+  public async isExpired(): Promise<boolean> {
+    const isExpired = (await this.persistentStore?.isExpired()) ?? true;
+    return isExpired;
+  }
+
   public get(key: string): T | null {
     if (!this.servingStore.isInitialized()) {
       logger.warn(`${loggerPrefix} getting a value from a ServingStore that is not initialized.`);

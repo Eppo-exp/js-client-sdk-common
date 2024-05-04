@@ -150,6 +150,11 @@ export default class EppoClient implements IEppoClient {
       this.requestPoller.stop();
     }
 
+    const isExpired = await this.configurationStore.isExpired();
+    if (!isExpired) {
+      return;
+    }
+
     // todo: consider injecting the IHttpClient interface
     const httpClient = new FetchHttpClient(
       this.configurationRequestParameters.baseUrl || DEFAULT_BASE_URL,

@@ -639,6 +639,24 @@ describe('EppoClient E2E test', () => {
       expect(variation).toBe(pi);
     });
 
+    it('Does not fetch configurations if the configuration store is unexpired', async () => {
+      class MockStore extends MemoryOnlyConfigurationStore<Flag | ObfuscatedFlag> {
+        async isExpired(): Promise<boolean> {
+          return false;
+        }
+      }
+
+      client = new EppoClient(new MockStore(), requestConfiguration);
+      client.setIsGracefulFailureMode(false);
+      // no configuration loaded
+      let variation = client.getNumericAssignment(flagKey, subject, {}, 0.0);
+      expect(variation).toBe(0.0);
+      // have client fetch configurations
+      await client.fetchFlagConfigurations();
+      variation = client.getNumericAssignment(flagKey, subject, {}, 0.0);
+      expect(variation).toBe(0.0);
+    });
+
     it.each([
       { pollAfterSuccessfulInitialization: false },
       { pollAfterSuccessfulInitialization: true },
