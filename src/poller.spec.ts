@@ -22,6 +22,12 @@ describe('poller', () => {
   });
 
   describe('initial startup', () => {
+    it('skips initial poll if configured to do so', async () => {
+      const poller = initPoller(testIntervalMs, noOpCallback, { skipInitialPoll: true });
+      await poller.start();
+      td.verify(noOpCallback(), { times: 0 });
+    });
+
     it('retries startup poll within same promise', async () => {
       const pollerRetries = 3;
       let callCount = 0;
