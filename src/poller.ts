@@ -23,6 +23,7 @@ export default function initPoller(
     pollAfterSuccessfulStart?: boolean;
     errorOnFailedStart?: boolean;
     pollAfterFailedStart?: boolean;
+    skipInitialPoll?: boolean;
   },
 ): IPoller {
   let stopped = false;
@@ -34,8 +35,9 @@ export default function initPoller(
   const start = async () => {
     stopped = false;
     let startRequestSuccess = false;
-    let startAttemptsRemaining =
-      1 + (options?.maxStartRetries ?? DEFAULT_INITIAL_CONFIG_REQUEST_RETRIES);
+    let startAttemptsRemaining = options?.skipInitialPoll
+      ? 0
+      : 1 + (options?.maxStartRetries ?? DEFAULT_INITIAL_CONFIG_REQUEST_RETRIES);
 
     let startErrorToThrow = null;
 

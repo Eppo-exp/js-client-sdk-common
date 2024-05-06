@@ -108,6 +108,7 @@ export type FlagConfigurationRequestParameters = {
   pollAfterSuccessfulInitialization?: boolean;
   pollAfterFailedInitialization?: boolean;
   throwOnFailedInitialization?: boolean;
+  skipInitialPoll?: boolean;
 };
 
 export default class EppoClient implements IEppoClient {
@@ -181,6 +182,7 @@ export default class EppoClient implements IEppoClient {
           this.configurationRequestParameters.pollAfterFailedInitialization ?? false,
         errorOnFailedStart:
           this.configurationRequestParameters.throwOnFailedInitialization ?? false,
+        skipInitialPoll: this.configurationRequestParameters.skipInitialPoll ?? false,
       },
     );
 
