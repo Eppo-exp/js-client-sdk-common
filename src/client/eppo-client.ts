@@ -154,6 +154,9 @@ export default class EppoClient implements IEppoClient {
 
     const isExpired = await this.configurationStore.isExpired();
     if (!isExpired) {
+      logger.info(
+        '[Eppo SDK] Configuration store is not expired. Skipping fetching flag configurations',
+      );
       return;
     }
 
