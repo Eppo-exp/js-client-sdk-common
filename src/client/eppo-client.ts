@@ -1,3 +1,4 @@
+import { logger } from '../application-logger';
 import {
   AssignmentCache,
   Cacheable,
@@ -305,7 +306,7 @@ export default class EppoClient implements IEppoClient {
 
   private rethrowIfNotGraceful(err: Error, defaultValue?: EppoValue): EppoValue {
     if (this.isGracefulFailureMode) {
-      console.error(`[Eppo SDK] Error getting assignment: ${err.message}`);
+      logger.error(`[Eppo SDK] Error getting assignment: ${err.message}`);
       return defaultValue ?? EppoValue.Null();
     }
     throw err;
@@ -336,7 +337,7 @@ export default class EppoClient implements IEppoClient {
     const flag = this.getFlag(flagKey);
 
     if (flag === null) {
-      console.warn(`[Eppo SDK] No assigned variation. Flag not found: ${flagKey}`);
+      logger.warn(`[Eppo SDK] No assigned variation. Flag not found: ${flagKey}`);
       // note: this is different from the Python SDK, which returns None instead
       return noneResult(flagKey, subjectKey, subjectAttributes);
     }
@@ -348,7 +349,7 @@ export default class EppoClient implements IEppoClient {
     }
 
     if (!flag.enabled) {
-      console.info(`[Eppo SDK] No assigned variation. Flag is disabled: ${flagKey}`);
+      logger.info(`[Eppo SDK] No assigned variation. Flag is disabled: ${flagKey}`);
       // note: this is different from the Python SDK, which returns None instead
       return noneResult(flagKey, subjectKey, subjectAttributes);
     }
@@ -373,7 +374,7 @@ export default class EppoClient implements IEppoClient {
         this.logAssignment(result);
       }
     } catch (error) {
-      console.error(`[Eppo SDK] Error logging assignment event: ${error}`);
+      logger.error(`[Eppo SDK] Error logging assignment event: ${error}`);
     }
 
     return result;
@@ -443,7 +444,7 @@ export default class EppoClient implements IEppoClient {
         this.assignmentLogger?.logAssignment(event);
       }
     } catch (error) {
-      console.error(`[Eppo SDK] Error flushing assignment events: ${error.message}`);
+      logger.error(`[Eppo SDK] Error flushing assignment events: ${error.message}`);
     }
   }
 
@@ -491,7 +492,7 @@ export default class EppoClient implements IEppoClient {
         variationKey: result.variation?.key ?? '__eppo_no_variation',
       });
     } catch (error) {
-      console.error(`[Eppo SDK] Error logging assignment event: ${error.message}`);
+      logger.error(`[Eppo SDK] Error logging assignment event: ${error.message}`);
     }
   }
 }
