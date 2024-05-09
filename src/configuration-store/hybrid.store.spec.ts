@@ -17,6 +17,7 @@ describe('HybridConfigurationStore', () => {
     asyncStoreMock = {
       getEntries: jest.fn(),
       isInitialized: jest.fn(),
+      isExpired: jest.fn(),
       setEntries: jest.fn(),
     };
 
@@ -32,6 +33,21 @@ describe('HybridConfigurationStore', () => {
       await store.init();
 
       expect(syncStoreMock.setEntries).toHaveBeenCalledWith(entries);
+    });
+  });
+
+  describe('isExpired', () => {
+    it("is the persistent store's expired value", async () => {
+      (asyncStoreMock.isExpired as jest.Mock).mockResolvedValue(true);
+      expect(await store.isExpired()).toBe(true);
+
+      (asyncStoreMock.isExpired as jest.Mock).mockResolvedValue(false);
+      expect(await store.isExpired()).toBe(false);
+    });
+
+    it('is true without a persistent store', async () => {
+      const mixedStoreWithNull = new HybridConfigurationStore(syncStoreMock, null);
+      expect(await mixedStoreWithNull.isExpired()).toBe(true);
     });
   });
 

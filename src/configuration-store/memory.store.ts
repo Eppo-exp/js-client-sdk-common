@@ -48,6 +48,10 @@ export class MemoryOnlyConfigurationStore<T> implements IConfigurationStore<T> {
     return this.servingStore.getKeys();
   }
 
+  async isExpired(): Promise<boolean> {
+    return true;
+  }
+
   isInitialized(): boolean {
     return this.initialized;
   }

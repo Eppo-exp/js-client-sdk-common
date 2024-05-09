@@ -12,6 +12,10 @@ describe('MemoryOnlyConfigurationStore', () => {
     expect(memoryStore.getKeys()).toEqual([]);
   });
 
+  it('is always expired', async () => {
+    expect(await memoryStore.isExpired()).toBe(true);
+  });
+
   it('should return null for non-existent keys', () => {
     expect(memoryStore.get('nonexistent')).toBeNull();
   });

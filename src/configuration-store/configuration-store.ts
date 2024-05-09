@@ -28,6 +28,7 @@ export interface IConfigurationStore<T> {
   get(key: string): T | null;
   getKeys(): string[];
   isInitialized(): boolean;
+  isExpired(): Promise<boolean>;
   setEntries(entries: Record<string, T>): Promise<void>;
 }
 
@@ -40,6 +41,7 @@ export interface ISyncStore<T> {
 
 export interface IAsyncStore<T> {
   isInitialized(): boolean;
+  isExpired(): Promise<boolean>;
   getEntries(): Promise<Record<string, T>>;
   setEntries(entries: Record<string, T>): Promise<void>;
 }
