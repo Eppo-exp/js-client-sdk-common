@@ -1,3 +1,4 @@
+import { logger } from './application-logger';
 import { AssignmentCache } from './assignment-cache';
 import { IAssignmentHooks } from './assignment-hooks';
 import { IAssignmentLogger, IAssignmentEvent } from './assignment-logger';
@@ -12,6 +13,7 @@ import { AttributeType, SubjectAttributes } from './types';
 import * as validation from './validation';
 
 export {
+  logger as applicationLogger,
   IAssignmentHooks,
   IAssignmentLogger,
   IAssignmentEvent,
