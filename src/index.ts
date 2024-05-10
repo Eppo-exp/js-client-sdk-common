@@ -9,7 +9,7 @@ import {
   ISyncStore,
 } from './configuration-store/configuration-store';
 import { HybridConfigurationStore } from './configuration-store/hybrid.store';
-import { MemoryOnlyConfigurationStore } from './configuration-store/memory.store';
+import { MemoryStore, MemoryOnlyConfigurationStore } from './configuration-store/memory.store';
 import * as constants from './constants';
 import FlagConfigRequestor from './flag-configuration-requestor';
 import HttpClient from './http-client';
@@ -33,6 +33,7 @@ export {
   IConfigurationStore,
   IAsyncStore,
   ISyncStore,
+  MemoryStore,
   HybridConfigurationStore,
   MemoryOnlyConfigurationStore,
 
