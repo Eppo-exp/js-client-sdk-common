@@ -186,7 +186,9 @@ function evaluateCondition(subjectAttributes: Record<string, any>, condition: Co
         }
         return compareNumber(value, condition.value, (a, b) => a < b);
       case OperatorType.MATCHES:
-        return new RegExp(condition.value as string).test(value as string);
+        return new RegExp(`^${condition.value as string}$`).test(value as string);
+      case OperatorType.NOT_MATCHES:
+        return !new RegExp(`^${condition.value as string}$`).test(value as string);
       case OperatorType.ONE_OF:
         return isOneOf(value.toString(), condition.value);
       case OperatorType.NOT_ONE_OF:
@@ -249,9 +251,9 @@ function evaluateObfuscatedCondition(
           (a, b) => a < b,
         );
       case ObfuscatedOperatorType.MATCHES:
-        return new RegExp(decodeBase64(condition.value as string)).test(value as string);
+        return new RegExp(`^${decodeBase64(condition.value as string)}$`).test(value as string);
       case ObfuscatedOperatorType.NOT_MATCHES:
-        return !new RegExp(decodeBase64(condition.value as string)).test(value as string);
+        return !new RegExp(`^${decodeBase64(condition.value as string)}$`).test(value as string);
       case ObfuscatedOperatorType.ONE_OF:
         return isOneOf(getMD5Hash(value.toString()), condition.value);
       case ObfuscatedOperatorType.NOT_ONE_OF:

@@ -14,6 +14,109 @@ describe('rules', () => {
     });
   });
 
+  describe('matchesRule | regex special cases', () => {
+    it('correctly matches on full email regex', () => {
+      const emailMatchesCondition: Rule = {
+        conditions: [
+          {
+            operator: OperatorType.MATCHES,
+            attribute: 'email',
+            value: '.*@example\\.com',
+          },
+        ],
+      };
+      expect(matchesRule(emailMatchesCondition, { email: 'user@example.com' }, false)).toBe(true);
+      expect(matchesRule(emailMatchesCondition, { email: 'user@test.com' }, false)).toBe(false);
+    });
+
+    it('correctly handles regex that has anchors', () => {
+      const emailMatchesConditionWithAnchors: Rule = {
+        conditions: [
+          {
+            operator: OperatorType.MATCHES,
+            attribute: 'email',
+            value: '^.*@example\\.com$',
+          },
+        ],
+      };
+
+      expect(
+        matchesRule(emailMatchesConditionWithAnchors, { email: 'user@example.com' }, false),
+      ).toBe(true);
+      expect(matchesRule(emailMatchesConditionWithAnchors, { email: 'user@test.com' }, false)).toBe(
+        false,
+      );
+    });
+    it('correctly does not match on partial email regex', () => {
+      const partialEmailMatchesCondition: Rule = {
+        conditions: [
+          {
+            operator: OperatorType.MATCHES,
+            attribute: 'email',
+            value: '@example\\.com',
+          },
+        ],
+      };
+      expect(matchesRule(partialEmailMatchesCondition, { email: 'user@example.com' }, false)).toBe(
+        false,
+      );
+    });
+
+    it('correctly does not match on full email regex', () => {
+      const emailNotMatchesCondition: Rule = {
+        conditions: [
+          {
+            operator: OperatorType.NOT_MATCHES,
+            attribute: 'email',
+            value: '.*@example\\.com',
+          },
+        ],
+      };
+      expect(matchesRule(emailNotMatchesCondition, { email: 'user@example.com' }, false)).toBe(
+        false,
+      );
+      expect(matchesRule(emailNotMatchesCondition, { email: 'user@test.com' }, false)).toBe(true);
+    });
+
+    it('correctly does not match on full email regex with anchors', () => {
+      const emailNotMatchesConditionWithAnchors: Rule = {
+        conditions: [
+          {
+            operator: OperatorType.NOT_MATCHES,
+            attribute: 'email',
+            value: '^.*@example\\.com$',
+          },
+        ],
+      };
+      expect(
+        matchesRule(emailNotMatchesConditionWithAnchors, { email: 'user@example.com' }, false),
+      ).toBe(false);
+      expect(
+        matchesRule(emailNotMatchesConditionWithAnchors, { email: 'user@test.com' }, false),
+      ).toBe(true);
+    });
+
+    it('corredly does not match on partial email regex', () => {
+      const partialNotEmailMatchesCondition: Rule = {
+        conditions: [
+          {
+            operator: OperatorType.NOT_MATCHES,
+            attribute: 'email',
+            value: '@example\\.com',
+          },
+        ],
+      };
+      expect(
+        matchesRule(partialNotEmailMatchesCondition, { email: 'user@example.com' }, false),
+      ).toBe(true);
+      expect(matchesRule(partialNotEmailMatchesCondition, { email: '@example.com' }, false)).toBe(
+        false,
+      );
+      expect(matchesRule(partialNotEmailMatchesCondition, { email: 'user@test.com' }, false)).toBe(
+        true,
+      );
+    });
+  });
   describe('matchesRule | standard rules', () => {
     const ruleWithEmptyConditions: Rule = {
       conditions: [],
@@ -104,6 +207,7 @@ describe('rules', () => {
         },
       ],
     };
+
     const subjectAttributes = {
       totalSales: 50,
       version: '1.15.0',
