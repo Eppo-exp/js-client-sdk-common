@@ -187,6 +187,8 @@ function evaluateCondition(subjectAttributes: Record<string, any>, condition: Co
         return compareNumber(value, condition.value, (a, b) => a < b);
       case OperatorType.MATCHES:
         return new RegExp(condition.value as string).test(value as string);
+      case OperatorType.NOT_MATCHES:
+        return !new RegExp(condition.value as string).test(value as string);
       case OperatorType.ONE_OF:
         return isOneOf(value.toString(), condition.value);
       case OperatorType.NOT_ONE_OF:
