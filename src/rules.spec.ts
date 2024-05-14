@@ -203,8 +203,16 @@ describe('rules', () => {
       expect(matchesRule(ruleWithMatchesCondition, failingAttributes, false)).toBe(false);
     });
 
-    it('should return true for a rule with not_matches condition that matches the subject attributes', () => {
-      expect(matchesRule(ruleWithNotMatchesCondition, subjectAttributes, false)).toBe(false);
+    it('should return false for a rule with NOT_MATCHES condition when the subject attribute matches the condition value', () => {
+      expect(matchesRule(ruleWithNotMatchesCondition, { user_id: 'user123' }, false)).toBe(false);
+    });
+
+    it('should return true for a rule with NOT_MATCHES condition when the subject attribute does not match the condition value', () => {
+      expect(matchesRule(ruleWithNotMatchesCondition, { user_id: 'admin' }, false)).toBe(true);
+    });
+
+    it('should return true for a rule with NOT_MATCHES condition when the subject attribute does not match the condition value', () => {
+      expect(matchesRule(ruleWithNotMatchesCondition, { country: 'uk' }, false)).toBe(false);
     });
   });
 
