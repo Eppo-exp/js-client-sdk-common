@@ -87,6 +87,8 @@ export interface IEppoClient {
     configurationRequestParameters: FlagConfigurationRequestParameters,
   ): void;
 
+  setConfigurationStore(configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>): void;
+
   fetchFlagConfigurations(): void;
 
   stopPolling(): void;
@@ -138,6 +140,10 @@ export default class EppoClient implements IEppoClient {
     configurationRequestParameters: FlagConfigurationRequestParameters,
   ) {
     this.configurationRequestParameters = configurationRequestParameters;
+  }
+
+  public setConfigurationStore(configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>) {
+    this.configurationStore = configurationStore;
   }
 
   public async fetchFlagConfigurations() {
