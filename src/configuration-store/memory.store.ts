@@ -20,6 +20,11 @@ export class MemoryStore<T> implements ISyncStore<T> {
     Object.entries(entries).forEach(([key, val]) => {
       this.store[key] = val;
     });
+    Object.keys(this.store).forEach((key) => {
+      if (typeof entries[key] === 'undefined') {
+        delete this.store[key];
+      }
+    });
     this.initialized = true;
   }
 }
