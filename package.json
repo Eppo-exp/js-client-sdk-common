@@ -63,6 +63,7 @@
     "webpack-cli": "^4.10.0"
   },
   "dependencies": {
+    "buffer": "^6.0.3",
     "md5": "^2.3.0",
     "pino": "^8.19.0",
     "semver": "^7.5.4",

@@ -1,6 +1,7 @@
 const path = require('path');
 
 const TerserPlugin = require('terser-webpack-plugin');
+const webpack = require('webpack');
 
 module.exports = {
   entry: './src/index.ts',
@@ -18,6 +19,9 @@ module.exports = {
   },
   resolve: {
     extensions: ['.tsx', '.ts', '.js'],
+    fallback: {
+      buffer: require.resolve('buffer/'),
+    },
   },
   output: {
     filename: 'eppo-sdk.js',
@@ -31,4 +35,9 @@ module.exports = {
     minimize: true,
     minimizer: [new TerserPlugin()],
   },
+  plugins: [
+    new webpack.ProvidePlugin({
+      Buffer: ['buffer', 'Buffer'],
+    }),
+  ],
 };
