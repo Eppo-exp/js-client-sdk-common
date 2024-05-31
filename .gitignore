@@ -10,5 +10,6 @@ yarn-error.log
 
 test/data
 .vscode/settings.json
+.idea
 
 .DS_Store

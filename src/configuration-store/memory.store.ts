@@ -17,9 +17,7 @@ export class MemoryStore<T> implements ISyncStore<T> {
   }
 
   setEntries(entries: Record<string, T>): void {
-    Object.entries(entries).forEach(([key, val]) => {
-      this.store[key] = val;
-    });
+    this.store = { ...entries };
     this.initialized = true;
   }
 }

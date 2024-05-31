@@ -37,8 +37,14 @@ describe('MemoryOnlyConfigurationStore', () => {
   });
 
   it('should overwrite existing entries', async () => {
-    await memoryStore.setEntries({ key1: 'value1' });
-    await memoryStore.setEntries({ key1: 'newValue1' });
-    expect(memoryStore.get('key1')).toBe('newValue1');
+    await memoryStore.setEntries({ toBeReplaced: 'old value', toBeRemoved: 'delete me' });
+    expect(memoryStore.get('toBeReplaced')).toBe('old value');
+    expect(memoryStore.get('toBeRemoved')).toBe('delete me');
+    expect(memoryStore.get('toBeAdded')).toBeNull();
+
+    await memoryStore.setEntries({ toBeReplaced: 'new value', toBeAdded: 'add me' });
+    expect(memoryStore.get('toBeReplaced')).toBe('new value');
+    expect(memoryStore.get('toBeRemoved')).toBeNull();
+    expect(memoryStore.get('toBeAdded')).toBe('add me');
   });
 });
