@@ -104,6 +104,8 @@ describe('EppoClient E2E test', () => {
 
       expect(client.getBoolAssignment(flagKey, 'subject-identifer', {}, true)).toBe(true);
       expect(client.getBoolAssignment(flagKey, 'subject-identifer', {}, false)).toBe(false);
+      expect(client.getBooleanAssignment(flagKey, 'subject-identifer', {}, true)).toBe(true);
+      expect(client.getBooleanAssignment(flagKey, 'subject-identifer', {}, false)).toBe(false);
       expect(client.getNumericAssignment(flagKey, 'subject-identifer', {}, 1)).toBe(1);
       expect(client.getNumericAssignment(flagKey, 'subject-identifer', {}, 0)).toBe(0);
       expect(client.getJSONAssignment(flagKey, 'subject-identifer', {}, {})).toEqual({});
@@ -122,6 +124,7 @@ describe('EppoClient E2E test', () => {
 
       expect(() => {
         client.getBoolAssignment(flagKey, 'subject-identifer', {}, true);
+        client.getBooleanAssignment(flagKey, 'subject-identifer', {}, true);
       }).toThrow();
 
       expect(() => {
@@ -301,6 +304,7 @@ describe('EppoClient E2E test', () => {
     const nonExistentFlag = 'non-existent-flag';
 
     expect(client.getBoolAssignment(nonExistentFlag, 'subject-identifer', {}, true)).toBe(true);
+    expect(client.getBooleanAssignment(nonExistentFlag, 'subject-identifer', {}, true)).toBe(true);
     expect(client.getNumericAssignment(nonExistentFlag, 'subject-identifer', {}, 1)).toBe(1);
     expect(client.getJSONAssignment(nonExistentFlag, 'subject-identifer', {}, {})).toEqual({});
     expect(client.getStringAssignment(nonExistentFlag, 'subject-identifer', {}, 'default')).toBe(
