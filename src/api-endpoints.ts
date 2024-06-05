@@ -2,6 +2,7 @@ import { ISdkParams } from './http-client';
 
 const UFC_ENDPOINT = '/flag-config/v1/config';
 
+/** Utility class for constructing an Eppo API endpoint URL given a provided baseUrl and query parameters */
 export default class ApiEndpoints {
   constructor(private readonly baseUrl: string, private readonly queryParams: ISdkParams) {}
 
