@@ -1,3 +1,4 @@
+import ApiEndpoints from '../api-endpoints';
 import { logger } from '../application-logger';
 import {
   AssignmentCache,
@@ -165,7 +166,6 @@ export default class EppoClient implements IEppoClient {
   private queuedEvents: IAssignmentEvent[] = [];
   private assignmentLogger: IAssignmentLogger | undefined;
   private isGracefulFailureMode = true;
-  private isObfuscated = false;
   private assignmentCache: AssignmentCache<Cacheable> | undefined;
   private configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>;
   private configurationRequestParameters: FlagConfigurationRequestParameters | undefined;
@@ -175,12 +175,11 @@ export default class EppoClient implements IEppoClient {
   constructor(
     configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>,
     configurationRequestParameters?: FlagConfigurationRequestParameters,
-    obfuscated = false,
+    private readonly isObfuscated = false,
   ) {
     this.evaluator = new Evaluator();
     this.configurationStore = configurationStore;
     this.configurationRequestParameters = configurationRequestParameters;
-    this.isObfuscated = obfuscated;
   }
 
   public setConfigurationRequestParameters(
@@ -212,17 +211,22 @@ export default class EppoClient implements IEppoClient {
       );
       return;
     }
-
-    // todo: consider injecting the IHttpClient interface
-    const httpClient = new FetchHttpClient(
-      this.configurationRequestParameters.baseUrl || DEFAULT_BASE_URL,
-      {
-        apiKey: this.configurationRequestParameters.apiKey,
-        sdkName: this.configurationRequestParameters.sdkName,
-        sdkVersion: this.configurationRequestParameters.sdkVersion,
-      },
-      this.configurationRequestParameters.requestTimeoutMs || DEFAULT_REQUEST_TIMEOUT_MS,
-    );
+    const {
+      apiKey,
+      sdkName,
+      sdkVersion,
+      baseUrl = DEFAULT_BASE_URL,
+      requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
+      numInitialRequestRetries = DEFAULT_INITIAL_CONFIG_REQUEST_RETRIES,
+      numPollRequestRetries = DEFAULT_POLL_CONFIG_REQUEST_RETRIES,
+      pollAfterSuccessfulInitialization = false,
+      pollAfterFailedInitialization = false,
+      throwOnFailedInitialization = false,
+      skipInitialPoll = false,
+    } = this.configurationRequestParameters;
+    // todo: Inject the chain of dependencies below
+    const apiEndpoints = new ApiEndpoints(baseUrl, { apiKey, sdkName, sdkVersion });
+    const httpClient = new FetchHttpClient(apiEndpoints, requestTimeoutMs);
     const configurationRequestor = new FlagConfigurationRequestor(
       this.configurationStore,
       httpClient,
@@ -232,19 +236,12 @@ export default class EppoClient implements IEppoClient {
       POLL_INTERVAL_MS,
       configurationRequestor.fetchAndStoreConfigurations.bind(configurationRequestor),
       {
-        maxStartRetries:
-          this.configurationRequestParameters.numInitialRequestRetries ??
-          DEFAULT_INITIAL_CONFIG_REQUEST_RETRIES,
-        maxPollRetries:
-          this.configurationRequestParameters.numPollRequestRetries ??
-          DEFAULT_POLL_CONFIG_REQUEST_RETRIES,
-        pollAfterSuccessfulStart:
-          this.configurationRequestParameters.pollAfterSuccessfulInitialization ?? false,
-        pollAfterFailedStart:
-          this.configurationRequestParameters.pollAfterFailedInitialization ?? false,
-        errorOnFailedStart:
-          this.configurationRequestParameters.throwOnFailedInitialization ?? false,
-        skipInitialPoll: this.configurationRequestParameters.skipInitialPoll ?? false,
+        maxStartRetries: numInitialRequestRetries,
+        maxPollRetries: numPollRequestRetries,
+        pollAfterSuccessfulStart: pollAfterSuccessfulInitialization,
+        pollAfterFailedStart: pollAfterFailedInitialization,
+        errorOnFailedStart: throwOnFailedInitialization,
+        skipInitialPoll: skipInitialPoll,
       },
     );
 
@@ -390,11 +387,10 @@ export default class EppoClient implements IEppoClient {
    * Note: This method is experimental and may change in future versions.
    * Please only use for debugging purposes, and not in production.
    *
-   * @param subjectKey The subject key
    * @param flagKey The flag key
+   * @param subjectKey The subject key
    * @param subjectAttributes The subject attributes
    * @param expectedVariationType The expected variation type
-   * @param obfuscated Whether the flag key is obfuscated
    * @returns A detailed return of assignment for a particular subject and flag
    */
   public getAssignmentDetail(

@@ -10,6 +10,7 @@ import {
   readMockUFCResponse,
   validateTestAssignments,
 } from '../../test/testHelpers';
+import ApiEndpoints from '../api-endpoints';
 import { IAssignmentLogger } from '../assignment-logger';
 import { IConfigurationStore } from '../configuration-store/configuration-store';
 import { MemoryOnlyConfigurationStore } from '../configuration-store/memory.store';
@@ -21,15 +22,12 @@ import { Flag, ObfuscatedFlag, VariationType } from '../interfaces';
 import EppoClient, { FlagConfigurationRequestParameters, checkTypeMatch } from './eppo-client';
 
 export async function init(configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>) {
-  const httpClient = new FetchHttpClient(
-    'http://127.0.0.1:4000',
-    {
-      apiKey: 'dummy',
-      sdkName: 'js-client-sdk-common',
-      sdkVersion: '1.0.0',
-    },
-    1000,
-  );
+  const apiEndpoints = new ApiEndpoints('http://127.0.0.1:4000', {
+    apiKey: 'dummy',
+    sdkName: 'js-client-sdk-common',
+    sdkVersion: '1.0.0',
+  });
+  const httpClient = new FetchHttpClient(apiEndpoints, 1000);
   const configurationRequestor = new FlagConfigurationRequestor(configurationStore, httpClient);
   await configurationRequestor.fetchAndStoreConfigurations();
 }

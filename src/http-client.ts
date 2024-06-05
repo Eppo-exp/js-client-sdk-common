@@ -1,3 +1,6 @@
+import ApiEndpoints from './api-endpoints';
+import { Flag } from './interfaces';
+
 export interface ISdkParams {
   apiKey: string;
   sdkVersion: string;
@@ -13,31 +16,38 @@ export class HttpRequestError extends Error {
   }
 }
 
+export interface IUniversalFlagConfig {
+  flags: Record<string, Flag>;
+}
+
 export interface IHttpClient {
-  get<T>(resource: string): Promise<T | undefined>;
+  getUniversalFlagConfiguration(): Promise<IUniversalFlagConfig | undefined>;
+  rawGet<T>(url: URL): Promise<T | undefined>;
 }
 
 export default class FetchHttpClient implements IHttpClient {
-  constructor(private baseUrl: string, private sdkParams: ISdkParams, private timeout: number) {}
+  constructor(private readonly apiEndpoints: ApiEndpoints, private readonly timeout: number) {}
 
-  async get<T>(resource: string): Promise<T | undefined> {
-    const url = new URL(this.baseUrl + resource);
-    Object.entries(this.sdkParams).forEach(([key, value]) => url.searchParams.append(key, value));
+  async getUniversalFlagConfiguration(): Promise<IUniversalFlagConfig | undefined> {
+    const url = this.apiEndpoints.ufcEndpoint();
+    return await this.rawGet<IUniversalFlagConfig>(url);
+  }
 
+  async rawGet<T>(url: URL): Promise<T | undefined> {
     try {
       // Canonical implementation of abortable fetch for interrupting when request takes longer than desired.
       // https://developer.chrome.com/blog/abortable-fetch/#reacting_to_an_aborted_fetch
       const controller = new AbortController();
       const signal = controller.signal;
       const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-      const response = await fetch(url.toString(), { signal: signal });
+      const response = await fetch(url.toString(), { signal });
       // Clear timeout when response is received within the budget.
       clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new HttpRequestError('Failed to fetch data', response.status);
       }
-      return response.json() as Promise<T>;
+      return await response.json();
     } catch (error) {
       if (error.name === 'AbortError') {
         throw new HttpRequestError('Request timed out', 408, error);
