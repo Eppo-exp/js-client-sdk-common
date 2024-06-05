@@ -220,7 +220,7 @@ describe('EppoClient E2E test', () => {
         }[] = [];
 
         const typeAssignmentFunctions = {
-          [VariationType.BOOLEAN]: client.getBoolAssignment.bind(client),
+          [VariationType.BOOLEAN]: client.getBooleanAssignment.bind(client),
           [VariationType.NUMERIC]: client.getNumericAssignment.bind(client),
           [VariationType.INTEGER]: client.getIntegerAssignment.bind(client),
           [VariationType.STRING]: client.getStringAssignment.bind(client),
@@ -267,7 +267,7 @@ describe('EppoClient E2E test', () => {
         client.setIsGracefulFailureMode(false);
 
         const typeAssignmentFunctions = {
-          [VariationType.BOOLEAN]: client.getBoolAssignment.bind(client),
+          [VariationType.BOOLEAN]: client.getBooleanAssignment.bind(client),
           [VariationType.NUMERIC]: client.getNumericAssignment.bind(client),
           [VariationType.INTEGER]: client.getIntegerAssignment.bind(client),
           [VariationType.STRING]: client.getStringAssignment.bind(client),
