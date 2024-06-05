@@ -35,11 +35,12 @@ export interface IEppoClient {
   /**
    * Maps a subject to a variation for a given experiment.
    *
-   * @param subjectKey an identifier of the experiment subject, for example a user ID.
    * @param flagKey feature flag identifier
+   * @param subjectKey an identifier of the experiment subject, for example a user ID.
    * @param subjectAttributes optional attributes associated with the subject, for example name and email.
+   * @param defaultValue default value to return if the subject is not part of the experiment sample
    * The subject attributes are used for evaluating any targeting rules tied to the experiment.
-   * @returns a variation value if the subject is part of the experiment sample, otherwise null
+   * @returns a variation value if the subject is part of the experiment sample, otherwise the default value
    * @public
    */
   getStringAssignment(
@@ -49,6 +50,9 @@ export interface IEppoClient {
     defaultValue: string,
   ): string;
 
+  /**
+   * @deprecated use getBooleanAssignment instead.
+   */
   getBoolAssignment(
     flagKey: string,
     subjectKey: string,
@@ -56,6 +60,31 @@ export interface IEppoClient {
     defaultValue: boolean,
   ): boolean;
 
+  /**
+   * Maps a subject to a boolean variation for a given experiment.
+   *
+   * @param flagKey feature flag identifier
+   * @param subjectKey an identifier of the experiment subject, for example a user ID.
+   * @param subjectAttributes optional attributes associated with the subject, for example name and email.
+   * @param defaultValue default value to return if the subject is not part of the experiment sample
+   * @returns a boolean variation value if the subject is part of the experiment sample, otherwise the default value
+   */
+  getBooleanAssignment(
+    flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
+    defaultValue: boolean,
+  ): boolean;
+
+  /**
+   * Maps a subject to an Integer variation for a given experiment.
+   *
+   * @param flagKey feature flag identifier
+   * @param subjectKey an identifier of the experiment subject, for example a user ID.
+   * @param subjectAttributes optional attributes associated with the subject, for example name and email.
+   * @param defaultValue default value to return if the subject is not part of the experiment sample
+   * @returns a number variation value if the subject is part of the experiment sample, otherwise the default value
+   */
   getIntegerAssignment(
     flagKey: string,
     subjectKey: string,
@@ -63,6 +92,15 @@ export interface IEppoClient {
     defaultValue: number,
   ): number;
 
+  /**
+   * Maps a subject to a Numeric variation for a given experiment.
+   *
+   * @param flagKey feature flag identifier
+   * @param subjectKey an identifier of the experiment subject, for example a user ID.
+   * @param subjectAttributes optional attributes associated with the subject, for example name and email.
+   * @param defaultValue default value to return if the subject is not part of the experiment sample
+   * @returns a number variation value if the subject is part of the experiment sample, otherwise the default value
+   */
   getNumericAssignment(
     flagKey: string,
     subjectKey: string,
@@ -70,6 +108,15 @@ export interface IEppoClient {
     defaultValue: number,
   ): number;
 
+  /**
+   * Maps a subject to a JSON variation for a given experiment.
+   *
+   * @param flagKey feature flag identifier
+   * @param subjectKey an identifier of the experiment subject, for example a user ID.
+   * @param subjectAttributes optional attributes associated with the subject, for example name and email.
+   * @param defaultValue default value to return if the subject is not part of the experiment sample
+   * @returns a JSON object variation value if the subject is part of the experiment sample, otherwise the default value
+   */
   getJSONAssignment(
     flagKey: string,
     subjectKey: string,
@@ -228,6 +275,15 @@ export default class EppoClient implements IEppoClient {
   }
 
   public getBoolAssignment(
+    flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
+    defaultValue: boolean,
+  ): boolean {
+    return this.getBooleanAssignment(flagKey, subjectKey, subjectAttributes, defaultValue);
+  }
+
+  public getBooleanAssignment(
     flagKey: string,
     subjectKey: string,
     subjectAttributes: Record<string, AttributeType>,
