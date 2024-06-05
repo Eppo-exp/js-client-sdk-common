@@ -9,9 +9,9 @@ export interface AssignmentCacheKey {
 }
 
 export interface Cacheable {
-  get(key: string): string | undefined;
-  set(key: string, value: string): void;
-  has(key: string): boolean;
+  get(key: string): Promise<string | undefined>;
+  set(key: string, value: string): Promise<void>;
+  has(key: string): Promise<boolean>;
 }
 
 export abstract class AssignmentCache<T extends Cacheable> {
@@ -22,8 +22,9 @@ export abstract class AssignmentCache<T extends Cacheable> {
     this.cache = cacheInstance;
   }
 
-  hasLoggedAssignment(key: AssignmentCacheKey): boolean {
+  async hasLoggedAssignment(key: AssignmentCacheKey): Promise<boolean> {
     // no cache key present
+
     if (!this.cache.has(this.getCacheKey(key))) {
       return false;
     }
@@ -31,15 +32,16 @@ export abstract class AssignmentCache<T extends Cacheable> {
     // the subject has been assigned to a different variation
     // than was previously logged.
     // in this case we need to log the assignment again.
-    if (this.cache.get(this.getCacheKey(key)) !== getMD5Hash(key.variationKey)) {
+    const cachedValue = await this.cache.get(this.getCacheKey(key));
+    if (cachedValue !== getMD5Hash(key.variationKey)) {
       return false;
     }
 
     return true;
   }
 
-  setLastLoggedAssignment(key: AssignmentCacheKey): void {
-    this.cache.set(this.getCacheKey(key), getMD5Hash(key.variationKey));
+  async setLastLoggedAssignment(key: AssignmentCacheKey): Promise<void> {
+    await this.cache.set(this.getCacheKey(key), getMD5Hash(key.variationKey));
   }
 
   protected getCacheKey({ subjectKey, flagKey, allocationKey }: AssignmentCacheKey): string {
@@ -53,9 +55,29 @@ export abstract class AssignmentCache<T extends Cacheable> {
  * The primary use case is for client-side SDKs, where the cache is only used
  * for a single user.
  */
-export class NonExpiringInMemoryAssignmentCache extends AssignmentCache<Map<string, string>> {
+
+export class AsyncMap implements Cacheable {
+  private map: Map<string, string>;
+
   constructor() {
-    super(new Map<string, string>());
+    this.map = new Map<string, string>();
+  }
+
+  async get(key: string): Promise<string | undefined> {
+    return this.map.get(key);
+  }
+
+  async set(key: string, value: string): Promise<void> {
+    this.map.set(key, value);
+  }
+
+  async has(key: string): Promise<boolean> {
+    return this.map.has(key);
+  }
+}
+export class NonExpiringInMemoryAssignmentCache extends AssignmentCache<AsyncMap> {
+  constructor() {
+    super(new AsyncMap());
   }
 }
 
@@ -68,8 +90,27 @@ export class NonExpiringInMemoryAssignmentCache extends AssignmentCache<Map<stri
  * multiple users. In this case, the cache size should be set to the maximum number
  * of users that can be active at the same time.
  */
-export class LRUInMemoryAssignmentCache extends AssignmentCache<LRUCache> {
+export class AsyncLRUCache implements Cacheable {
+  private cache: LRUCache;
+
   constructor(maxSize: number) {
-    super(new LRUCache(maxSize));
+    this.cache = new LRUCache(maxSize);
+  }
+
+  async get(key: string): Promise<string | undefined> {
+    return this.cache.get(key);
+  }
+
+  async set(key: string, value: string): Promise<void> {
+    this.cache.set(key, value);
+  }
+
+  async has(key: string): Promise<boolean> {
+    return this.cache.has(key);
+  }
+}
+export class LRUInMemoryAssignmentCache extends AssignmentCache<AsyncLRUCache> {
+  constructor(maxSize: number) {
+    super(new AsyncLRUCache(maxSize));
   }
 }

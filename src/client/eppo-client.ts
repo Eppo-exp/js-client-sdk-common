@@ -387,6 +387,9 @@ export default class EppoClient implements IEppoClient {
 
     try {
       if (result?.doLog) {
+        // this function is async but the getAssignmentDetail function is not
+        // we cannot await so we execute it in a "fire and forget" manner.
+        // todo: how do we test this?
         this.logAssignment(result);
       }
     } catch (error) {
@@ -464,7 +467,7 @@ export default class EppoClient implements IEppoClient {
     }
   }
 
-  private logAssignment(result: FlagEvaluation) {
+  private async logAssignment(result: FlagEvaluation): Promise<void> {
     const event: IAssignmentEvent = {
       ...(result.extraLogging ?? {}),
       allocation: result.allocationKey ?? null,
@@ -481,17 +484,16 @@ export default class EppoClient implements IEppoClient {
       },
     };
 
-    if (
-      result.variation &&
-      result.allocationKey &&
-      this.assignmentCache?.hasLoggedAssignment({
+    if (result.variation && result.allocationKey) {
+      const hasLoggedAssignment = await this.assignmentCache?.hasLoggedAssignment({
         flagKey: result.flagKey,
         subjectKey: result.subjectKey,
         allocationKey: result.allocationKey,
         variationKey: result.variation.key,
-      })
-    ) {
-      return;
+      });
+      if (hasLoggedAssignment) {
+        return;
+      }
     }
 
     // assignment logger may be null while waiting for initialization
