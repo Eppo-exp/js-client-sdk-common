@@ -1,3 +1,4 @@
+import ApiEndpoints from './api-endpoints';
 import { logger } from './application-logger';
 import {
   Cacheable,
@@ -28,6 +29,7 @@ export {
   IAssignmentLogger,
   IAssignmentEvent,
   EppoClient,
+  ApiEndpoints,
   IEppoClient,
   constants,
   FlagConfigRequestor,
