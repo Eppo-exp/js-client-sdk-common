@@ -233,7 +233,6 @@ describe('EppoClient E2E test', () => {
         assignments = getTestAssignments(
           { flag, variationType, defaultValue, subjects },
           assignmentFn,
-          false,
         );
 
         validateTestAssignments(assignments, flag);
@@ -280,7 +279,6 @@ describe('EppoClient E2E test', () => {
         const assignments = getTestAssignments(
           { flag, variationType, defaultValue, subjects },
           assignmentFn,
-          true,
         );
 
         validateTestAssignments(assignments, flag);

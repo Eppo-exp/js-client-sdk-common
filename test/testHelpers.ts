@@ -8,14 +8,6 @@ export const ASSIGNMENT_TEST_DATA_DIR = TEST_DATA_DIR + 'tests/';
 const MOCK_UFC_FILENAME = 'flags-v1';
 export const MOCK_UFC_RESPONSE_FILE = `${MOCK_UFC_FILENAME}.json`;
 export const OBFUSCATED_MOCK_UFC_RESPONSE_FILE = `${MOCK_UFC_FILENAME}-obfuscated.json`;
-
-export enum ValueTestType {
-  BoolType = 'boolean',
-  NumericType = 'numeric',
-  StringType = 'string',
-  JSONType = 'json',
-}
-
 export interface SubjectTestCase {
   subjectKey: string;
   subjectAttributes: Record<string, AttributeType>;
@@ -36,20 +28,19 @@ export function readMockUFCResponse(filename: string): {
 }
 
 export function readAssignmentTestData(): IAssignmentTestCase[] {
-  const testCaseData: IAssignmentTestCase[] = [];
-  const testCaseFiles = fs.readdirSync(ASSIGNMENT_TEST_DATA_DIR);
-  testCaseFiles.forEach((file) => {
-    const testCase = JSON.parse(fs.readFileSync(ASSIGNMENT_TEST_DATA_DIR + file, 'utf8'));
-    testCaseData.push(testCase);
-  });
-  return testCaseData;
+  return fs
+    .readdirSync(ASSIGNMENT_TEST_DATA_DIR)
+    .map((file) => JSON.parse(fs.readFileSync(ASSIGNMENT_TEST_DATA_DIR + file, 'utf8')));
 }
 
 export function getTestAssignments(
   testCase: IAssignmentTestCase,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  assignmentFn: any,
-  obfuscated = false,
+  assignmentFn: (
+    flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
+    defaultValue: string | number | boolean | object,
+  ) => never,
 ): { subject: SubjectTestCase; assignment: string | boolean | number | null | object }[] {
   const assignments: {
     subject: SubjectTestCase;
@@ -61,9 +52,8 @@ export function getTestAssignments(
       subject.subjectKey,
       subject.subjectAttributes,
       testCase.defaultValue,
-      obfuscated,
     );
-    assignments.push({ subject: subject, assignment: assignment });
+    assignments.push({ subject, assignment });
   }
   return assignments;
 }
