@@ -40,7 +40,9 @@
   "homepage": "https://github.com/Eppo-exp/js-client-sdk-common#readme",
   "devDependencies": {
     "@types/jest": "^29.5.11",
+    "@types/js-base64": "^3.3.1",
     "@types/md5": "^2.3.2",
+    "@types/react-native-base64": "^0.2.2",
     "@types/semver": "^7.5.6",
     "@typescript-eslint/eslint-plugin": "^5.13.0",
     "@typescript-eslint/parser": "^5.13.0",
@@ -63,9 +65,9 @@
     "webpack-cli": "^4.10.0"
   },
   "dependencies": {
+    "js-base64": "^3.7.7",
     "md5": "^2.3.0",
     "pino": "^8.19.0",
-    "semver": "^7.5.4",
-    "universal-base64": "^2.1.0"
+    "semver": "^7.5.4"
   }
 }
