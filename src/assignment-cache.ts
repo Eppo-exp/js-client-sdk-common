@@ -18,14 +18,14 @@ export abstract class AssignmentCache<T extends Cacheable> {
   // key -> variation value hash
   protected cache: T;
 
-  constructor(cacheInstance: T) {
+  protected constructor(cacheInstance: T) {
     this.cache = cacheInstance;
   }
 
   async hasLoggedAssignment(key: AssignmentCacheKey): Promise<boolean> {
     // no cache key present
 
-    if (!this.cache.has(this.getCacheKey(key))) {
+    if (!(await this.cache.has(this.getCacheKey(key)))) {
       return false;
     }
 
@@ -33,11 +33,7 @@ export abstract class AssignmentCache<T extends Cacheable> {
     // than was previously logged.
     // in this case we need to log the assignment again.
     const cachedValue = await this.cache.get(this.getCacheKey(key));
-    if (cachedValue !== getMD5Hash(key.variationKey)) {
-      return false;
-    }
-
-    return true;
+    return cachedValue === getMD5Hash(key.variationKey);
   }
 
   async setLastLoggedAssignment(key: AssignmentCacheKey): Promise<void> {

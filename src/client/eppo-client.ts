@@ -467,7 +467,7 @@ export default class EppoClient implements IEppoClient {
     }
   }
 
-  private async logAssignment(result: FlagEvaluation): Promise<void> {
+  private async logAssignment(result: FlagEvaluation) {
     const event: IAssignmentEvent = {
       ...(result.extraLogging ?? {}),
       allocation: result.allocationKey ?? null,

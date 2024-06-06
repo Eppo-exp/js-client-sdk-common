@@ -1,4 +1,5 @@
 import * as td from 'testdouble';
+import waitForExpect from 'wait-for-expect';
 
 import {
   IAssignmentTestCase,
@@ -143,17 +144,19 @@ describe('EppoClient E2E test', () => {
       storage.setEntries({ [flagKey]: mockFlag });
     });
 
-    it('Invokes logger for queued events', () => {
+    it('Invokes logger for queued events', async () => {
       const mockLogger = td.object<IAssignmentLogger>();
 
       const client = new EppoClient(storage);
       client.getStringAssignment(flagKey, 'subject-to-be-logged', {}, 'default-value');
       client.setLogger(mockLogger);
 
-      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
-      expect(td.explain(mockLogger.logAssignment).calls[0].args[0].subject).toEqual(
-        'subject-to-be-logged',
-      );
+      await waitForExpect(async () => {
+        expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
+        expect(td.explain(mockLogger.logAssignment).calls[0].args[0].subject).toEqual(
+          'subject-to-be-logged',
+        );
+      });
     });
 
     it('Does not log same queued event twice', () => {
