@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
 const path = require('path');
 
 const TerserPlugin = require('terser-webpack-plugin');
@@ -5,7 +6,7 @@ const TerserPlugin = require('terser-webpack-plugin');
 module.exports = {
   entry: './src/index.ts',
   mode: 'production',
-  devtool: 'inline-source-map',
+  devtool: 'source-map',
   target: 'web',
   module: {
     rules: [
