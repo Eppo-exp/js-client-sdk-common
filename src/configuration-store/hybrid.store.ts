@@ -3,13 +3,10 @@ import { logger, loggerPrefix } from '../application-logger';
 import { IAsyncStore, IConfigurationStore, ISyncStore } from './configuration-store';
 
 export class HybridConfigurationStore<T> implements IConfigurationStore<T> {
-  servingStore: ISyncStore<T>;
-  persistentStore: IAsyncStore<T> | null;
-
-  constructor(servingStore: ISyncStore<T>, persistentStore: IAsyncStore<T> | null) {
-    this.servingStore = servingStore;
-    this.persistentStore = persistentStore;
-  }
+  constructor(
+    private readonly servingStore: ISyncStore<T>,
+    private readonly persistentStore: IAsyncStore<T> | null,
+  ) {}
 
   /**
    * Initialize the configuration store by loading the entries from the persistent store into the serving store.
@@ -41,8 +38,8 @@ export class HybridConfigurationStore<T> implements IConfigurationStore<T> {
   }
 
   public async isExpired(): Promise<boolean> {
-    const isExpired = (await this.persistentStore?.isExpired()) ?? true;
-    return isExpired;
+    const isExpired = await this.persistentStore?.isExpired();
+    return isExpired ?? true;
   }
 
   public get(key: string): T | null {
@@ -57,10 +54,8 @@ export class HybridConfigurationStore<T> implements IConfigurationStore<T> {
   }
 
   public async setEntries(entries: Record<string, T>): Promise<void> {
-    if (this.persistentStore) {
-      // Persistence store is now initialized and should mark itself accordingly.
-      await this.persistentStore.setEntries(entries);
-    }
+    // Persistence store is now initialized and should mark itself accordingly.
+    await this.persistentStore?.setEntries(entries);
     this.servingStore.setEntries(entries);
   }
 }
