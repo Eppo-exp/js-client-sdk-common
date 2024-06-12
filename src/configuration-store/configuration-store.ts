@@ -21,6 +21,9 @@
  * implementation specific and handled upstream.
  */
 export interface IConfigurationStore<T> {
+  servingStore: ISyncStore<T>;
+  persistentStore: IAsyncStore<T> | null;
+
   init(): Promise<void>;
   get(key: string): T | null;
   getKeys(): string[];
