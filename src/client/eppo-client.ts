@@ -1,12 +1,11 @@
 import ApiEndpoints from '../api-endpoints';
 import { logger } from '../application-logger';
+import { IAssignmentEvent, IAssignmentLogger } from '../assignment-logger';
 import {
   AssignmentCache,
-  Cacheable,
   LRUInMemoryAssignmentCache,
   NonExpiringInMemoryAssignmentCache,
-} from '../assignment-cache';
-import { IAssignmentEvent, IAssignmentLogger } from '../assignment-logger';
+} from '../cache/assignment-cache';
 import { IConfigurationStore } from '../configuration-store/configuration-store';
 import {
   BASE_URL as DEFAULT_BASE_URL,
@@ -129,7 +128,7 @@ export interface IEppoClient {
 
   useLRUInMemoryAssignmentCache(maxSize: number): void;
 
-  useCustomAssignmentCache(cache: AssignmentCache<Cacheable>): void;
+  useCustomAssignmentCache(cache: AssignmentCache): void;
 
   setConfigurationRequestParameters(
     configurationRequestParameters: FlagConfigurationRequestParameters,
@@ -164,23 +163,17 @@ export type FlagConfigurationRequestParameters = {
 
 export default class EppoClient implements IEppoClient {
   private queuedEvents: IAssignmentEvent[] = [];
-  private assignmentLogger: IAssignmentLogger | undefined;
+  private assignmentLogger?: IAssignmentLogger;
   private isGracefulFailureMode = true;
-  private assignmentCache: AssignmentCache<Cacheable> | undefined;
-  private configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>;
-  private configurationRequestParameters: FlagConfigurationRequestParameters | undefined;
-  private requestPoller: IPoller | undefined;
-  private evaluator: Evaluator;
+  private assignmentCache?: AssignmentCache;
+  private requestPoller?: IPoller;
+  private evaluator = new Evaluator();
 
   constructor(
-    configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>,
-    configurationRequestParameters?: FlagConfigurationRequestParameters,
+    private configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>,
+    private configurationRequestParameters?: FlagConfigurationRequestParameters,
     private readonly isObfuscated = false,
-  ) {
-    this.evaluator = new Evaluator();
-    this.configurationStore = configurationStore;
-    this.configurationRequestParameters = configurationRequestParameters;
-  }
+  ) {}
 
   public setConfigurationRequestParameters(
     configurationRequestParameters: FlagConfigurationRequestParameters,
@@ -496,7 +489,7 @@ export default class EppoClient implements IEppoClient {
     this.assignmentCache = new LRUInMemoryAssignmentCache(maxSize);
   }
 
-  public useCustomAssignmentCache(cache: AssignmentCache<Cacheable>) {
+  public useCustomAssignmentCache(cache: AssignmentCache) {
     this.assignmentCache = cache;
   }
 
@@ -517,15 +510,16 @@ export default class EppoClient implements IEppoClient {
   }
 
   private logAssignment(result: FlagEvaluation) {
+    const { flagKey, subjectKey, allocationKey, subjectAttributes, variation } = result;
     const event: IAssignmentEvent = {
       ...(result.extraLogging ?? {}),
-      allocation: result.allocationKey ?? null,
-      experiment: result.allocationKey ? `${result.flagKey}-${result.allocationKey}` : null,
-      featureFlag: result.flagKey,
-      variation: result.variation?.key ?? null,
-      subject: result.subjectKey,
+      allocation: allocationKey ?? null,
+      experiment: allocationKey ? `${flagKey}-${allocationKey}` : null,
+      featureFlag: flagKey,
+      variation: variation?.key ?? null,
+      subject: subjectKey,
       timestamp: new Date().toISOString(),
-      subjectAttributes: result.subjectAttributes,
+      subjectAttributes,
       metaData: {
         obfuscated: this.isObfuscated,
         sdkLanguage: 'javascript',
@@ -533,17 +527,16 @@ export default class EppoClient implements IEppoClient {
       },
     };
 
-    if (
-      result.variation &&
-      result.allocationKey &&
-      this.assignmentCache?.hasLoggedAssignment({
-        flagKey: result.flagKey,
-        subjectKey: result.subjectKey,
-        allocationKey: result.allocationKey,
-        variationKey: result.variation.key,
-      })
-    ) {
-      return;
+    if (variation && allocationKey) {
+      const hasLoggedAssignment = this.assignmentCache?.has({
+        flagKey,
+        subjectKey,
+        allocationKey,
+        variationKey: variation.key,
+      });
+      if (hasLoggedAssignment) {
+        return;
+      }
     }
 
     // assignment logger may be null while waiting for initialization
@@ -553,8 +546,8 @@ export default class EppoClient implements IEppoClient {
     }
     try {
       this.assignmentLogger.logAssignment(event);
-      this.assignmentCache?.setLastLoggedAssignment({
-        flagKey: result.flagKey,
+      this.assignmentCache?.set({
+        flagKey: flagKey,
         subjectKey: result.subjectKey,
         allocationKey: result.allocationKey ?? '__eppo_no_allocation',
         variationKey: result.variation?.key ?? '__eppo_no_variation',

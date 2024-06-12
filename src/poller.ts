@@ -4,6 +4,7 @@ import {
   DEFAULT_POLL_CONFIG_REQUEST_RETRIES,
   POLL_JITTER_PCT,
 } from './constants';
+import { waitForMs } from './util';
 
 export interface IPoller {
   start: () => Promise<void>;
@@ -57,7 +58,7 @@ export default function initPoller(
           logger.warn(
             `Eppo SDK will retry the initial poll again in ${jitterMs} ms (${startAttemptsRemaining} attempts remaining)`,
           );
-          await new Promise((resolve) => setTimeout(resolve, jitterMs));
+          await waitForMs(jitterMs);
         } else {
           if (options?.pollAfterFailedStart) {
             logger.warn('Eppo SDK initial poll failed; will attempt regular polling');

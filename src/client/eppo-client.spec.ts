@@ -1,3 +1,4 @@
+import { times } from 'lodash';
 import * as td from 'testdouble';
 
 import {
@@ -165,19 +166,17 @@ describe('EppoClient E2E test', () => {
       client.getStringAssignment(flagKey, 'subject-to-be-logged', {}, 'default-value');
       client.setLogger(mockLogger);
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
-
       client.setLogger(mockLogger);
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
     });
 
     it('Does not invoke logger for events that exceed queue size', () => {
       const mockLogger = td.object<IAssignmentLogger>();
-
       const client = new EppoClient(storage);
 
-      for (let i = 0; i < MAX_EVENT_QUEUE_SIZE + 100; i++) {
-        client.getStringAssignment(flagKey, `subject-to-be-logged-${i}`, {}, 'default-value');
-      }
+      times(MAX_EVENT_QUEUE_SIZE + 100, (i) =>
+        client.getStringAssignment(flagKey, `subject-to-be-logged-${i}`, {}, 'default-value'),
+      );
       client.setLogger(mockLogger);
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(MAX_EVENT_QUEUE_SIZE);
     });
@@ -364,7 +363,7 @@ describe('EppoClient E2E test', () => {
       client.setLogger(mockLogger);
     });
 
-    it('logs duplicate assignments without an assignment cache', () => {
+    it('logs duplicate assignments without an assignment cache', async () => {
       client.disableAssignmentCache();
 
       client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
@@ -374,12 +373,10 @@ describe('EppoClient E2E test', () => {
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(2);
     });
 
-    it('does not log duplicate assignments', () => {
+    it('does not log duplicate assignments', async () => {
       client.useNonExpiringInMemoryAssignmentCache();
-
       client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
       client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
-
       // call count should be 1 because the second call is a cache hit and not logged.
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
     });
@@ -415,8 +412,8 @@ describe('EppoClient E2E test', () => {
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(2);
     });
 
-    it('logs for each unique flag', () => {
-      storage.setEntries({
+    it('logs for each unique flag', async () => {
+      await storage.setEntries({
         [flagKey]: mockFlag,
         'flag-2': {
           ...mockFlag,

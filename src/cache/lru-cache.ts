@@ -6,13 +6,44 @@
  * The cache is implemented as a Map, which is a built-in JavaScript object.
  * The Map object holds key-value pairs and remembers the order of key-value pairs as they were inserted.
  */
-export class LRUCache {
-  private capacity: number;
-  private cache: Map<string, string>;
+export class LRUCache implements Map<string, string> {
+  private readonly cache = new Map<string, string>();
+  [Symbol.toStringTag]: string;
 
-  constructor(capacity: number) {
-    this.capacity = capacity;
-    this.cache = new Map<string, string>();
+  constructor(private readonly capacity: number) {}
+
+  [Symbol.iterator](): IterableIterator<[string, string]> {
+    return this.cache[Symbol.iterator]();
+  }
+
+  forEach(
+    callbackFn: (value: string, key: string, map: Map<string, string>) => void,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    thisArg?: any,
+  ): void {
+    this.cache.forEach(callbackFn, thisArg);
+  }
+
+  readonly size: number = this.cache.size;
+
+  entries(): IterableIterator<[string, string]> {
+    return this.cache.entries();
+  }
+
+  clear() {
+    this.cache.clear();
+  }
+
+  delete(key: string): boolean {
+    return this.cache.delete(key);
+  }
+
+  keys(): IterableIterator<string> {
+    return this.cache.keys();
+  }
+
+  values(): IterableIterator<string> {
+    return this.cache.values();
   }
 
   has(key: string): boolean {
@@ -20,7 +51,7 @@ export class LRUCache {
   }
 
   get(key: string): string | undefined {
-    if (!this.cache.has(key)) {
+    if (!this.has(key)) {
       return undefined;
     }
 
@@ -32,16 +63,16 @@ export class LRUCache {
       // This is crucial for maintaining the correct order of elements in the cache,
       // which directly impacts which item is considered the least recently used (LRU) and
       // thus eligible for eviction when the cache reaches its capacity.
-      this.cache.delete(key);
+      this.delete(key);
       this.cache.set(key, value);
     }
 
     return value;
   }
 
-  set(key: string, value: string): void {
+  set(key: string, value: string): this {
     if (this.capacity === 0) {
-      return;
+      return this;
     }
 
     if (this.cache.has(key)) {
@@ -52,9 +83,10 @@ export class LRUCache {
       // Therefore, the first key represents the oldest entry, which is the least recently used item in our cache.
       // We use Map.prototype.keys().next().value to obtain this oldest key and then delete it from the cache.
       const oldestKey = this.cache.keys().next().value;
-      this.cache.delete(oldestKey);
+      this.delete(oldestKey);
     }
 
     this.cache.set(key, value);
+    return this;
   }
 }
