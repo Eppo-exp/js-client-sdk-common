@@ -104,19 +104,19 @@ describe('EppoClient E2E test', () => {
     it('returns default value when graceful failure if error encountered', async () => {
       client.setIsGracefulFailureMode(true);
 
-      expect(client.getBoolAssignment(flagKey, 'subject-identifer', {}, true)).toBe(true);
-      expect(client.getBoolAssignment(flagKey, 'subject-identifer', {}, false)).toBe(false);
-      expect(client.getBooleanAssignment(flagKey, 'subject-identifer', {}, true)).toBe(true);
-      expect(client.getBooleanAssignment(flagKey, 'subject-identifer', {}, false)).toBe(false);
-      expect(client.getNumericAssignment(flagKey, 'subject-identifer', {}, 1)).toBe(1);
-      expect(client.getNumericAssignment(flagKey, 'subject-identifer', {}, 0)).toBe(0);
-      expect(client.getJSONAssignment(flagKey, 'subject-identifer', {}, {})).toEqual({});
+      expect(client.getBoolAssignment(flagKey, 'subject-identifier', {}, true)).toBe(true);
+      expect(client.getBoolAssignment(flagKey, 'subject-identifier', {}, false)).toBe(false);
+      expect(client.getBooleanAssignment(flagKey, 'subject-identifier', {}, true)).toBe(true);
+      expect(client.getBooleanAssignment(flagKey, 'subject-identifier', {}, false)).toBe(false);
+      expect(client.getNumericAssignment(flagKey, 'subject-identifier', {}, 1)).toBe(1);
+      expect(client.getNumericAssignment(flagKey, 'subject-identifier', {}, 0)).toBe(0);
+      expect(client.getJSONAssignment(flagKey, 'subject-identifier', {}, {})).toEqual({});
       expect(
-        client.getJSONAssignment(flagKey, 'subject-identifer', {}, { hello: 'world' }),
+        client.getJSONAssignment(flagKey, 'subject-identifier', {}, { hello: 'world' }),
       ).toEqual({
         hello: 'world',
       });
-      expect(client.getStringAssignment(flagKey, 'subject-identifer', {}, 'default')).toBe(
+      expect(client.getStringAssignment(flagKey, 'subject-identifier', {}, 'default')).toBe(
         'default',
       );
     });
@@ -125,20 +125,20 @@ describe('EppoClient E2E test', () => {
       client.setIsGracefulFailureMode(false);
 
       expect(() => {
-        client.getBoolAssignment(flagKey, 'subject-identifer', {}, true);
-        client.getBooleanAssignment(flagKey, 'subject-identifer', {}, true);
+        client.getBoolAssignment(flagKey, 'subject-identifier', {}, true);
+        client.getBooleanAssignment(flagKey, 'subject-identifier', {}, true);
       }).toThrow();
 
       expect(() => {
-        client.getJSONAssignment(flagKey, 'subject-identifer', {}, {});
+        client.getJSONAssignment(flagKey, 'subject-identifier', {}, {});
       }).toThrow();
 
       expect(() => {
-        client.getNumericAssignment(flagKey, 'subject-identifer', {}, 1);
+        client.getNumericAssignment(flagKey, 'subject-identifier', {}, 1);
       }).toThrow();
 
       expect(() => {
-        client.getStringAssignment(flagKey, 'subject-identifer', {}, 'default');
+        client.getStringAssignment(flagKey, 'subject-identifier', {}, 'default');
       }).toThrow();
     });
   });
@@ -303,11 +303,11 @@ describe('EppoClient E2E test', () => {
 
     const nonExistentFlag = 'non-existent-flag';
 
-    expect(client.getBoolAssignment(nonExistentFlag, 'subject-identifer', {}, true)).toBe(true);
-    expect(client.getBooleanAssignment(nonExistentFlag, 'subject-identifer', {}, true)).toBe(true);
-    expect(client.getNumericAssignment(nonExistentFlag, 'subject-identifer', {}, 1)).toBe(1);
-    expect(client.getJSONAssignment(nonExistentFlag, 'subject-identifer', {}, {})).toEqual({});
-    expect(client.getStringAssignment(nonExistentFlag, 'subject-identifer', {}, 'default')).toBe(
+    expect(client.getBoolAssignment(nonExistentFlag, 'subject-identifier', {}, true)).toBe(true);
+    expect(client.getBooleanAssignment(nonExistentFlag, 'subject-identifier', {}, true)).toBe(true);
+    expect(client.getNumericAssignment(nonExistentFlag, 'subject-identifier', {}, 1)).toBe(1);
+    expect(client.getJSONAssignment(nonExistentFlag, 'subject-identifier', {}, {})).toEqual({});
+    expect(client.getStringAssignment(nonExistentFlag, 'subject-identifier', {}, 'default')).toBe(
       'default',
     );
   });
