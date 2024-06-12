@@ -63,8 +63,8 @@ export default class FetchHttpClient implements IHttpClient {
       // Clear timeout when response is received within the budget.
       clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        throw new HttpRequestError('Failed to fetch data', response.status);
+      if (!response?.ok) {
+        throw new HttpRequestError('Failed to fetch data', response?.status);
       }
       return await response.json();
     } catch (error) {
