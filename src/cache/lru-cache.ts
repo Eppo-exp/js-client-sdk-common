@@ -24,7 +24,7 @@ export class LRUCache implements Map<string, string> {
     this.cache.forEach(callbackFn, thisArg);
   }
 
-  size: number;
+  readonly size: number = this.cache.size;
 
   entries(): IterableIterator<[string, string]> {
     return this.cache.entries();
