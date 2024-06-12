@@ -23,7 +23,7 @@ export class MemoryStore<T> implements ISyncStore<T> {
 }
 
 export class MemoryOnlyConfigurationStore<T> implements IConfigurationStore<T> {
-  private readonly servingStore: ISyncStore<T>;
+  private readonly servingStore: ISyncStore<T> = new MemoryStore<T>();
   private initialized = false;
 
   init(): Promise<void> {
