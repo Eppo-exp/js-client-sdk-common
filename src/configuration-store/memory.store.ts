@@ -1,4 +1,4 @@
-import { IAsyncStore, IConfigurationStore, ISyncStore } from './configuration-store';
+import { IConfigurationStore, ISyncStore } from './configuration-store';
 
 export class MemoryStore<T> implements ISyncStore<T> {
   private store: Record<string, T> = {};
@@ -23,15 +23,8 @@ export class MemoryStore<T> implements ISyncStore<T> {
 }
 
 export class MemoryOnlyConfigurationStore<T> implements IConfigurationStore<T> {
-  servingStore: ISyncStore<T>;
-  persistentStore: IAsyncStore<T> | null;
-  private initialized: boolean;
-
-  constructor() {
-    this.servingStore = new MemoryStore<T>();
-    this.persistentStore = null;
-    this.initialized = false;
-  }
+  private readonly servingStore: ISyncStore<T> = new MemoryStore<T>();
+  private initialized = false;
 
   init(): Promise<void> {
     this.initialized = true;
