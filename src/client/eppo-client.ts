@@ -514,7 +514,7 @@ export default class EppoClient implements IEppoClient {
     const event: IAssignmentEvent = {
       ...(result.extraLogging ?? {}),
       allocation: allocationKey ?? null,
-      experiment: allocationKey ? `${result.flagKey}-${allocationKey}` : null,
+      experiment: allocationKey ? `${flagKey}-${allocationKey}` : null,
       featureFlag: flagKey,
       variation: variation?.key ?? null,
       subject: subjectKey,
