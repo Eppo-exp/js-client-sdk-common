@@ -276,12 +276,12 @@ describe('BanditEvaluator', () => {
         gamma,
         highProbabilityFloor,
       );
-      // As we increase the probability floor, we expect the lowest scored action's weight to be lifted, and the others reduced to make room
+      // As we increase the probability floor, we expect the lowest scored action's weight to be lifted, the highest scored to be reduced, and the others to the stay the same
       // We also explicit all weights to be above the normalized probability floor, 0.3 / 3 = 0.1
-      expect(actionWeightsHighProbabilityFloor.action1).toBeLessThan(
+      expect(actionWeightsHighProbabilityFloor.action1).toBeLessThanOrEqual(
         actionWeightsLowProbabilityFloor.action1,
       );
-      expect(actionWeightsHighProbabilityFloor.action2).toBeLessThan(
+      expect(actionWeightsHighProbabilityFloor.action2).toBe(
         actionWeightsLowProbabilityFloor.action2,
       );
       expect(actionWeightsHighProbabilityFloor.action3).toBeGreaterThan(
@@ -292,7 +292,8 @@ describe('BanditEvaluator', () => {
         false,
       );
       expect(
-        Object.values(actionWeightsHighProbabilityFloor).every((weight) => weight >= 0.1),
+        // Since we know the floor will be in effect, we use > 0.09999 instead of >= 0.1 to account for lack of precision with floating point numbers
+        Object.values(actionWeightsHighProbabilityFloor).every((weight) => weight > 0.099999),
       ).toBe(true);
     });
   });

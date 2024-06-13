@@ -123,10 +123,48 @@ export class BanditEvaluator {
     actionProbabilityFloor: number,
   ) {
     const actionWeights: Record<string, number> = {};
-    Object.entries(actionScores).forEach(([actionKey, actionScore]) => {
-      const weight = 0; // TODO: math
-      actionWeights[actionKey] = weight;
+    const actionScoreEntries = Object.entries(actionScores);
+
+    if (!actionScoreEntries.length) {
+      return actionWeights;
+    }
+
+    // First find the action with the highest score
+    let currTopScore: number | null = null;
+    let currTopAction: string | null = null;
+    actionScoreEntries.forEach(([actionKey, actionScore]) => {
+      if (currTopScore === null || actionScore > currTopScore) {
+        currTopScore = actionScore;
+        currTopAction = actionKey;
+      }
     });
+
+    if (currTopScore === null || currTopAction === null) {
+      // Appease typescript with this check and extra variables
+      throw new Error('Unable to find top score');
+    }
+    const topScore: number = currTopScore;
+    const topAction: string = currTopAction;
+
+    // Then weigh every action but the top one
+    const numActions = actionScoreEntries.length;
+    const minimumWeight = actionProbabilityFloor / numActions;
+    let cumulativeWeight = 0;
+
+    actionScoreEntries.forEach(([actionKey, actionScore]) => {
+      if (actionKey === topAction) {
+        // We weigh the top action later
+        return;
+      }
+      const weight = 1 / (numActions + gamma * (topScore - actionScore));
+      const boundedWeight = Math.max(weight, minimumWeight);
+      cumulativeWeight += boundedWeight;
+      actionWeights[actionKey] = boundedWeight;
+    });
+
+    // Finally weigh the top action (defensively bounding to 0.0)
+    actionWeights[topAction] = Math.max(1 - cumulativeWeight, 0.0);
+
     return actionWeights;
   }
 
@@ -135,6 +173,6 @@ export class BanditEvaluator {
     subjectKey: string,
     actionWeights: Record<string, number>,
   ): string {
-    return Object.keys(actionWeights)[0]; // TODO: math
+    return Object.keys(actionWeights)[0]; // TODO: math and stuff
   }
 }
