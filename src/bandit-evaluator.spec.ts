@@ -11,11 +11,6 @@ describe('BanditEvaluator', () => {
 
   // We don't want these methods part of the public interface, however it's handy to be able to test them individually
   const exposedEvaluator = banditEvaluator as unknown as {
-    scoreActions: (
-      subjectAttributes: Attributes,
-      actions: Record<string, Attributes>,
-      banditModel: Pick<BanditModelData, 'coefficients' | 'defaultActionScore'>,
-    ) => Record<string, number>;
     scoreNumericAttributes: (
       coefficients: BanditNumericAttributeCoefficients[],
       attributes: Attributes,
@@ -24,6 +19,16 @@ describe('BanditEvaluator', () => {
       coefficients: BanditCategoricalAttributeCoefficients[],
       attributes: Attributes,
     ) => number;
+    scoreActions: (
+      subjectAttributes: Attributes,
+      actions: Record<string, Attributes>,
+      banditModel: Pick<BanditModelData, 'coefficients' | 'defaultActionScore'>,
+    ) => Record<string, number>;
+    weighActions: (
+      actionScores: Record<string, number>,
+      gamma: number,
+      actionProbabilityFloor: number,
+    ) => Record<string, number>;
   };
 
   describe('scoreNumericAttributes', () => {
@@ -208,6 +213,87 @@ describe('BanditEvaluator', () => {
       expect(actionScores.action1).toBe(0.5 + 30 * 0.1 + 0.2 + 25 * 0.05 + 0.3);
       expect(actionScores.action2).toBe(0.3 + 30 * 0.2 + 0.6 + -0.1 * 50 + 0.4);
       expect(actionScores.action99).toBe(1.23); // Default score
+    });
+  });
+
+  describe('weighActions', () => {
+    it('handles no actions', () => {
+      const actionWeights = exposedEvaluator.weighActions({}, 1, 0.1);
+      expect(actionWeights).toStrictEqual({});
+    });
+
+    it('weights a single action at 100%', () => {
+      const scoredActions = { action: 1.23 };
+      const actionWeights = exposedEvaluator.weighActions(scoredActions, 1, 0.1);
+      expect(actionWeights).toStrictEqual({
+        action: 1.0,
+      });
+    });
+
+    it('weighs multiple actions with the same scores', () => {
+      const scoredActions = { action1: 5, action2: 5, action3: 5 };
+      const actionWeights = exposedEvaluator.weighActions(scoredActions, 1, 0.1);
+      expect(Object.keys(actionWeights)).toHaveLength(3);
+      expect(actionWeights.action1).toBeCloseTo(0.33333);
+      expect(actionWeights.action2).toBeCloseTo(0.33333);
+      expect(actionWeights.action3).toBeCloseTo(0.33333);
+    });
+
+    it('weighs multiple actions with different scores', () => {
+      const scoredActions = { action1: 1, action2: 0.5 };
+      const gamma = 10;
+      const actionWeights = exposedEvaluator.weighActions(scoredActions, gamma, 0.1);
+      expect(Object.keys(actionWeights)).toHaveLength(2);
+      expect(actionWeights.action1).toBeCloseTo(0.85714);
+      expect(actionWeights.action2).toBeCloseTo(0.14286);
+    });
+
+    it('responds as expected to changes in gamma', () => {
+      const scoredActions = { action1: 1, action2: 0.5 };
+      const smallGamma = 0.1;
+      const largeGamma = 0.5;
+      const actionWeightsSmallGamma = exposedEvaluator.weighActions(scoredActions, smallGamma, 0.0);
+      const actionWeightsLargeGamma = exposedEvaluator.weighActions(scoredActions, largeGamma, 0.0);
+      // Gamma quantifies the "learning rate" of the FALCON algorithm; with a larger value meaning less learning and smaller more learning
+      // Increasing gamma from low to high, we expect to exploit more and explore less
+      // Thus we expect the higher-scored action's weight to increase and the lower-scored action's weight to decrease
+      expect(actionWeightsLargeGamma.action1).toBeGreaterThan(actionWeightsSmallGamma.action1);
+      expect(actionWeightsLargeGamma.action2).toBeLessThan(actionWeightsSmallGamma.action2);
+    });
+
+    it('applies probability floor', () => {
+      const scoredActions = { action1: 1, action2: 0.5, action3: 0.2 };
+      const gamma = 10;
+      const lowProbabilityFloor = 0.1;
+      const highProbabilityFloor = 0.3;
+      const actionWeightsLowProbabilityFloor = exposedEvaluator.weighActions(
+        scoredActions,
+        gamma,
+        lowProbabilityFloor,
+      );
+      const actionWeightsHighProbabilityFloor = exposedEvaluator.weighActions(
+        scoredActions,
+        gamma,
+        highProbabilityFloor,
+      );
+      // As we increase the probability floor, we expect the lowest scored action's weight to be lifted, and the others reduced to make room
+      // We also explicit all weights to be above the normalized probability floor, 0.3 / 3 = 0.1
+      expect(actionWeightsHighProbabilityFloor.action1).toBeLessThan(
+        actionWeightsLowProbabilityFloor.action1,
+      );
+      expect(actionWeightsHighProbabilityFloor.action2).toBeLessThan(
+        actionWeightsLowProbabilityFloor.action2,
+      );
+      expect(actionWeightsHighProbabilityFloor.action3).toBeGreaterThan(
+        actionWeightsLowProbabilityFloor.action3,
+      );
+
+      expect(Object.values(actionWeightsLowProbabilityFloor).every((weight) => weight >= 0.1)).toBe(
+        false,
+      );
+      expect(
+        Object.values(actionWeightsHighProbabilityFloor).every((weight) => weight >= 0.1),
+      ).toBe(true);
     });
   });
 });
