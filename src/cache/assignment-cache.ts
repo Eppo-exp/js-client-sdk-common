@@ -20,7 +20,7 @@ export interface AssignmentCache {
   has(key: AssignmentCacheKey): boolean;
 }
 
-export abstract class AssignmentCacheImpl<T extends Map<string, string>>
+export abstract class AbstractAssignmentCache<T extends Map<string, string>>
   implements AssignmentCache
 {
   // key -> variation value hash
@@ -59,7 +59,9 @@ export abstract class AssignmentCacheImpl<T extends Map<string, string>>
  * The primary use case is for client-side SDKs, where the cache is only used
  * for a single user.
  */
-export class NonExpiringInMemoryAssignmentCache extends AssignmentCacheImpl<Map<string, string>> {
+export class NonExpiringInMemoryAssignmentCache extends AbstractAssignmentCache<
+  Map<string, string>
+> {
   constructor() {
     super(new Map<string, string>());
   }
@@ -74,7 +76,7 @@ export class NonExpiringInMemoryAssignmentCache extends AssignmentCacheImpl<Map<
  * multiple users. In this case, the cache size should be set to the maximum number
  * of users that can be active at the same time.
  */
-export class LRUInMemoryAssignmentCache extends AssignmentCacheImpl<LRUCache> {
+export class LRUInMemoryAssignmentCache extends AbstractAssignmentCache<LRUCache> {
   constructor(maxSize: number) {
     super(new LRUCache(maxSize));
   }
