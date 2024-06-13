@@ -1,4 +1,8 @@
-import { BanditModelData, BanditNumericAttributeCoefficients } from './interfaces';
+import {
+  BanditCategoricalAttributeCoefficients,
+  BanditModelData,
+  BanditNumericAttributeCoefficients,
+} from './interfaces';
 import { Attributes } from './types';
 
 export interface BanditEvaluation {
@@ -56,12 +60,37 @@ export class BanditEvaluator {
     return actionScores;
   }
 
-  private scoreNumericAttributes(coefficients: BanditNumericAttributeCoefficients[], attributes: Attributes): number {
-    return 0;// TODO: math
+  private scoreNumericAttributes(
+    coefficients: BanditNumericAttributeCoefficients[],
+    attributes: Attributes,
+  ): number {
+    return coefficients.reduce((score, numericCoefficients) => {
+      const attributeValue = attributes[numericCoefficients.attributeKey];
+      if (typeof attributeValue === 'number' && isFinite(attributeValue)) {
+        score += attributeValue * numericCoefficients.coefficient;
+      } else {
+        score += numericCoefficients.missingValueCoefficient;
+      }
+      return score;
+    }, 0);
   }
 
-  private scoreCategoricalAttributes(coefficients: BanditNumericAttributeCoefficients[], attributes: Attributes): number {
-    return 0;// TODO: math
+  private scoreCategoricalAttributes(
+    coefficients: BanditCategoricalAttributeCoefficients[],
+    attributes: Attributes,
+  ): number {
+    return coefficients.reduce((score, attributeCoefficients) => {
+      const attributeValue = attributes[attributeCoefficients.attributeKey]?.toString();
+      const applicableCoefficient =
+        attributeValue && attributeCoefficients.valueCoefficients[attributeValue];
+
+      score +=
+        typeof applicableCoefficient === 'number'
+          ? applicableCoefficient
+          : attributeCoefficients.missingValueCoefficient;
+
+      return score;
+    }, 0);
   }
 
   private weighActions(actionScores: Record<string, number>, gamma: number, actionProbabilityFloor: number) {

@@ -129,16 +129,16 @@ describe('BanditEvaluator', () => {
         const negativeCategoricalCoefficients: BanditCategoricalAttributeCoefficients[] = [
           {
             attributeKey: 'color',
-            missingValueCoefficient: 0.2,
+            missingValueCoefficient: -0.2,
             valueCoefficients: {
-              red: 1.0,
-              blue: 0.5,
+              red: -1.0,
+              blue: -0.5,
             },
           },
           {
             attributeKey: 'size',
-            missingValueCoefficient: 0.3,
-            valueCoefficients: { large: 2.0, small: 1.0 },
+            missingValueCoefficient: -0.3,
+            valueCoefficients: { large: -2.0, small: -1.0 },
           },
         ];
         const subjectAttributes: Attributes = { color: 'blue', size: 'small' };
