@@ -11,6 +11,7 @@ export interface FlagEvaluation {
   variation: Variation | null;
   extraLogging: Record<string, string>;
   doLog: boolean;
+  reason: string;
 }
 
 export class Evaluator {
@@ -27,7 +28,7 @@ export class Evaluator {
     obfuscated: boolean,
   ): FlagEvaluation {
     if (!flag.enabled) {
-      return noneResult(flag.key, subjectKey, subjectAttributes);
+      return noneResult(flag.key, subjectKey, subjectAttributes, `flag not enabled: ${flag.key}`);
     }
 
     const now = new Date();
@@ -35,9 +36,12 @@ export class Evaluator {
       if (allocation.startAt && now < new Date(allocation.startAt)) continue;
       if (allocation.endAt && now > new Date(allocation.endAt)) continue;
 
-      if (
-        matchesRules(allocation?.rules ?? [], { id: subjectKey, ...subjectAttributes }, obfuscated)
-      ) {
+      const { matched, matchedRule } = matchesRules(
+        allocation?.rules ?? [],
+        { id: subjectKey, ...subjectAttributes },
+        obfuscated,
+      );
+      if (matched) {
         for (const split of allocation.splits) {
           if (
             split.shards.every((shard) => this.matchesShard(shard, subjectKey, flag.totalShards))
@@ -50,13 +54,15 @@ export class Evaluator {
               variation: flag.variations[split.variationKey],
               extraLogging: split.extraLogging ?? {},
               doLog: allocation.doLog,
+              reason: `subject "${subjectKey}" assigned to "${split.variationKey}" group for matched rule (${matchedRule})`,
             };
           }
         }
       }
     }
 
-    return noneResult(flag.key, subjectKey, subjectAttributes);
+    const reason = `subject "${subjectKey}" is not assigned to a variation group`;
+    return noneResult(flag.key, subjectKey, subjectAttributes, reason);
   }
 
   matchesShard(shard: Shard, subjectKey: string, totalShards: number): boolean {
@@ -77,6 +83,7 @@ export function noneResult(
   flagKey: string,
   subjectKey: string,
   subjectAttributes: SubjectAttributes,
+  reason: string,
 ): FlagEvaluation {
   return {
     flagKey,
@@ -86,6 +93,7 @@ export function noneResult(
     variation: null,
     extraLogging: {},
     doLog: false,
+    reason,
   };
 }
 
@@ -93,6 +101,27 @@ export function matchesRules(
   rules: Rule[],
   subjectAttributes: SubjectAttributes,
   obfuscated: boolean,
-): boolean {
-  return !rules.length || rules.some((rule) => matchesRule(rule, subjectAttributes, obfuscated));
+): { matched: boolean; matchedRule: string } {
+  if (!rules.length) {
+    return {
+      matched: true,
+      matchedRule: 'no rules defined',
+    };
+  }
+  let matchedRule = '';
+  const hasMatch = rules.some((rule) => {
+    const matched = matchesRule(rule, subjectAttributes, obfuscated);
+    if (matched) {
+      matchedRule = `${JSON.stringify(rule)}`;
+    }
+  });
+  return hasMatch
+    ? {
+        matched: true,
+        matchedRule,
+      }
+    : {
+        matched: false,
+        matchedRule: 'no matched rule',
+      };
 }

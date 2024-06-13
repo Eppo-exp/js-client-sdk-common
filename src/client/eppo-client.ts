@@ -20,12 +20,17 @@ import { EppoValue } from '../eppo_value';
 import { Evaluator, FlagEvaluation, noneResult } from '../evaluator';
 import FlagConfigurationRequestor from '../flag-configuration-requestor';
 import FetchHttpClient from '../http-client';
-import { Flag, ObfuscatedFlag, VariationType } from '../interfaces';
+import { Flag, ObfuscatedFlag, Variation, VariationType } from '../interfaces';
 import { getMD5Hash } from '../obfuscation';
 import initPoller, { IPoller } from '../poller';
 import { AttributeType, ValueType } from '../types';
 import { validateNotBlank } from '../validation';
 import { LIB_VERSION } from '../version';
+
+export type AssignmentDetails<T extends Variation['value']> = {
+  value: T;
+  reason: string;
+};
 
 export type FlagConfigurationRequestParameters = {
   apiKey: string;
@@ -127,21 +132,30 @@ export default class EppoClient {
     }
   }
 
-  public getStringAssignment(
+  public getStringAssignment = (
     flagKey: string,
     subjectKey: string,
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: string,
-  ): string {
-    return (
-      this.getAssignmentVariation(
-        flagKey,
-        subjectKey,
-        subjectAttributes,
-        EppoValue.String(defaultValue),
-        VariationType.STRING,
-      ).stringValue ?? defaultValue
+  ) => this.getStringAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue).value;
+
+  public getStringAssignmentDetails(
+    flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
+    defaultValue: string,
+  ): AssignmentDetails<string> {
+    const { eppoValue, reason } = this.getAssignmentVariation(
+      flagKey,
+      subjectKey,
+      subjectAttributes,
+      EppoValue.String(defaultValue),
+      VariationType.STRING,
     );
+    return {
+      value: eppoValue.stringValue ?? defaultValue,
+      reason,
+    };
   }
 
   public getBoolAssignment(
@@ -159,15 +173,14 @@ export default class EppoClient {
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: boolean,
   ): boolean {
-    return (
-      this.getAssignmentVariation(
-        flagKey,
-        subjectKey,
-        subjectAttributes,
-        EppoValue.Bool(defaultValue),
-        VariationType.BOOLEAN,
-      ).boolValue ?? defaultValue
+    const { eppoValue } = this.getAssignmentVariation(
+      flagKey,
+      subjectKey,
+      subjectAttributes,
+      EppoValue.Bool(defaultValue),
+      VariationType.BOOLEAN,
     );
+    return eppoValue.boolValue ?? defaultValue;
   }
 
   public getIntegerAssignment(
@@ -176,15 +189,14 @@ export default class EppoClient {
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: number,
   ): number {
-    return (
-      this.getAssignmentVariation(
-        flagKey,
-        subjectKey,
-        subjectAttributes,
-        EppoValue.Numeric(defaultValue),
-        VariationType.INTEGER,
-      ).numericValue ?? defaultValue
+    const { eppoValue } = this.getAssignmentVariation(
+      flagKey,
+      subjectKey,
+      subjectAttributes,
+      EppoValue.Numeric(defaultValue),
+      VariationType.NUMERIC,
     );
+    return eppoValue.numericValue ?? defaultValue;
   }
 
   public getNumericAssignment(
@@ -193,15 +205,14 @@ export default class EppoClient {
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: number,
   ): number {
-    return (
-      this.getAssignmentVariation(
-        flagKey,
-        subjectKey,
-        subjectAttributes,
-        EppoValue.Numeric(defaultValue),
-        VariationType.NUMERIC,
-      ).numericValue ?? defaultValue
+    const { eppoValue } = this.getAssignmentVariation(
+      flagKey,
+      subjectKey,
+      subjectAttributes,
+      EppoValue.Numeric(defaultValue),
+      VariationType.NUMERIC,
     );
+    return eppoValue.numericValue ?? defaultValue;
   }
 
   public getJSONAssignment(
@@ -210,15 +221,14 @@ export default class EppoClient {
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: object,
   ): object {
-    return (
-      this.getAssignmentVariation(
-        flagKey,
-        subjectKey,
-        subjectAttributes,
-        EppoValue.JSON(defaultValue),
-        VariationType.JSON,
-      ).objectValue ?? defaultValue
+    const { eppoValue } = this.getAssignmentVariation(
+      flagKey,
+      subjectKey,
+      subjectAttributes,
+      EppoValue.JSON(defaultValue),
+      VariationType.JSON,
     );
+    return eppoValue.objectValue ?? defaultValue;
   }
 
   private getAssignmentVariation(
@@ -227,7 +237,7 @@ export default class EppoClient {
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: EppoValue,
     expectedVariationType: VariationType,
-  ): EppoValue {
+  ): { eppoValue: EppoValue; reason: string } {
     try {
       const result = this.getAssignmentDetail(
         flagKey,
@@ -237,12 +247,21 @@ export default class EppoClient {
       );
 
       if (!result.variation) {
-        return defaultValue;
+        return {
+          eppoValue: defaultValue,
+          reason: result.reason,
+        };
       }
 
-      return EppoValue.valueOf(result.variation.value, expectedVariationType);
+      return {
+        eppoValue: EppoValue.valueOf(result.variation.value, expectedVariationType),
+        reason: result.reason,
+      };
     } catch (error) {
-      return this.rethrowIfNotGraceful(error, defaultValue);
+      return {
+        eppoValue: this.rethrowIfNotGraceful(error, defaultValue),
+        reason: `error getting assignment: ${error.message}`,
+      };
     }
   }
 
@@ -280,7 +299,8 @@ export default class EppoClient {
     if (flag === null) {
       logger.warn(`[Eppo SDK] No assigned variation. Flag not found: ${flagKey}`);
       // note: this is different from the Python SDK, which returns None instead
-      return noneResult(flagKey, subjectKey, subjectAttributes);
+      const reason = `flag not found: ${flagKey}`;
+      return noneResult(flagKey, subjectKey, subjectAttributes, reason);
     }
 
     if (!checkTypeMatch(expectedVariationType, flag.variationType)) {
@@ -292,7 +312,8 @@ export default class EppoClient {
     if (!flag.enabled) {
       logger.info(`[Eppo SDK] No assigned variation. Flag is disabled: ${flagKey}`);
       // note: this is different from the Python SDK, which returns None instead
-      return noneResult(flagKey, subjectKey, subjectAttributes);
+      const reason = `flag not enabled: ${flagKey}`;
+      return noneResult(flagKey, subjectKey, subjectAttributes, reason);
     }
 
     const result = this.evaluator.evaluateFlag(
@@ -307,7 +328,8 @@ export default class EppoClient {
     }
 
     if (result?.variation && !checkValueTypeMatch(expectedVariationType, result.variation.value)) {
-      return noneResult(flagKey, subjectKey, subjectAttributes);
+      const reason = `expected type ${expectedVariationType} does not match for value ${result.variation.value}`;
+      return noneResult(flagKey, subjectKey, subjectAttributes, reason);
     }
 
     try {
