@@ -7,6 +7,7 @@ import {
   NonExpiringInMemoryAssignmentCache,
 } from '../assignment-cache';
 import { IAssignmentEvent, IAssignmentLogger } from '../assignment-logger';
+import ConfigurationRequestor from '../configuration-requestor';
 import { IConfigurationStore } from '../configuration-store/configuration-store';
 import {
   BASE_URL as DEFAULT_BASE_URL,
@@ -19,9 +20,8 @@ import {
 import { decodeFlag } from '../decoding';
 import { EppoValue } from '../eppo_value';
 import { Evaluator, FlagEvaluation, noneResult } from '../evaluator';
-import FlagConfigurationRequestor from '../flag-configuration-requestor';
 import FetchHttpClient from '../http-client';
-import { Flag, ObfuscatedFlag, VariationType } from '../interfaces';
+import { BanditParameters, Flag, ObfuscatedFlag, VariationType } from '../interfaces';
 import { getMD5Hash } from '../obfuscation';
 import initPoller, { IPoller } from '../poller';
 import { AttributeType, ValueType } from '../types';
@@ -135,7 +135,7 @@ export interface IEppoClient {
     configurationRequestParameters: FlagConfigurationRequestParameters,
   ): void;
 
-  setConfigurationStore(configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>): void;
+  setFlagConfigurationStore(configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>): void;
 
   fetchFlagConfigurations(): void;
 
@@ -167,18 +167,21 @@ export default class EppoClient implements IEppoClient {
   private assignmentLogger: IAssignmentLogger | undefined;
   private isGracefulFailureMode = true;
   private assignmentCache: AssignmentCache<Cacheable> | undefined;
-  private configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>;
+  private flagConfigurationStore: IConfigurationStore<Flag | ObfuscatedFlag>;
+  private banditConfigurationStore: IConfigurationStore<BanditParameters> | undefined;
   private configurationRequestParameters: FlagConfigurationRequestParameters | undefined;
   private requestPoller: IPoller | undefined;
   private evaluator: Evaluator;
 
   constructor(
-    configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>,
+    flagConfigurationStore: IConfigurationStore<Flag | ObfuscatedFlag>,
+    banditConfigurationStore?: IConfigurationStore<BanditParameters>,
     configurationRequestParameters?: FlagConfigurationRequestParameters,
     private readonly isObfuscated = false,
   ) {
     this.evaluator = new Evaluator();
-    this.configurationStore = configurationStore;
+    this.flagConfigurationStore = flagConfigurationStore;
+    this.banditConfigurationStore = banditConfigurationStore;
     this.configurationRequestParameters = configurationRequestParameters;
   }
 
@@ -188,8 +191,16 @@ export default class EppoClient implements IEppoClient {
     this.configurationRequestParameters = configurationRequestParameters;
   }
 
-  public setConfigurationStore(configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>) {
-    this.configurationStore = configurationStore;
+  public setFlagConfigurationStore(
+    flagConfigurationStore: IConfigurationStore<Flag | ObfuscatedFlag>,
+  ) {
+    this.flagConfigurationStore = flagConfigurationStore;
+  }
+
+  public setBanditConfigurationStore(
+    banditConfigurationStore: IConfigurationStore<BanditParameters>,
+  ) {
+    this.banditConfigurationStore = banditConfigurationStore;
   }
 
   public async fetchFlagConfigurations() {
@@ -204,7 +215,7 @@ export default class EppoClient implements IEppoClient {
       this.requestPoller.stop();
     }
 
-    const isExpired = await this.configurationStore.isExpired();
+    const isExpired = await this.flagConfigurationStore.isExpired();
     if (!isExpired) {
       logger.info(
         '[Eppo SDK] Configuration store is not expired. Skipping fetching flag configurations',
@@ -227,9 +238,10 @@ export default class EppoClient implements IEppoClient {
     // todo: Inject the chain of dependencies below
     const apiEndpoints = new ApiEndpoints(baseUrl, { apiKey, sdkName, sdkVersion });
     const httpClient = new FetchHttpClient(apiEndpoints, requestTimeoutMs);
-    const configurationRequestor = new FlagConfigurationRequestor(
-      this.configurationStore,
+    const configurationRequestor = new ConfigurationRequestor(
       httpClient,
+      this.flagConfigurationStore,
+      this.banditConfigurationStore ?? null,
     );
 
     this.requestPoller = initPoller(
@@ -452,11 +464,11 @@ export default class EppoClient implements IEppoClient {
     if (this.isObfuscated) {
       return this.getObfuscatedFlag(flagKey);
     }
-    return this.configurationStore.get(flagKey);
+    return this.flagConfigurationStore.get(flagKey);
   }
 
   private getObfuscatedFlag(flagKey: string): Flag | null {
-    const flag: ObfuscatedFlag | null = this.configurationStore.get(
+    const flag: ObfuscatedFlag | null = this.flagConfigurationStore.get(
       getMD5Hash(flagKey),
     ) as ObfuscatedFlag;
     return flag ? decodeFlag(flag) : null;
@@ -469,11 +481,14 @@ export default class EppoClient implements IEppoClient {
      *
      * Note that it is generally not a good idea to pre-load all flag configurations.
      */
-    return this.configurationStore.getKeys();
+    return this.flagConfigurationStore.getKeys();
   }
 
   public isInitialized() {
-    return this.configurationStore.isInitialized();
+    return (
+      this.flagConfigurationStore.isInitialized() &&
+      (!this.banditConfigurationStore || this.banditConfigurationStore.isInitialized())
+    );
   }
 
   public setLogger(logger: IAssignmentLogger) {
