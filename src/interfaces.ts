@@ -98,10 +98,10 @@ export interface BanditModelData {
 export interface BanditCoefficients {
   actionKey: string;
   intercept: number;
-  subjectNumericCoefficients: Record<string, BanditNumericAttributeCoefficients>;
-  subjectCategoricalCoefficients: Record<string, BanditCategoricalAttributeCoefficients>;
-  actionNumericCoefficients: Record<string, BanditNumericAttributeCoefficients>;
-  actionCategoricalCoefficients: Record<string, BanditCategoricalAttributeCoefficients>;
+  subjectNumericCoefficients: BanditNumericAttributeCoefficients[];
+  subjectCategoricalCoefficients: BanditCategoricalAttributeCoefficients[];
+  actionNumericCoefficients: BanditNumericAttributeCoefficients[];
+  actionCategoricalCoefficients: BanditCategoricalAttributeCoefficients[];
 }
 
 export interface BanditNumericAttributeCoefficients {

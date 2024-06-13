@@ -7,7 +7,7 @@ export default class ConfigurationRequestor {
   constructor(
     private readonly httpClient: IHttpClient,
     private readonly flagConfigurationStore: IConfigurationStore<Flag>,
-    private readonly banditConfigurationStore: IConfigurationStore<BanditParameters> | undefined,
+    private readonly banditConfigurationStore: IConfigurationStore<BanditParameters> | null,
   ) {}
 
   async fetchAndStoreConfigurations(): Promise<void> {

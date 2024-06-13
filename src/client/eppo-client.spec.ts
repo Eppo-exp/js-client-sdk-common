@@ -31,7 +31,7 @@ export async function init(configurationStore: IConfigurationStore<Flag | Obfusc
   const configurationRequestor = new ConfigurationRequestor(
     httpClient,
     configurationStore,
-    undefined,
+    null,
   );
   await configurationRequestor.fetchAndStoreConfigurations();
 }

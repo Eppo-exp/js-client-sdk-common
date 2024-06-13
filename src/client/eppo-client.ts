@@ -241,7 +241,7 @@ export default class EppoClient implements IEppoClient {
     const configurationRequestor = new ConfigurationRequestor(
       httpClient,
       this.flagConfigurationStore,
-      this.banditConfigurationStore,
+      this.banditConfigurationStore ?? null,
     );
 
     this.requestPoller = initPoller(
