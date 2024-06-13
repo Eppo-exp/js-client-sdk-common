@@ -22,7 +22,7 @@ export class BanditEvaluator {
     flagKey: string,
     subjectKey: string,
     subjectAttributes: Attributes,
-    actions: Record<string, Attributes>,
+    actions: Record<string, Attributes>, // TODO: option to specify if action attributes are numeric or categorical
     banditModel: BanditModelData,
   ): BanditEvaluation {
     const actionScores: Record<string, number> = this.scoreActions(
@@ -51,10 +51,34 @@ export class BanditEvaluator {
     };
   }
 
-  private scoreActions(subjectAttributes: Attributes, actions: Record<string, Attributes>, banditModel: BanditModelData): Record<string, number> {
+  private scoreActions(
+    subjectAttributes: Attributes,
+    actions: Record<string, Attributes>,
+    banditModel: Pick<BanditModelData, 'coefficients' | 'defaultActionScore'>,
+  ): Record<string, number> {
     const actionScores: Record<string, number> = {};
     Object.entries(actions).forEach(([actionKey, actionAttributes]) => {
-      const score = 0; // TODO: math
+      let score = banditModel.defaultActionScore;
+      const coefficients = banditModel.coefficients[actionKey];
+      if (coefficients) {
+        score = coefficients.intercept;
+        score += this.scoreNumericAttributes(
+          coefficients.subjectNumericCoefficients,
+          subjectAttributes,
+        );
+        score += this.scoreCategoricalAttributes(
+          coefficients.subjectCategoricalCoefficients,
+          subjectAttributes,
+        );
+        score += this.scoreNumericAttributes(
+          coefficients.actionNumericCoefficients,
+          actionAttributes,
+        );
+        score += this.scoreCategoricalAttributes(
+          coefficients.actionCategoricalCoefficients,
+          actionAttributes,
+        );
+      }
       actionScores[actionKey] = score;
     });
     return actionScores;
@@ -93,7 +117,11 @@ export class BanditEvaluator {
     }, 0);
   }
 
-  private weighActions(actionScores: Record<string, number>, gamma: number, actionProbabilityFloor: number) {
+  private weighActions(
+    actionScores: Record<string, number>,
+    gamma: number,
+    actionProbabilityFloor: number,
+  ) {
     const actionWeights: Record<string, number> = {};
     Object.entries(actionScores).forEach(([actionKey, actionScore]) => {
       const weight = 0; // TODO: math
@@ -102,7 +130,11 @@ export class BanditEvaluator {
     return actionWeights;
   }
 
-  private selectAction(flagKey: string, subjectKey: string, actionWeights: Record<string, number>): string {
+  private selectAction(
+    flagKey: string,
+    subjectKey: string,
+    actionWeights: Record<string, number>,
+  ): string {
     return Object.keys(actionWeights)[0]; // TODO: math
   }
 }
