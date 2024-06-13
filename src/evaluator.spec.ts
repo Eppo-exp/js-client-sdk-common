@@ -559,7 +559,7 @@ describe('matchesRules', () => {
       const rules: Rule[] = [];
       const subjectAttributes = { id: 'test-subject' };
       const obfuscated = false;
-      expect(matchesRules(rules, subjectAttributes, obfuscated)).toBeTruthy();
+      expect(matchesRules(rules, subjectAttributes, obfuscated).matched).toBeTruthy();
     });
 
     it('should return true when a rule matches', () => {
@@ -576,7 +576,7 @@ describe('matchesRules', () => {
       ];
       const subjectAttributes = { id: 'test-subject', age: 20 };
       const obfuscated = false;
-      expect(matchesRules(rules, subjectAttributes, obfuscated)).toBeTruthy();
+      expect(matchesRules(rules, subjectAttributes, obfuscated).matched).toBeTruthy();
     });
 
     it('should return true when one of two rules matches', () => {
@@ -602,7 +602,7 @@ describe('matchesRules', () => {
       ];
       const subjectAttributes = { id: 'test-subject', age: 10 };
       const obfuscated = false;
-      expect(matchesRules(rules, subjectAttributes, obfuscated)).toBeTruthy();
+      expect(matchesRules(rules, subjectAttributes, obfuscated).matched).toBeTruthy();
     });
 
     it('should return true when null or rule is passed', () => {
@@ -627,9 +627,11 @@ describe('matchesRules', () => {
         },
       ];
       const obfuscated = false;
-      expect(matchesRules(rules, { id: 'test-subject', age: 20 }, obfuscated)).toBeTruthy();
-      expect(matchesRules(rules, { id: 'test-subject', age: 10 }, obfuscated)).toBeFalsy();
-      expect(matchesRules(rules, { id: 'test-subject', country: 'UK' }, obfuscated)).toBeTruthy();
+      expect(matchesRules(rules, { id: 'test-subject', age: 20 }, obfuscated).matched).toBeTruthy();
+      expect(matchesRules(rules, { id: 'test-subject', age: 10 }, obfuscated).matched).toBeFalsy();
+      expect(
+        matchesRules(rules, { id: 'test-subject', country: 'UK' }, obfuscated).matched,
+      ).toBeTruthy();
     });
 
     it('should return false when no rules match', () => {
@@ -646,7 +648,7 @@ describe('matchesRules', () => {
       ];
       const subjectAttributes = { id: 'test-subject', age: 16 };
       const obfuscated = false;
-      expect(matchesRules(rules, subjectAttributes, obfuscated)).toBeFalsy();
+      expect(matchesRules(rules, subjectAttributes, obfuscated).matched).toBeFalsy();
     });
   });
 });
