@@ -13,10 +13,10 @@ import {
 } from '../../test/testHelpers';
 import ApiEndpoints from '../api-endpoints';
 import { IAssignmentLogger } from '../assignment-logger';
+import ConfigurationRequestor from '../configuration-requestor';
 import { IConfigurationStore } from '../configuration-store/configuration-store';
 import { MemoryOnlyConfigurationStore } from '../configuration-store/memory.store';
 import { MAX_EVENT_QUEUE_SIZE, POLL_INTERVAL_MS, POLL_JITTER_PCT } from '../constants';
-import FlagConfigurationRequestor from '../flag-configuration-requestor';
 import FetchHttpClient from '../http-client';
 import { Flag, ObfuscatedFlag, VariationType } from '../interfaces';
 
@@ -29,7 +29,11 @@ export async function init(configurationStore: IConfigurationStore<Flag | Obfusc
     sdkVersion: '1.0.0',
   });
   const httpClient = new FetchHttpClient(apiEndpoints, 1000);
-  const configurationRequestor = new FlagConfigurationRequestor(configurationStore, httpClient);
+  const configurationRequestor = new ConfigurationRequestor(
+    httpClient,
+    configurationStore,
+    null,
+  );
   await configurationRequestor.fetchAndStoreConfigurations();
 }
 
@@ -101,19 +105,19 @@ describe('EppoClient E2E test', () => {
     it('returns default value when graceful failure if error encountered', async () => {
       client.setIsGracefulFailureMode(true);
 
-      expect(client.getBoolAssignment(flagKey, 'subject-identifer', {}, true)).toBe(true);
-      expect(client.getBoolAssignment(flagKey, 'subject-identifer', {}, false)).toBe(false);
-      expect(client.getBooleanAssignment(flagKey, 'subject-identifer', {}, true)).toBe(true);
-      expect(client.getBooleanAssignment(flagKey, 'subject-identifer', {}, false)).toBe(false);
-      expect(client.getNumericAssignment(flagKey, 'subject-identifer', {}, 1)).toBe(1);
-      expect(client.getNumericAssignment(flagKey, 'subject-identifer', {}, 0)).toBe(0);
-      expect(client.getJSONAssignment(flagKey, 'subject-identifer', {}, {})).toEqual({});
+      expect(client.getBoolAssignment(flagKey, 'subject-identifier', {}, true)).toBe(true);
+      expect(client.getBoolAssignment(flagKey, 'subject-identifier', {}, false)).toBe(false);
+      expect(client.getBooleanAssignment(flagKey, 'subject-identifier', {}, true)).toBe(true);
+      expect(client.getBooleanAssignment(flagKey, 'subject-identifier', {}, false)).toBe(false);
+      expect(client.getNumericAssignment(flagKey, 'subject-identifier', {}, 1)).toBe(1);
+      expect(client.getNumericAssignment(flagKey, 'subject-identifier', {}, 0)).toBe(0);
+      expect(client.getJSONAssignment(flagKey, 'subject-identifier', {}, {})).toEqual({});
       expect(
-        client.getJSONAssignment(flagKey, 'subject-identifer', {}, { hello: 'world' }),
+        client.getJSONAssignment(flagKey, 'subject-identifier', {}, { hello: 'world' }),
       ).toEqual({
         hello: 'world',
       });
-      expect(client.getStringAssignment(flagKey, 'subject-identifer', {}, 'default')).toBe(
+      expect(client.getStringAssignment(flagKey, 'subject-identifier', {}, 'default')).toBe(
         'default',
       );
     });
@@ -122,20 +126,20 @@ describe('EppoClient E2E test', () => {
       client.setIsGracefulFailureMode(false);
 
       expect(() => {
-        client.getBoolAssignment(flagKey, 'subject-identifer', {}, true);
-        client.getBooleanAssignment(flagKey, 'subject-identifer', {}, true);
+        client.getBoolAssignment(flagKey, 'subject-identifier', {}, true);
+        client.getBooleanAssignment(flagKey, 'subject-identifier', {}, true);
       }).toThrow();
 
       expect(() => {
-        client.getJSONAssignment(flagKey, 'subject-identifer', {}, {});
+        client.getJSONAssignment(flagKey, 'subject-identifier', {}, {});
       }).toThrow();
 
       expect(() => {
-        client.getNumericAssignment(flagKey, 'subject-identifer', {}, 1);
+        client.getNumericAssignment(flagKey, 'subject-identifier', {}, 1);
       }).toThrow();
 
       expect(() => {
-        client.getStringAssignment(flagKey, 'subject-identifer', {}, 'default');
+        client.getStringAssignment(flagKey, 'subject-identifier', {}, 'default');
       }).toThrow();
     });
   });
@@ -259,7 +263,7 @@ describe('EppoClient E2E test', () => {
     it.each(readAssignmentTestData())(
       'test variation assignment splits',
       async ({ flag, variationType, defaultValue, subjects }: IAssignmentTestCase) => {
-        const client = new EppoClient(storage, undefined, true);
+        const client = new EppoClient(storage, undefined, undefined, true);
         client.setIsGracefulFailureMode(false);
 
         const typeAssignmentFunctions = {
@@ -298,11 +302,11 @@ describe('EppoClient E2E test', () => {
 
     const nonExistentFlag = 'non-existent-flag';
 
-    expect(client.getBoolAssignment(nonExistentFlag, 'subject-identifer', {}, true)).toBe(true);
-    expect(client.getBooleanAssignment(nonExistentFlag, 'subject-identifer', {}, true)).toBe(true);
-    expect(client.getNumericAssignment(nonExistentFlag, 'subject-identifer', {}, 1)).toBe(1);
-    expect(client.getJSONAssignment(nonExistentFlag, 'subject-identifer', {}, {})).toEqual({});
-    expect(client.getStringAssignment(nonExistentFlag, 'subject-identifer', {}, 'default')).toBe(
+    expect(client.getBoolAssignment(nonExistentFlag, 'subject-identifier', {}, true)).toBe(true);
+    expect(client.getBooleanAssignment(nonExistentFlag, 'subject-identifier', {}, true)).toBe(true);
+    expect(client.getNumericAssignment(nonExistentFlag, 'subject-identifier', {}, 1)).toBe(1);
+    expect(client.getJSONAssignment(nonExistentFlag, 'subject-identifier', {}, {})).toEqual({});
+    expect(client.getStringAssignment(nonExistentFlag, 'subject-identifier', {}, 'default')).toBe(
       'default',
     );
   });
@@ -553,7 +557,7 @@ describe('EppoClient E2E test', () => {
 
   describe('Eppo Client constructed with configuration request parameters', () => {
     let client: EppoClient;
-    let thisStorage: IConfigurationStore<Flag | ObfuscatedFlag>;
+    let thisFlagStorage: IConfigurationStore<Flag | ObfuscatedFlag>;
     let requestConfiguration: FlagConfigurationRequestParameters;
 
     const flagKey = 'numeric_flag';
@@ -579,7 +583,7 @@ describe('EppoClient E2E test', () => {
         sdkVersion: '1.0.0',
       };
 
-      thisStorage = new MemoryOnlyConfigurationStore();
+      thisFlagStorage = new MemoryOnlyConfigurationStore();
 
       // We only want to fake setTimeout() and clearTimeout()
       jest.useFakeTimers({
@@ -612,7 +616,7 @@ describe('EppoClient E2E test', () => {
     });
 
     it('Fetches initial configuration with parameters in constructor', async () => {
-      client = new EppoClient(thisStorage, requestConfiguration);
+      client = new EppoClient(thisFlagStorage, undefined, requestConfiguration);
       client.setIsGracefulFailureMode(false);
       // no configuration loaded
       let variation = client.getNumericAssignment(flagKey, subject, {}, 123.4);
@@ -624,7 +628,7 @@ describe('EppoClient E2E test', () => {
     });
 
     it('Fetches initial configuration with parameters provided later', async () => {
-      client = new EppoClient(thisStorage);
+      client = new EppoClient(thisFlagStorage);
       client.setIsGracefulFailureMode(false);
       client.setConfigurationRequestParameters(requestConfiguration);
       // no configuration loaded
@@ -637,13 +641,13 @@ describe('EppoClient E2E test', () => {
     });
 
     it('Does not fetch configurations if the configuration store is unexpired', async () => {
-      class MockStore extends MemoryOnlyConfigurationStore<Flag | ObfuscatedFlag> {
+      class MockStore<T> extends MemoryOnlyConfigurationStore<T> {
         async isExpired(): Promise<boolean> {
           return false;
         }
       }
 
-      client = new EppoClient(new MockStore(), requestConfiguration);
+      client = new EppoClient(new MockStore(), new MockStore(), requestConfiguration);
       client.setIsGracefulFailureMode(false);
       // no configuration loaded
       let variation = client.getNumericAssignment(flagKey, subject, {}, 0.0);
@@ -685,7 +689,7 @@ describe('EppoClient E2E test', () => {
         ...requestConfiguration,
         pollAfterSuccessfulInitialization,
       };
-      client = new EppoClient(thisStorage, requestConfiguration);
+      client = new EppoClient(thisFlagStorage, undefined, requestConfiguration);
       client.setIsGracefulFailureMode(false);
       // no configuration loaded
       let variation = client.getNumericAssignment(flagKey, subject, {}, 0.0);
@@ -750,7 +754,7 @@ describe('EppoClient E2E test', () => {
         throwOnFailedInitialization,
         pollAfterFailedInitialization,
       };
-      client = new EppoClient(thisStorage, requestConfiguration);
+      client = new EppoClient(thisFlagStorage, undefined, requestConfiguration);
       client.setIsGracefulFailureMode(false);
       // no configuration loaded
       expect(client.getNumericAssignment(flagKey, subject, {}, 0.0)).toBe(0.0);

@@ -9,6 +9,7 @@ import {
   AsyncMap,
 } from './cache/assignment-cache';
 import EppoClient, { FlagConfigurationRequestParameters, IEppoClient } from './client/eppo-client';
+import FlagConfigRequestor from './configuration-requestor';
 import {
   IConfigurationStore,
   IAsyncStore,
@@ -17,7 +18,6 @@ import {
 import { HybridConfigurationStore } from './configuration-store/hybrid.store';
 import { MemoryStore, MemoryOnlyConfigurationStore } from './configuration-store/memory.store';
 import * as constants from './constants';
-import FlagConfigRequestor from './flag-configuration-requestor';
 import HttpClient from './http-client';
 import { Flag, VariationType } from './interfaces';
 import { AttributeType, SubjectAttributes } from './types';

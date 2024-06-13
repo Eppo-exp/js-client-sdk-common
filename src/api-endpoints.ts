@@ -1,6 +1,7 @@
 import { ISdkParams } from './http-client';
 
 const UFC_ENDPOINT = '/flag-config/v1/config';
+const BANDIT_ENDPOINT = '/flag-config/v1/bandits';
 
 /** Utility class for constructing an Eppo API endpoint URL given a provided baseUrl and query parameters */
 export default class ApiEndpoints {
@@ -14,5 +15,9 @@ export default class ApiEndpoints {
 
   ufcEndpoint(): URL {
     return this.endpoint(UFC_ENDPOINT);
+  }
+
+  banditParametersEndpoint(): URL {
+    return this.endpoint(BANDIT_ENDPOINT);
   }
 }
