@@ -8,7 +8,7 @@ import {
   LRUInMemoryAssignmentCache,
   AsyncMap,
 } from './cache/assignment-cache';
-import EppoClient, { FlagConfigurationRequestParameters, IEppoClient } from './client/eppo-client';
+import EppoClient, { FlagConfigurationRequestParameters } from './client/eppo-client';
 import {
   IConfigurationStore,
   IAsyncStore,
@@ -30,7 +30,6 @@ export {
   IAssignmentLogger,
   IAssignmentEvent,
   EppoClient,
-  IEppoClient,
   constants,
   FlagConfigRequestor,
   HttpClient,
