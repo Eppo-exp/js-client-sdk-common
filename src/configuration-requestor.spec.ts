@@ -189,7 +189,7 @@ describe('ConfigurationRequestor', () => {
     });
 
     it('Will not fetch bandit parameters if there is no store', async () => {
-      configurationRequestor = new ConfigurationRequestor(httpClient, flagStore, undefined);
+      configurationRequestor = new ConfigurationRequestor(httpClient, flagStore, null);
       await configurationRequestor.fetchAndStoreConfigurations();
       expect(fetchSpy).toHaveBeenCalledTimes(1);
     });
