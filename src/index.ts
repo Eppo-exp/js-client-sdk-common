@@ -2,6 +2,7 @@ import { logger } from './application-logger';
 import { IAssignmentHooks } from './assignment-hooks';
 import { IAssignmentLogger, IAssignmentEvent } from './assignment-logger';
 import {
+  AbstractAssignmentCache,
   AssignmentCache,
   NonExpiringInMemoryAssignmentCache,
   LRUInMemoryAssignmentCache,
@@ -24,6 +25,7 @@ import * as validation from './validation';
 
 export {
   logger as applicationLogger,
+  AbstractAssignmentCache,
   IAssignmentHooks,
   IAssignmentLogger,
   IAssignmentEvent,
