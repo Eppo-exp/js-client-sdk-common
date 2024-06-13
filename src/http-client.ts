@@ -1,5 +1,5 @@
 import ApiEndpoints from './api-endpoints';
-import { Flag } from './interfaces';
+import { BanditParameters, Flag } from './interfaces';
 
 export interface IQueryParams {
   apiKey: string;
@@ -16,21 +16,40 @@ export class HttpRequestError extends Error {
   }
 }
 
-export interface IUniversalFlagConfig {
+export interface IUniversalFlagConfigResponse {
   flags: Record<string, Flag>;
+  bandits: Record<
+    string,
+    {
+      key: string;
+      flagKey: string;
+      variationKey: string;
+      variationValue: string;
+    }
+  >;
+}
+
+export interface IBanditParametersResponse {
+  bandits: Record<string, BanditParameters>;
 }
 
 export interface IHttpClient {
-  getUniversalFlagConfiguration(): Promise<IUniversalFlagConfig | undefined>;
+  getUniversalFlagConfiguration(): Promise<IUniversalFlagConfigResponse | undefined>;
+  getBanditParameters(): Promise<IBanditParametersResponse | undefined>;
   rawGet<T>(url: URL): Promise<T | undefined>;
 }
 
 export default class FetchHttpClient implements IHttpClient {
   constructor(private readonly apiEndpoints: ApiEndpoints, private readonly timeout: number) {}
 
-  async getUniversalFlagConfiguration(): Promise<IUniversalFlagConfig | undefined> {
+  async getUniversalFlagConfiguration(): Promise<IUniversalFlagConfigResponse | undefined> {
     const url = this.apiEndpoints.ufcEndpoint();
-    return await this.rawGet<IUniversalFlagConfig>(url);
+    return await this.rawGet<IUniversalFlagConfigResponse>(url);
+  }
+
+  async getBanditParameters(): Promise<IBanditParametersResponse | undefined> {
+    const url = this.apiEndpoints.banditParametersEndpoint();
+    return await this.rawGet<IBanditParametersResponse>(url);
   }
 
   async rawGet<T>(url: URL): Promise<T | undefined> {
