@@ -1,4 +1,4 @@
-import { BanditModelData } from './interfaces';
+import { BanditModelData, BanditNumericAttributeCoefficients } from './interfaces';
 import { Attributes } from './types';
 
 export interface BanditEvaluation {
@@ -54,6 +54,14 @@ export class BanditEvaluator {
       actionScores[actionKey] = score;
     });
     return actionScores;
+  }
+
+  private scoreNumericAttributes(coefficients: BanditNumericAttributeCoefficients[], attributes: Attributes): number {
+    return 0;// TODO: math
+  }
+
+  private scoreCategoricalAttributes(coefficients: BanditNumericAttributeCoefficients[], attributes: Attributes): number {
+    return 0;// TODO: math
   }
 
   private weighActions(actionScores: Record<string, number>, gamma: number, actionProbabilityFloor: number) {
