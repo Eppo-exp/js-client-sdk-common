@@ -40,7 +40,7 @@ export abstract class AbstractAssignmentCache<T extends Map<string, string>>
     return cachedValue === getMD5Hash(key.variationKey);
   }
 
-  private get(key: AssignmentCacheKey): string | undefined {
+  get(key: AssignmentCacheKey): string | undefined {
     return this.delegate.get(this.toCacheKeyString(key));
   }
 
@@ -48,8 +48,12 @@ export abstract class AbstractAssignmentCache<T extends Map<string, string>>
     this.delegate.set(this.toCacheKeyString(key), getMD5Hash(key.variationKey));
   }
 
-  private toCacheKeyString({ subjectKey, flagKey, allocationKey }: AssignmentCacheKey): string {
-    return [`subject:${subjectKey}`, `flag:${flagKey}`, `allocation:${allocationKey}`].join(';');
+  entries(): AssignmentCacheKey[] {
+    return Array.from(this.delegate.entries()).map(([k]) => JSON.parse(k));
+  }
+
+  protected toCacheKeyString({ subjectKey, flagKey, allocationKey }: AssignmentCacheKey): string {
+    return JSON.stringify({ subjectKey, flagKey, allocationKey });
   }
 }
 
