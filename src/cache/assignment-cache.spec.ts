@@ -16,6 +16,6 @@ describe('NonExpiringInMemoryAssignmentCache', () => {
     expect(cache.has(key2)).toBeTruthy();
     expect(cache.get(key1)).toBe(getMD5Hash('d'));
     expect(cache.get(key2)).toBe(getMD5Hash('4'));
-    expect(cache.entries()).toEqual([omit(key1, 'variationKey'), omit(key2, 'variationKey')]);
+    expect(cache.keys()).toEqual([omit(key1, 'variationKey'), omit(key2, 'variationKey')]);
   });
 });

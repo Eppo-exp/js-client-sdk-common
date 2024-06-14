@@ -11,12 +11,15 @@ export type AssignmentCacheKey = {
 
 export interface AsyncMap<K, V> {
   get(key: K): Promise<V | undefined>;
+
   set(key: K, value: V): Promise<void>;
+
   has(key: K): Promise<boolean>;
 }
 
 export interface AssignmentCache {
   set(key: AssignmentCacheKey): void;
+
   has(key: AssignmentCacheKey): boolean;
 }
 
@@ -26,6 +29,7 @@ export abstract class AbstractAssignmentCache<T extends Map<string, string>>
   // key -> variation value hash
   protected constructor(protected readonly delegate: T) {}
 
+  /** Returns whether the provided {@link AssignmentCacheKey} is present in the cache. */
   has(key: AssignmentCacheKey): boolean {
     const isPresent = this.delegate.has(this.toCacheKeyString(key));
     if (!isPresent) {
@@ -40,15 +44,24 @@ export abstract class AbstractAssignmentCache<T extends Map<string, string>>
     return cachedValue === getMD5Hash(key.variationKey);
   }
 
+  /**
+   * Returns the value stored in the cache for the provided {@link AssignmentCacheKey} or
+   * `undefined` if not present.
+   */
   get(key: AssignmentCacheKey): string | undefined {
     return this.delegate.get(this.toCacheKeyString(key));
   }
 
+  /**
+   * Stores the provided {@link AssignmentCacheKey} in the cache. If the key already exists, it
+   * will be overwritten.
+   */
   set(key: AssignmentCacheKey): void {
     this.delegate.set(this.toCacheKeyString(key), getMD5Hash(key.variationKey));
   }
 
-  entries(): AssignmentCacheKey[] {
+  /** Returns an array with all {@link AssignmentCacheKey}s stored in the cache. */
+  keys(): AssignmentCacheKey[] {
     return Array.from(this.delegate.entries()).map(([k]) => JSON.parse(k));
   }
 
