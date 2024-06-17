@@ -9,6 +9,7 @@ import {
   AsyncMap,
   AssignmentCacheKey,
   assignmentCacheKeyToString,
+  assignmentCacheValueToString,
 } from './cache/abstract-assignment-cache';
 import EppoClient, { FlagConfigurationRequestParameters, IEppoClient } from './client/eppo-client';
 import {
@@ -53,6 +54,7 @@ export {
   NonExpiringInMemoryAssignmentCache,
   LRUInMemoryAssignmentCache,
   assignmentCacheKeyToString,
+  assignmentCacheValueToString,
 
   // Interfaces
   FlagConfigurationRequestParameters,
