@@ -1,0 +1,178 @@
+import {
+  BanditCategoricalAttributeCoefficients,
+  BanditModelData,
+  BanditNumericAttributeCoefficients,
+} from './interfaces';
+import { Attributes } from './types';
+
+export interface BanditEvaluation {
+  flagKey: string;
+  subjectKey: string;
+  subjectAttributes: Attributes;
+  actionKey: string;
+  actionAttributes: Attributes;
+  actionScore: number;
+  actionWeight: number;
+  gamma: number;
+  optimalityGap: number;
+}
+
+export class BanditEvaluator {
+  public evaluateBandit(
+    flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Attributes,
+    actions: Record<string, Attributes>, // TODO: option to specify if action attributes are numeric or categorical
+    banditModel: BanditModelData,
+  ): BanditEvaluation {
+    const actionScores: Record<string, number> = this.scoreActions(
+      subjectAttributes,
+      actions,
+      banditModel,
+    );
+    const actionWeights: Record<string, number> = this.weighActions(
+      actionScores,
+      banditModel.gamma,
+      banditModel.actionProbabilityFloor,
+    );
+    const selectedActionKey: string = this.selectAction(flagKey, subjectKey, actionWeights);
+    const optimalityGap = 0; // TODO: compute difference between selected and max
+
+    return {
+      flagKey,
+      subjectKey,
+      subjectAttributes,
+      actionKey: selectedActionKey,
+      actionAttributes: actions[selectedActionKey],
+      actionScore: actionScores[selectedActionKey],
+      actionWeight: actionWeights[selectedActionKey],
+      gamma: banditModel.gamma,
+      optimalityGap,
+    };
+  }
+
+  private scoreActions(
+    subjectAttributes: Attributes,
+    actions: Record<string, Attributes>,
+    banditModel: Pick<BanditModelData, 'coefficients' | 'defaultActionScore'>,
+  ): Record<string, number> {
+    const actionScores: Record<string, number> = {};
+    Object.entries(actions).forEach(([actionKey, actionAttributes]) => {
+      let score = banditModel.defaultActionScore;
+      const coefficients = banditModel.coefficients[actionKey];
+      if (coefficients) {
+        score = coefficients.intercept;
+        score += this.scoreNumericAttributes(
+          coefficients.subjectNumericCoefficients,
+          subjectAttributes,
+        );
+        score += this.scoreCategoricalAttributes(
+          coefficients.subjectCategoricalCoefficients,
+          subjectAttributes,
+        );
+        score += this.scoreNumericAttributes(
+          coefficients.actionNumericCoefficients,
+          actionAttributes,
+        );
+        score += this.scoreCategoricalAttributes(
+          coefficients.actionCategoricalCoefficients,
+          actionAttributes,
+        );
+      }
+      actionScores[actionKey] = score;
+    });
+    return actionScores;
+  }
+
+  private scoreNumericAttributes(
+    coefficients: BanditNumericAttributeCoefficients[],
+    attributes: Attributes,
+  ): number {
+    return coefficients.reduce((score, numericCoefficients) => {
+      const attributeValue = attributes[numericCoefficients.attributeKey];
+      if (typeof attributeValue === 'number' && isFinite(attributeValue)) {
+        score += attributeValue * numericCoefficients.coefficient;
+      } else {
+        score += numericCoefficients.missingValueCoefficient;
+      }
+      return score;
+    }, 0);
+  }
+
+  private scoreCategoricalAttributes(
+    coefficients: BanditCategoricalAttributeCoefficients[],
+    attributes: Attributes,
+  ): number {
+    return coefficients.reduce((score, attributeCoefficients) => {
+      const attributeValue = attributes[attributeCoefficients.attributeKey]?.toString();
+      const applicableCoefficient =
+        attributeValue && attributeCoefficients.valueCoefficients[attributeValue];
+
+      score +=
+        typeof applicableCoefficient === 'number'
+          ? applicableCoefficient
+          : attributeCoefficients.missingValueCoefficient;
+
+      return score;
+    }, 0);
+  }
+
+  private weighActions(
+    actionScores: Record<string, number>,
+    gamma: number,
+    actionProbabilityFloor: number,
+  ) {
+    const actionWeights: Record<string, number> = {};
+    const actionScoreEntries = Object.entries(actionScores);
+
+    if (!actionScoreEntries.length) {
+      return actionWeights;
+    }
+
+    // First find the action with the highest score
+    let currTopScore: number | null = null;
+    let currTopAction: string | null = null;
+    actionScoreEntries.forEach(([actionKey, actionScore]) => {
+      if (currTopScore === null || actionScore > currTopScore) {
+        currTopScore = actionScore;
+        currTopAction = actionKey;
+      }
+    });
+
+    if (currTopScore === null || currTopAction === null) {
+      // Appease typescript with this check and extra variables
+      throw new Error('Unable to find top score');
+    }
+    const topScore: number = currTopScore;
+    const topAction: string = currTopAction;
+
+    // Then weigh every action but the top one
+    const numActions = actionScoreEntries.length;
+    const minimumWeight = actionProbabilityFloor / numActions;
+    let cumulativeWeight = 0;
+
+    actionScoreEntries.forEach(([actionKey, actionScore]) => {
+      if (actionKey === topAction) {
+        // We weigh the top action later
+        return;
+      }
+      const weight = 1 / (numActions + gamma * (topScore - actionScore));
+      const boundedWeight = Math.max(weight, minimumWeight);
+      cumulativeWeight += boundedWeight;
+      actionWeights[actionKey] = boundedWeight;
+    });
+
+    // Finally weigh the top action (defensively bounding to 0.0)
+    actionWeights[topAction] = Math.max(1 - cumulativeWeight, 0.0);
+
+    return actionWeights;
+  }
+
+  private selectAction(
+    flagKey: string,
+    subjectKey: string,
+    actionWeights: Record<string, number>,
+  ): string {
+    return Object.keys(actionWeights)[0]; // TODO: math and stuff
+  }
+}
