@@ -29,6 +29,11 @@ describe('BanditEvaluator', () => {
       gamma: number,
       actionProbabilityFloor: number,
     ) => Record<string, number>;
+    selectAction: (
+      flagKey: string,
+      subjectKey: string,
+      actionWeights: Record<string, number>,
+    ) => string;
   };
 
   describe('scoreNumericAttributes', () => {
@@ -295,6 +300,27 @@ describe('BanditEvaluator', () => {
         // Since we know the floor will be in effect, we use > 0.09999 instead of >= 0.1 to account for lack of precision with floating point numbers
         Object.values(actionWeightsHighProbabilityFloor).every((weight) => weight > 0.099999),
       ).toBe(true);
+    });
+  });
+
+  describe('selectAction', () => {
+    const flagKey = 'flag';
+    const actionWeights = { action1: 0.4, action2: 0.6, action3: 0.2 };
+
+    it('selects actions', () => {
+      expect(exposedEvaluator.selectAction(flagKey, 'subjectA', actionWeights)).toBe('action1');
+      expect(exposedEvaluator.selectAction(flagKey, 'subjectB', actionWeights)).toBe('action2');
+      expect(exposedEvaluator.selectAction(flagKey, 'subjectV', actionWeights)).toBe('action3');
+
+      /*
+      const assignmentCounts: Record<string, number> = { action1: 0, action2: 0, action3: 0 };
+      for (let i = 0; i < 100000; i += 1) {
+        const subjectKey = `subject${i}`;
+        const assignment = exposedEvaluator.selectAction(flagKey, subjectKey, actionWeights);
+        assignmentCounts[assignment] += 1;
+      }
+      console.log('>>>>>>', assignmentCounts); // { action1: 33526, action2: 53152, action3: 13322 }
+       */
     });
   });
 });
