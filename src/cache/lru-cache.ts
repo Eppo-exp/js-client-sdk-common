@@ -3,8 +3,12 @@
  *
  * Items are removed from the cache when the cache is full.
  *
- * The cache is implemented as a Map, which is a built-in JavaScript object.
- * The Map object holds key-value pairs and remembers the order of key-value pairs as they were inserted.
+ * The cache is implemented as a Set, which maintains insertion order:
+ * ```
+ * You can iterate through the elements of a set in insertion order. The insertion order corresponds
+ * to the order in which each element was inserted into the set by the add()
+ * ```
+ * Source: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set
  */
 export class LRUCache implements Set<string> {
   private readonly cache = new Set<string>();
