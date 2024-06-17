@@ -46,7 +46,7 @@ export abstract class AbstractAssignmentCache<T extends Map<string, string>>
   // key -> variation value hash
   protected constructor(protected readonly delegate: T) {}
 
-  /** Returns whether the provided {@link AssignmentCacheKey} is present in the cache. */
+  /** Returns whether the provided {@link AssignmentCacheEntry} is present in the cache. */
   has(entry: AssignmentCacheEntry): boolean {
     return this.get(entry) === assignmentCacheValueToString(entry);
   }
@@ -56,7 +56,7 @@ export abstract class AbstractAssignmentCache<T extends Map<string, string>>
   }
 
   /**
-   * Stores the provided {@link AssignmentCacheKey} in the cache. If the key already exists, it
+   * Stores the provided {@link AssignmentCacheEntry} in the cache. If the key already exists, it
    * will be overwritten.
    */
   set(entry: AssignmentCacheEntry): void {
@@ -64,7 +64,7 @@ export abstract class AbstractAssignmentCache<T extends Map<string, string>>
   }
 
   /**
-   * Returns an array with all {@link AssignmentCacheKey} entries in the cache as an array of
+   * Returns an array with all {@link AssignmentCacheEntry} entries in the cache as an array of
    * {@link string}s.
    */
   entries(): IterableIterator<[string, string]> {

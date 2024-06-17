@@ -8,6 +8,8 @@ import {
   LRUInMemoryAssignmentCache,
   AsyncMap,
   AssignmentCacheKey,
+  AssignmentCacheValue,
+  AssignmentCacheEntry,
   assignmentCacheKeyToString,
   assignmentCacheValueToString,
 } from './cache/abstract-assignment-cache';
@@ -49,6 +51,8 @@ export {
 
   // Assignment cache
   AssignmentCacheKey,
+  AssignmentCacheValue,
+  AssignmentCacheEntry,
   AssignmentCache,
   AsyncMap,
   NonExpiringInMemoryAssignmentCache,
