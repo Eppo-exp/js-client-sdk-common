@@ -3,7 +3,7 @@ import { IAssignmentHooks } from './assignment-hooks';
 import { IAssignmentLogger, IAssignmentEvent } from './assignment-logger';
 import {
   AbstractAssignmentCache,
-  AbstractAssignmentCache,
+  AssignmentCache,
   NonExpiringInMemoryAssignmentCache,
   LRUInMemoryAssignmentCache,
   AsyncMap,
@@ -45,7 +45,7 @@ export {
   MemoryOnlyConfigurationStore,
 
   // Assignment cache
-  AbstractAssignmentCache,
+  AssignmentCache,
   AsyncMap,
   NonExpiringInMemoryAssignmentCache,
   LRUInMemoryAssignmentCache,
