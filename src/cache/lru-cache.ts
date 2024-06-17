@@ -1,33 +1,33 @@
 /**
- * LRUCache is a cache that stores a maximum number of items.
+ * LRUCache is a simple implementation of a Least Recently Used (LRU) cache.
  *
- * Items are removed from the cache when the cache is full.
+ * Old items are evicted when the cache reaches its capacity.
  *
- * The cache is implemented as a Set, which maintains insertion order:
+ * The cache is implemented as a Map, which maintains insertion order:
  * ```
- * You can iterate through the elements of a set in insertion order. The insertion order corresponds
- * to the order in which each element was inserted into the set by the add()
+ * Iteration happens in insertion order, which corresponds to the order in which each key-value pair
+ * was first inserted into the map by the set() method (that is, there wasn't a key with the same
+ * value already in the map when set() was called).
  * ```
- * Source: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set
+ * Source: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map
  */
-export class LRUCache implements Set<string> {
-  private readonly cache = new Set<string>();
+export class LRUCache implements Map<string, string> {
+  private readonly cache = new Map<string, string>();
+  [Symbol.toStringTag]: string;
 
   constructor(private readonly capacity: number) {}
 
-  forEach(
-    callbackfn: (value: string, value2: string, set: Set<string>) => void,
-    // eslint-disable-next-line
-    thisArg?: any,
-  ): void {
-    this.cache.forEach(callbackfn, thisArg);
-  }
-
-  [Symbol.iterator](): IterableIterator<string> {
+  [Symbol.iterator](): IterableIterator<[string, string]> {
     return this.cache[Symbol.iterator]();
   }
 
-  [Symbol.toStringTag]: string;
+  forEach(
+    callbackFn: (value: string, key: string, map: Map<string, string>) => void,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    thisArg?: any,
+  ): void {
+    this.cache.forEach(callbackFn, thisArg);
+  }
 
   readonly size: number = this.cache.size;
 
@@ -52,23 +52,30 @@ export class LRUCache implements Set<string> {
   }
 
   has(key: string): boolean {
-    const { cache } = this;
-    if (!cache.has(key)) {
-      return false;
-    }
-
-    // the delete and set operations are used together to ensure that the most recently accessed
-    // or added item is always considered the "newest" in terms of access order.
-    // This is crucial for maintaining the correct order of elements in the cache,
-    // which directly impacts which item is considered the least recently used (LRU) and
-    // thus eligible for eviction when the cache reaches its capacity.
-    this.delete(key);
-    cache.add(key);
-
-    return true;
+    return this.cache.has(key);
   }
 
-  add(key: string): this {
+  get(key: string): string | undefined {
+    if (!this.has(key)) {
+      return undefined;
+    }
+
+    const value = this.cache.get(key);
+
+    if (value !== undefined) {
+      // the delete and set operations are used together to ensure that the most recently accessed
+      // or added item is always considered the "newest" in terms of access order.
+      // This is crucial for maintaining the correct order of elements in the cache,
+      // which directly impacts which item is considered the least recently used (LRU) and
+      // thus eligible for eviction when the cache reaches its capacity.
+      this.delete(key);
+      this.cache.set(key, value);
+    }
+
+    return value;
+  }
+
+  set(key: string, value: string): this {
     if (this.capacity === 0) {
       return this;
     }
@@ -84,7 +91,7 @@ export class LRUCache implements Set<string> {
       this.delete(oldestKey);
     }
 
-    this.cache.add(key);
+    this.cache.set(key, value);
     return this;
   }
 }

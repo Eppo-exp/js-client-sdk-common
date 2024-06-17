@@ -33,13 +33,29 @@ export interface AssignmentCache {
   has(key: AssignmentCacheKey): boolean;
 }
 
-export abstract class AbstractAssignmentCache<T extends Set<string>> implements AssignmentCache {
+export abstract class AbstractAssignmentCache<T extends Map<string, string>>
+  implements AssignmentCache
+{
   // key -> variation value hash
   protected constructor(protected readonly delegate: T) {}
 
   /** Returns whether the provided {@link AssignmentCacheKey} is present in the cache. */
   has(key: AssignmentCacheKey): boolean {
-    return this.delegate.has(assignmentCacheKeyToString(key));
+    const isPresent = this.delegate.has(assignmentCacheKeyToString(key));
+    if (!isPresent) {
+      // no cache key present
+      return false;
+    }
+
+    // the subject has been assigned to a different variation
+    // than was previously logged.
+    // in this case we need to log the assignment again.
+    const cachedValue = this.get(key);
+    return cachedValue === getMD5Hash(key.variationKey);
+  }
+
+  private get(key: AssignmentCacheKey): string | undefined {
+    return this.delegate.get(assignmentCacheKeyToString(key));
   }
 
   /**
@@ -47,12 +63,12 @@ export abstract class AbstractAssignmentCache<T extends Set<string>> implements 
    * will be overwritten.
    */
   set(key: AssignmentCacheKey): void {
-    this.delegate.add(assignmentCacheKeyToString(key));
+    this.delegate.set(assignmentCacheKeyToString(key), getMD5Hash(key.variationKey));
   }
 
   /**
-   * Returns an array with all **MD5-encoded* {@link AssignmentCacheKey} entries in the cache
-   * as an array of {@link string}s.
+   * Returns an array with all {@link AssignmentCacheKey} entries in the cache as an array of
+   * {@link string}s.
    */
   keys(): string[] {
     return Array.from(this.delegate.keys());
@@ -65,9 +81,11 @@ export abstract class AbstractAssignmentCache<T extends Set<string>> implements 
  * The primary use case is for client-side SDKs, where the cache is only used
  * for a single user.
  */
-export class NonExpiringInMemoryAssignmentCache extends AbstractAssignmentCache<Set<string>> {
+export class NonExpiringInMemoryAssignmentCache extends AbstractAssignmentCache<
+  Map<string, string>
+> {
   constructor() {
-    super(new Set<string>());
+    super(new Map<string, string>());
   }
 }
 
