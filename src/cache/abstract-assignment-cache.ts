@@ -9,6 +9,16 @@ export type AssignmentCacheKey = {
   variationKey: string;
 };
 
+/** Converts an {@link AssignmentCacheKey} to a string. */
+export function assignmentCacheKeyToString({
+  subjectKey,
+  flagKey,
+  allocationKey,
+  variationKey,
+}: AssignmentCacheKey): string {
+  return getMD5Hash([subjectKey, flagKey, allocationKey, variationKey].join(';'));
+}
+
 export interface AsyncMap<K, V> {
   get(key: K): Promise<V | undefined>;
 
@@ -29,7 +39,7 @@ export abstract class AbstractAssignmentCache<T extends Set<string>> implements 
 
   /** Returns whether the provided {@link AssignmentCacheKey} is present in the cache. */
   has(key: AssignmentCacheKey): boolean {
-    return this.delegate.has(this.toCacheKeyString(key));
+    return this.delegate.has(assignmentCacheKeyToString(key));
   }
 
   /**
@@ -37,7 +47,7 @@ export abstract class AbstractAssignmentCache<T extends Set<string>> implements 
    * will be overwritten.
    */
   set(key: AssignmentCacheKey): void {
-    this.delegate.add(this.toCacheKeyString(key));
+    this.delegate.add(assignmentCacheKeyToString(key));
   }
 
   /**
@@ -46,15 +56,6 @@ export abstract class AbstractAssignmentCache<T extends Set<string>> implements 
    */
   keys(): string[] {
     return Array.from(this.delegate.keys());
-  }
-
-  protected toCacheKeyString({
-    subjectKey,
-    flagKey,
-    allocationKey,
-    variationKey,
-  }: AssignmentCacheKey): string {
-    return getMD5Hash([subjectKey, flagKey, allocationKey, variationKey].join(';'));
   }
 }
 
