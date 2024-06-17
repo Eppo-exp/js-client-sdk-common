@@ -83,8 +83,8 @@ export abstract class AbstractAssignmentCache<T extends Map<string, string>>
 export class NonExpiringInMemoryAssignmentCache extends AbstractAssignmentCache<
   Map<string, string>
 > {
-  constructor() {
-    super(new Map<string, string>());
+  constructor(store = new Map<string, string>()) {
+    super(store);
   }
 }
 
