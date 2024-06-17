@@ -1,7 +1,6 @@
-import { getMD5Hash } from '../obfuscation';
-
 import {
   assignmentCacheKeyToString,
+  assignmentCacheValueToString,
   NonExpiringInMemoryAssignmentCache,
 } from './abstract-assignment-cache';
 
@@ -18,8 +17,11 @@ describe('NonExpiringInMemoryAssignmentCache', () => {
     // this makes an assumption about the internal implementation of the cache, which is not ideal
     // but it's the only way to test the cache without exposing the internal state
     expect(Array.from(cache.entries())).toEqual([
-      [assignmentCacheKeyToString(key1), getMD5Hash('d')],
-      [assignmentCacheKeyToString(key2), getMD5Hash('4')],
+      [assignmentCacheKeyToString(key1), assignmentCacheValueToString(key1)],
+      [assignmentCacheKeyToString(key2), assignmentCacheValueToString(key2)],
     ]);
+
+    expect(cache.has({ ...key1, allocationKey: 'c1' })).toBeFalsy();
+    expect(cache.has({ ...key2, variationKey: 'd1' })).toBeFalsy();
   });
 });

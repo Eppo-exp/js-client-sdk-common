@@ -2,20 +2,28 @@ import { getMD5Hash } from '../obfuscation';
 
 import { LRUCache } from './lru-cache';
 
-export type AssignmentCacheKey = {
-  subjectKey: string;
-  flagKey: string;
+export type AssignmentCacheValue = {
   allocationKey: string;
   variationKey: string;
 };
 
+export type AssignmentCacheKey = {
+  subjectKey: string;
+  flagKey: string;
+};
+
+export type AssignmentCacheEntry = AssignmentCacheKey & AssignmentCacheValue;
+
 /** Converts an {@link AssignmentCacheKey} to a string. */
-export function assignmentCacheKeyToString({
-  subjectKey,
-  flagKey,
+export function assignmentCacheKeyToString({ subjectKey, flagKey }: AssignmentCacheKey): string {
+  return getMD5Hash([subjectKey, flagKey].join(';'));
+}
+
+export function assignmentCacheValueToString({
   allocationKey,
-}: AssignmentCacheKey): string {
-  return getMD5Hash([subjectKey, flagKey, allocationKey].join(';'));
+  variationKey,
+}: AssignmentCacheValue): string {
+  return getMD5Hash([allocationKey, variationKey].join(';'));
 }
 
 export interface AsyncMap<K, V> {
@@ -27,9 +35,9 @@ export interface AsyncMap<K, V> {
 }
 
 export interface AssignmentCache {
-  set(key: AssignmentCacheKey): void;
+  set(key: AssignmentCacheEntry): void;
 
-  has(key: AssignmentCacheKey): boolean;
+  has(key: AssignmentCacheEntry): boolean;
 }
 
 export abstract class AbstractAssignmentCache<T extends Map<string, string>>
@@ -39,18 +47,8 @@ export abstract class AbstractAssignmentCache<T extends Map<string, string>>
   protected constructor(protected readonly delegate: T) {}
 
   /** Returns whether the provided {@link AssignmentCacheKey} is present in the cache. */
-  has(key: AssignmentCacheKey): boolean {
-    const isPresent = this.delegate.has(assignmentCacheKeyToString(key));
-    if (!isPresent) {
-      // no cache key present
-      return false;
-    }
-
-    // the subject has been assigned to a different variation
-    // than was previously logged.
-    // in this case we need to log the assignment again.
-    const cachedValue = this.get(key);
-    return cachedValue === getMD5Hash(key.variationKey);
+  has(entry: AssignmentCacheEntry): boolean {
+    return this.get(entry) === assignmentCacheValueToString(entry);
   }
 
   private get(key: AssignmentCacheKey): string | undefined {
@@ -61,8 +59,8 @@ export abstract class AbstractAssignmentCache<T extends Map<string, string>>
    * Stores the provided {@link AssignmentCacheKey} in the cache. If the key already exists, it
    * will be overwritten.
    */
-  set(key: AssignmentCacheKey): void {
-    this.delegate.set(assignmentCacheKeyToString(key), getMD5Hash(key.variationKey));
+  set(entry: AssignmentCacheEntry): void {
+    this.delegate.set(assignmentCacheKeyToString(entry), assignmentCacheValueToString(entry));
   }
 
   /**
