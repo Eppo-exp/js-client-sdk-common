@@ -6,23 +6,24 @@
  * The cache is implemented as a Map, which is a built-in JavaScript object.
  * The Map object holds key-value pairs and remembers the order of key-value pairs as they were inserted.
  */
-export class LRUCache implements Map<string, string> {
-  private readonly cache = new Map<string, string>();
-  [Symbol.toStringTag]: string;
+export class LRUCache implements Set<string> {
+  private readonly cache = new Set<string>();
 
   constructor(private readonly capacity: number) {}
 
-  [Symbol.iterator](): IterableIterator<[string, string]> {
+  forEach(
+    callbackfn: (value: string, value2: string, set: Set<string>) => void,
+    // eslint-disable-next-line
+    thisArg?: any,
+  ): void {
+    this.cache.forEach(callbackfn, thisArg);
+  }
+
+  [Symbol.iterator](): IterableIterator<string> {
     return this.cache[Symbol.iterator]();
   }
 
-  forEach(
-    callbackFn: (value: string, key: string, map: Map<string, string>) => void,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    thisArg?: any,
-  ): void {
-    this.cache.forEach(callbackFn, thisArg);
-  }
+  [Symbol.toStringTag]: string;
 
   readonly size: number = this.cache.size;
 
@@ -47,30 +48,23 @@ export class LRUCache implements Map<string, string> {
   }
 
   has(key: string): boolean {
-    return this.cache.has(key);
-  }
-
-  get(key: string): string | undefined {
-    if (!this.has(key)) {
-      return undefined;
+    const { cache } = this;
+    if (!cache.has(key)) {
+      return false;
     }
 
-    const value = this.cache.get(key);
+    // the delete and set operations are used together to ensure that the most recently accessed
+    // or added item is always considered the "newest" in terms of access order.
+    // This is crucial for maintaining the correct order of elements in the cache,
+    // which directly impacts which item is considered the least recently used (LRU) and
+    // thus eligible for eviction when the cache reaches its capacity.
+    this.delete(key);
+    cache.add(key);
 
-    if (value !== undefined) {
-      // the delete and set operations are used together to ensure that the most recently accessed
-      // or added item is always considered the "newest" in terms of access order.
-      // This is crucial for maintaining the correct order of elements in the cache,
-      // which directly impacts which item is considered the least recently used (LRU) and
-      // thus eligible for eviction when the cache reaches its capacity.
-      this.delete(key);
-      this.cache.set(key, value);
-    }
-
-    return value;
+    return true;
   }
 
-  set(key: string, value: string): this {
+  add(key: string): this {
     if (this.capacity === 0) {
       return this;
     }
@@ -86,7 +80,7 @@ export class LRUCache implements Map<string, string> {
       this.delete(oldestKey);
     }
 
-    this.cache.set(key, value);
+    this.cache.add(key);
     return this;
   }
 }

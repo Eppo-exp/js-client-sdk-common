@@ -3,11 +3,11 @@ import { IAssignmentHooks } from './assignment-hooks';
 import { IAssignmentLogger, IAssignmentEvent } from './assignment-logger';
 import {
   AbstractAssignmentCache,
-  AssignmentCache,
+  AbstractAssignmentCache,
   NonExpiringInMemoryAssignmentCache,
   LRUInMemoryAssignmentCache,
   AsyncMap,
-} from './cache/assignment-cache';
+} from './cache/abstract-assignment-cache';
 import EppoClient, { FlagConfigurationRequestParameters, IEppoClient } from './client/eppo-client';
 import {
   IConfigurationStore,
@@ -45,7 +45,7 @@ export {
   MemoryOnlyConfigurationStore,
 
   // Assignment cache
-  AssignmentCache,
+  AbstractAssignmentCache,
   AsyncMap,
   NonExpiringInMemoryAssignmentCache,
   LRUInMemoryAssignmentCache,

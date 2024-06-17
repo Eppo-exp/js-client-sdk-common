@@ -23,33 +23,13 @@ export interface AssignmentCache {
   has(key: AssignmentCacheKey): boolean;
 }
 
-export abstract class AbstractAssignmentCache<T extends Map<string, string>>
-  implements AssignmentCache
-{
+export abstract class AbstractAssignmentCache<T extends Set<string>> implements AssignmentCache {
   // key -> variation value hash
   protected constructor(protected readonly delegate: T) {}
 
   /** Returns whether the provided {@link AssignmentCacheKey} is present in the cache. */
   has(key: AssignmentCacheKey): boolean {
-    const isPresent = this.delegate.has(this.toCacheKeyString(key));
-    if (!isPresent) {
-      // no cache key present
-      return false;
-    }
-
-    // the subject has been assigned to a different variation
-    // than was previously logged.
-    // in this case we need to log the assignment again.
-    const cachedValue = this.get(key);
-    return cachedValue === getMD5Hash(key.variationKey);
-  }
-
-  /**
-   * Returns the value stored in the cache for the provided {@link AssignmentCacheKey} or
-   * `undefined` if not present.
-   */
-  get(key: AssignmentCacheKey): string | undefined {
-    return this.delegate.get(this.toCacheKeyString(key));
+    return this.delegate.has(this.toCacheKeyString(key));
   }
 
   /**
@@ -57,16 +37,24 @@ export abstract class AbstractAssignmentCache<T extends Map<string, string>>
    * will be overwritten.
    */
   set(key: AssignmentCacheKey): void {
-    this.delegate.set(this.toCacheKeyString(key), getMD5Hash(key.variationKey));
+    this.delegate.add(this.toCacheKeyString(key));
   }
 
-  /** Returns an array with all {@link AssignmentCacheKey}s stored in the cache. */
-  keys(): AssignmentCacheKey[] {
-    return Array.from(this.delegate.entries()).map(([k]) => JSON.parse(k));
+  /**
+   * Returns an array with all **MD5-encoded* {@link AssignmentCacheKey} entries in the cache
+   * as an array of {@link string}s.
+   */
+  keys(): string[] {
+    return Array.from(this.delegate.keys());
   }
 
-  protected toCacheKeyString({ subjectKey, flagKey, allocationKey }: AssignmentCacheKey): string {
-    return JSON.stringify({ subjectKey, flagKey, allocationKey });
+  protected toCacheKeyString({
+    subjectKey,
+    flagKey,
+    allocationKey,
+    variationKey,
+  }: AssignmentCacheKey): string {
+    return getMD5Hash([subjectKey, flagKey, allocationKey, variationKey].join(';'));
   }
 }
 
@@ -76,11 +64,9 @@ export abstract class AbstractAssignmentCache<T extends Map<string, string>>
  * The primary use case is for client-side SDKs, where the cache is only used
  * for a single user.
  */
-export class NonExpiringInMemoryAssignmentCache extends AbstractAssignmentCache<
-  Map<string, string>
-> {
+export class NonExpiringInMemoryAssignmentCache extends AbstractAssignmentCache<Set<string>> {
   constructor() {
-    super(new Map<string, string>());
+    super(new Set<string>());
   }
 }
 
