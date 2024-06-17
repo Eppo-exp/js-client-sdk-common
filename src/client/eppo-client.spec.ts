@@ -29,11 +29,7 @@ export async function init(configurationStore: IConfigurationStore<Flag | Obfusc
     sdkVersion: '1.0.0',
   });
   const httpClient = new FetchHttpClient(apiEndpoints, 1000);
-  const configurationRequestor = new ConfigurationRequestor(
-    httpClient,
-    configurationStore,
-    null,
-  );
+  const configurationRequestor = new ConfigurationRequestor(httpClient, configurationStore, null);
   await configurationRequestor.fetchAndStoreConfigurations();
 }
 

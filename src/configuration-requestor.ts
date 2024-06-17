@@ -17,7 +17,9 @@ export default class ConfigurationRequestor {
     }
 
     await this.flagConfigurationStore.setEntries(configResponse.flags);
-    if (Object.keys(configResponse.bandits ?? {}).length) {
+    const flagsHaveBandits = Object.keys(configResponse.bandits ?? {}).length > 0;
+    const banditStoreProvided = !!this.banditConfigurationStore;
+    if (flagsHaveBandits && banditStoreProvided) {
       // TODO: different polling intervals for bandit parameters
       const banditResponse = await this.httpClient.getBanditParameters();
       if (banditResponse?.bandits) {

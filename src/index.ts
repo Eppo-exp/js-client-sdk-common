@@ -20,7 +20,7 @@ import { MemoryStore, MemoryOnlyConfigurationStore } from './configuration-store
 import * as constants from './constants';
 import HttpClient from './http-client';
 import { Flag, VariationType } from './interfaces';
-import { AttributeType, SubjectAttributes } from './types';
+import { AttributeType, Attributes } from './types';
 import * as validation from './validation';
 
 export {
@@ -55,5 +55,5 @@ export {
   Flag,
   VariationType,
   AttributeType,
-  SubjectAttributes,
+  Attributes,
 };
