@@ -14,9 +14,8 @@ export function assignmentCacheKeyToString({
   subjectKey,
   flagKey,
   allocationKey,
-  variationKey,
 }: AssignmentCacheKey): string {
-  return getMD5Hash([subjectKey, flagKey, allocationKey, variationKey].join(';'));
+  return getMD5Hash([subjectKey, flagKey, allocationKey].join(';'));
 }
 
 export interface AsyncMap<K, V> {
@@ -70,8 +69,8 @@ export abstract class AbstractAssignmentCache<T extends Map<string, string>>
    * Returns an array with all {@link AssignmentCacheKey} entries in the cache as an array of
    * {@link string}s.
    */
-  keys(): string[] {
-    return Array.from(this.delegate.keys());
+  entries(): IterableIterator<[string, string]> {
+    return this.delegate.entries();
   }
 }
 

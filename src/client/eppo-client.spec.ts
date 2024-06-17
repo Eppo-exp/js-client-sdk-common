@@ -495,8 +495,6 @@ describe('EppoClient E2E test', () => {
       client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // log this assignment
       client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // cache hit, don't log
 
-      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
-
       // change the variation
       storage.setEntries({
         [flagKey]: {
@@ -520,17 +518,11 @@ describe('EppoClient E2E test', () => {
       client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // log this assignment
       client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // cache hit, don't log
 
-      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(2);
-
       // change the flag again, back to the original
       storage.setEntries({ [flagKey]: mockFlag });
 
-      // we don't log this assignment because the variation has been seen before and is cached
-      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
-      // cache hit, don't log
-      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
-
-      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(2);
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // important: log this assignment
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // cache hit, don't log
 
       // change the allocation
       storage.setEntries({
@@ -552,12 +544,10 @@ describe('EppoClient E2E test', () => {
         },
       });
 
-      // new allocation, log assignment
-      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
-      // cache hit, don't log
-      client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // log this assignment
+      client.getStringAssignment(flagKey, 'subject-10', {}, 'default'); // cache hit, don't log
 
-      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(3);
+      expect(td.explain(mockLogger.logAssignment).callCount).toEqual(4);
     });
   });
 
