@@ -120,7 +120,7 @@ describe('BanditEvaluator', () => {
       expect(score).toBe(expectedScore);
     });
 
-    it('Handles negative numeric coefficients', () => {
+    it('Handles negative categorical coefficients', () => {
       const negativeCategoricalCoefficients: BanditCategoricalAttributeCoefficients[] = [
         {
           attributeKey: 'color',
