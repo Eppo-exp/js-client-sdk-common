@@ -365,57 +365,69 @@ export default class EppoClient implements IEppoClient {
     actions: Record<string, Attributes>,
     defaultValue: string,
   ): { variation: string; action: string | null } {
-    const variation = this.getStringAssignment(
-      flagKey,
-      subjectKey,
-      subjectAttributes,
-      defaultValue,
-    );
+    let variation = this.getStringAssignment(flagKey, subjectKey, subjectAttributes, defaultValue);
     let action: string | null = null;
     const banditKey = variation;
-    const banditParameters = this.banditConfigurationStore?.get(banditKey);
-    if (banditParameters) {
-      // For now, we use the shortcut of assuming if a variation value is the key of a known bandit, that is the bandit we want
-      const banditModelData = banditParameters.modelData;
-      const banditEvaluation = this.banditEvaluator.evaluateBandit(
-        flagKey,
-        subjectKey,
-        subjectAttributes,
-        actions,
-        banditModelData,
-      );
-      action = banditEvaluation.actionKey;
+    try {
+      const banditParameters = this.banditConfigurationStore?.get(banditKey);
+      if (banditParameters && !actions?.length) {
+        // If it's a bandit, but we have no actions, just return default value
+        variation = defaultValue;
+      } else if (banditParameters) {
+        // For now, we use the shortcut of assuming if a variation value is the key of a known bandit, that is the bandit we want
+        const banditModelData = banditParameters.modelData;
+        const banditEvaluation = this.banditEvaluator.evaluateBandit(
+          flagKey,
+          subjectKey,
+          subjectAttributes,
+          actions,
+          banditModelData,
+        );
+        action = banditEvaluation.actionKey;
 
-      // TODO: fold into private helper method like logAssignment that flushes and stuff
-      if (this.banditLogger) {
-        try {
-          this.banditLogger.logBanditAction({
-            timestamp: new Date().toISOString(),
-            featureFlag: flagKey,
-            bandit: banditKey,
-            subject: subjectKey,
-            action,
-            actionProbability: banditEvaluation.actionWeight,
-            optimalityGap: banditEvaluation.optimalityGap,
-            modelVersion: banditParameters.modelVersion,
-            // TODO: bucket these out ahead of time
-            subjectNumericAttributes: this.pruneValuesByType(subjectAttributes, true),
-            subjectCategoricalAttributes: this.pruneValuesByType(subjectAttributes, false),
-            actionNumericAttributes: this.pruneValuesByType(actions[action], true),
-            actionCategoricalAttributes: this.pruneValuesByType(actions[action], false),
-            metaData: {
-              // TODO: dedupe
-              obfuscated: this.isObfuscated,
-              sdkLanguage: 'javascript',
-              sdkLibVersion: LIB_VERSION,
-            },
-          });
-        } catch (err) {
-          logger.warn('Error encountered logging bandit action', err);
-        }
+        const banditEvent: IBanditEvent = {
+          timestamp: new Date().toISOString(),
+          featureFlag: flagKey,
+          bandit: banditKey,
+          subject: subjectKey,
+          action,
+          actionProbability: banditEvaluation.actionWeight,
+          optimalityGap: banditEvaluation.optimalityGap,
+          modelVersion: banditParameters.modelVersion,
+          // TODO: bucket these out ahead of time
+          subjectNumericAttributes: this.pruneValuesByType(subjectAttributes, true),
+          subjectCategoricalAttributes: this.pruneValuesByType(subjectAttributes, false),
+          actionNumericAttributes: this.pruneValuesByType(actions[action], true),
+          actionCategoricalAttributes: this.pruneValuesByType(actions[action], false),
+          metaData: this.buildLoggerMetadata(),
+        };
+        this.logBanditAction(banditEvent);
+      }
+    } catch (err) {
+      if (this.isGracefulFailureMode) {
+        logger.error('Error evaluating bandit action', err);
+        variation = defaultValue;
+      } else {
+        throw err;
       }
     }
     return { variation, action };
+  }
+
+  private logBanditAction(banditEvent: IBanditEvent): void {
+    if (!this.banditLogger) {
+      // No bandit logger set; enqueue the event in case a logger is later set
+      if (this.queuedBanditEvents.length < MAX_EVENT_QUEUE_SIZE) {
+        this.queuedBanditEvents.push(banditEvent);
+      }
+      return;
+    }
+    // If here, we have a logger
+    try {
+      this.banditLogger.logBanditAction(banditEvent);
+    } catch (err) {
+      logger.warn('Error encountered logging bandit action', err);
+    }
   }
 
   // TODO: this method can be repurposed to bucket attributes once bandit signatures updated
@@ -630,11 +642,7 @@ export default class EppoClient implements IEppoClient {
       subject: subjectKey,
       timestamp: new Date().toISOString(),
       subjectAttributes,
-      metaData: {
-        obfuscated: this.isObfuscated,
-        sdkLanguage: 'javascript',
-        sdkLibVersion: LIB_VERSION,
-      },
+      metaData: this.buildLoggerMetadata(),
     };
 
     if (variation && allocationKey) {
@@ -666,6 +674,14 @@ export default class EppoClient implements IEppoClient {
     } catch (error) {
       logger.error(`[Eppo SDK] Error logging assignment event: ${error.message}`);
     }
+  }
+
+  private buildLoggerMetadata(): Record<string, unknown> {
+    return {
+      obfuscated: this.isObfuscated,
+      sdkLanguage: 'javascript',
+      sdkLibVersion: LIB_VERSION,
+    };
   }
 }
 

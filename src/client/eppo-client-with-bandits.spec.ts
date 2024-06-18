@@ -6,6 +6,7 @@ import {
   BanditTestCase,
 } from '../../test/testHelpers';
 import ApiEndpoints from '../api-endpoints';
+import { IBanditEvent } from '../bandit-logger';
 import ConfigurationRequestor from '../configuration-requestor';
 import { MemoryOnlyConfigurationStore } from '../configuration-store/memory.store';
 import FetchHttpClient from '../http-client';
@@ -13,8 +14,6 @@ import { BanditParameters, Flag } from '../interfaces';
 import { Attributes } from '../types';
 
 import EppoClient from './eppo-client';
-import { IAssignmentEvent, IAssignmentLogger } from '../assignment-logger';
-import { IBanditEvent, IBanditLogger } from '../bandit-logger';
 
 describe('EppoClient Bandits E2E test', () => {
   const flagStore = new MemoryOnlyConfigurationStore<Flag>();
@@ -116,18 +115,32 @@ describe('EppoClient Bandits E2E test', () => {
         expect(numAssignmentsChecked).toBeGreaterThan(0);
       },
     );
+
+    //TODO: make this a shared data test case
+    it('Returns default value if no actions provided', () => {
+      const banditAssignment = client.getBanditAction(
+        'banner_bandit_flag',
+        'eve',
+        {},
+        {},
+        'control',
+      );
+
+      expect(banditAssignment.variation).toBe('control');
+      expect(banditAssignment.action).toBeNull();
+    });
   });
 
   describe('BanditAssignmentLogger', () => {
     it('Passes the correct information to the logger', () => {
       const testStart = Date.now();
       const flagKey = 'banner_bandit_flag';
-      const subjectKey = 'alice';
-      const subjectAttributes: Attributes = { age: 25, country: 'USA', gender_identity: 'woman' };
+      const subjectKey = 'bob';
+      const subjectAttributes: Attributes = { age: 25, country: 'USA', gender_identity: 'female' };
       const actions: Record<string, Attributes> = {
-        nike: { brand_affinity: 1.5, loyalty_tier: 'silver' },
-        adidas: { brand_affinity: -1.0, loyalty_tier: 'bronze' },
-        reebok: { brand_affinity: 0.5, loyalty_tier: 'gold' },
+        nike: { brand_affinity: 1.5, loyalty_tier: 'silver' }, // score of 6.2, weight of 0.7923
+        adidas: { brand_affinity: -1.0, loyalty_tier: 'bronze' }, // score of -0.9, we
+        reebok: { brand_affinity: 0.5, loyalty_tier: 'gold' }, // score of 0
       };
 
       const banditAssignment = client.getBanditAction(
@@ -139,7 +152,7 @@ describe('EppoClient Bandits E2E test', () => {
       );
 
       expect(banditAssignment.variation).toBe('banner_bandit');
-      expect(banditAssignment.action).toBe('nike');
+      expect(banditAssignment.action).toBe('adidas');
 
       // TODO: update shared bandit test UFC to have doLog: true for bandit
       /*
@@ -161,17 +174,17 @@ describe('EppoClient Bandits E2E test', () => {
       expect(banditEvent.featureFlag).toBe(flagKey);
       expect(banditEvent.bandit).toBe('banner_bandit');
       expect(banditEvent.subject).toBe(subjectKey);
-      expect(banditEvent.action).toBe('nike');
-      expect(banditEvent.actionProbability).toBeCloseTo(0.8218);
-      expect(banditEvent.optimalityGap).toBe(0);
+      expect(banditEvent.action).toBe('adidas');
+      expect(banditEvent.actionProbability).toBeCloseTo(0.099);
+      expect(banditEvent.optimalityGap).toBe(7.1);
       expect(banditEvent.modelVersion).toBe('v123');
       expect(banditEvent.subjectNumericAttributes).toStrictEqual({ age: 25 });
       expect(banditEvent.subjectCategoricalAttributes).toStrictEqual({
         country: 'USA',
-        gender_identity: 'woman',
+        gender_identity: 'female',
       });
-      expect(banditEvent.actionNumericAttributes).toStrictEqual({ brand_affinity: 1.5 });
-      expect(banditEvent.actionCategoricalAttributes).toStrictEqual({ loyalty_tier: 'silver' });
+      expect(banditEvent.actionNumericAttributes).toStrictEqual({ brand_affinity: -1 });
+      expect(banditEvent.actionCategoricalAttributes).toStrictEqual({ loyalty_tier: 'bronze' });
       expect(banditEvent.metaData?.obfuscated).toBe(false);
     });
   });
