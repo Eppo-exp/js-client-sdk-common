@@ -305,22 +305,12 @@ describe('BanditEvaluator', () => {
 
   describe('selectAction', () => {
     const flagKey = 'flag';
-    const actionWeights = { action1: 0.4, action2: 0.6, action3: 0.2 };
+    const actionWeights = { action1: 0.2, action2: 0.5, action3: 0.3 };
 
     it('selects actions', () => {
       expect(exposedEvaluator.selectAction(flagKey, 'subjectA', actionWeights)).toBe('action1');
       expect(exposedEvaluator.selectAction(flagKey, 'subjectB', actionWeights)).toBe('action2');
-      expect(exposedEvaluator.selectAction(flagKey, 'subjectV', actionWeights)).toBe('action3');
-
-      /*
-      const assignmentCounts: Record<string, number> = { action1: 0, action2: 0, action3: 0 };
-      for (let i = 0; i < 100000; i += 1) {
-        const subjectKey = Math.random().toString(36).substring(2);
-        const assignment = exposedEvaluator.selectAction(flagKey, subjectKey, actionWeights);
-        assignmentCounts[assignment] += 1;
-      }
-      console.log('>>>>>>', assignmentCounts); // { action1: 33526, action2: 53152, action3: 13322 }
-      */
+      expect(exposedEvaluator.selectAction(flagKey, 'subjectE', actionWeights)).toBe('action3');
     });
   });
 
