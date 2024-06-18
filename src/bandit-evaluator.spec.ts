@@ -312,7 +312,6 @@ describe('BanditEvaluator', () => {
       expect(exposedEvaluator.selectAction(flagKey, 'subjectB', actionWeights)).toBe('action2');
       expect(exposedEvaluator.selectAction(flagKey, 'subjectV', actionWeights)).toBe('action3');
 
-      /*
       const assignmentCounts: Record<string, number> = { action1: 0, action2: 0, action3: 0 };
       for (let i = 0; i < 100000; i += 1) {
         const subjectKey = `subject${i}`;
@@ -320,7 +319,6 @@ describe('BanditEvaluator', () => {
         assignmentCounts[assignment] += 1;
       }
       console.log('>>>>>>', assignmentCounts); // { action1: 33526, action2: 53152, action3: 13322 }
-       */
     });
   });
 

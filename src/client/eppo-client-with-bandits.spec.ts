@@ -64,6 +64,7 @@ describe('EppoClient Bandits E2E test', () => {
       'Shared bandit test data - %s',
       async (flagKey: string) => {
         const { defaultValue, subjects } = testsByFlagKey[flagKey];
+        let numAssignmentsChecked = 0;
         subjects.forEach((subject) => {
           // TODO: handle already-bucketed attributes
           // TODO: common test case with a numeric value passed as a categorical attribute and vice verse
@@ -102,7 +103,10 @@ describe('EppoClient Bandits E2E test', () => {
 
           expect(banditAssignment.variation).toBe(subject.assignment.variation);
           expect(banditAssignment.action).toBe(subject.assignment.action);
+          numAssignmentsChecked += 1;
         });
+        // Ensure that this test case correctly checked some test assignments
+        expect(numAssignmentsChecked).toBeGreaterThan(0);
       },
     );
   });
