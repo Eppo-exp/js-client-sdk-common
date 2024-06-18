@@ -2,12 +2,15 @@ import {
   readMockUFCResponse,
   MOCK_BANDIT_MODELS_RESPONSE_FILE,
   MOCK_FLAGS_WITH_BANDITS_RESPONSE_FILE,
+  readBanditTestData,
+  BanditTestCase,
 } from '../../test/testHelpers';
 import ApiEndpoints from '../api-endpoints';
 import ConfigurationRequestor from '../configuration-requestor';
 import { MemoryOnlyConfigurationStore } from '../configuration-store/memory.store';
 import FetchHttpClient from '../http-client';
 import { BanditParameters, Flag } from '../interfaces';
+import { Attributes } from '../types';
 
 import EppoClient from './eppo-client';
 
@@ -40,7 +43,9 @@ describe('EppoClient Bandits E2E test', () => {
     const httpClient = new FetchHttpClient(apiEndpoints, 1000);
     const configurationRequestor = new ConfigurationRequestor(httpClient, flagStore, banditStore);
     await configurationRequestor.fetchAndStoreConfigurations();
+  });
 
+  beforeEach(() => {
     client = new EppoClient(flagStore, banditStore);
     client.setIsGracefulFailureMode(false);
   });
@@ -49,7 +54,58 @@ describe('EppoClient Bandits E2E test', () => {
     jest.restoreAllMocks();
   });
 
-  it('TODO', () => {
-    // TODO: bandit test cases with the client
+  describe('Shared test data', () => {
+    const testData = readBanditTestData();
+    // Build a map for more useful test names
+    const testsByFlagKey: Record<string, BanditTestCase> = {};
+    testData.forEach((testCase) => (testsByFlagKey[testCase.flag] = testCase));
+
+    it.each(Object.keys(testsByFlagKey))(
+      'Shared bandit test data - %s',
+      async (flagKey: string) => {
+        const { defaultValue, subjects } = testsByFlagKey[flagKey];
+        subjects.forEach((subject) => {
+          // TODO: handle already-bucketed attributes
+          // TODO: common test case with a numeric value passed as a categorical attribute and vice verse
+
+          const actions: Record<string, Attributes> = {};
+          subject.actions.forEach((action) => {
+            actions[action.actionKey] = {
+              ...action.numericAttributes,
+              ...action.categoricalAttributes,
+            };
+          });
+
+          const subjectAttributes = {
+            ...subject.subjectAttributes.numeric_attributes,
+            ...subject.subjectAttributes.categorical_attributes,
+          };
+
+          const banditAssignment = client.getBanditAction(
+            flagKey,
+            subject.subjectKey,
+            subjectAttributes,
+            actions,
+            defaultValue,
+          );
+
+          // Do this check in addition to assertions to provide helpful information on exactly which
+          // evaluation failed to produce an expected result
+          if (
+            banditAssignment.variation !== subject.assignment.variation ||
+            banditAssignment.action !== subject.assignment.action
+          ) {
+            console.error(
+              `Unexpected result for flag ${flagKey} and subject ${subject.subjectKey}`,
+            );
+          }
+
+          expect(banditAssignment.variation).toBe(subject.assignment.variation);
+          expect(banditAssignment.action).toBe(subject.assignment.action);
+        });
+      },
+    );
   });
+
+  //TODO: test that verifies that the bandit logger called with expected values
 });

@@ -9,7 +9,7 @@ import {
   getTestAssignments,
   readAssignmentTestData,
   readMockUFCResponse,
-  validateTestAssignments,
+  validateTestAssignments, ASSIGNMENT_TEST_DATA_DIR,
 } from '../../test/testHelpers';
 import ApiEndpoints from '../api-endpoints';
 import { IAssignmentLogger } from '../assignment-logger';

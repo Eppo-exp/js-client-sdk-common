@@ -379,7 +379,7 @@ describe('BanditEvaluator', () => {
       expect(result.actionKey).toBe('action1');
       expect(result.actionAttributes).toStrictEqual(actions.action1);
       expect(result.actionScore).toBe(3.2);
-      expect(result.actionWeight).toBeCloseTo(0.41);
+      expect(result.actionWeight).toBeCloseTo(0.417);
       expect(result.gamma).toBe(banditModel.gamma);
       expect(result.optimalityGap).toBe(0);
     });

@@ -23,9 +23,10 @@ import FetchHttpClient from '../http-client';
 import { BanditParameters, Flag, ObfuscatedFlag, VariationType } from '../interfaces';
 import { getMD5Hash } from '../obfuscation';
 import initPoller, { IPoller } from '../poller';
-import { AttributeType, ValueType } from '../types';
+import { Attributes, AttributeType, ValueType } from '../types';
 import { validateNotBlank } from '../validation';
 import { LIB_VERSION } from '../version';
+import { BanditEvaluator } from '../bandit-evaluator';
 
 /**
  * Client for assigning experiment variations.
@@ -168,6 +169,7 @@ export default class EppoClient implements IEppoClient {
   private assignmentCache?: AssignmentCache;
   private requestPoller?: IPoller;
   private evaluator = new Evaluator();
+  private banditEvaluator = new BanditEvaluator();
 
   constructor(
     private flagConfigurationStore: IConfigurationStore<Flag | ObfuscatedFlag>,
@@ -349,6 +351,37 @@ export default class EppoClient implements IEppoClient {
         VariationType.JSON,
       ).objectValue ?? defaultValue
     );
+  }
+
+  public getBanditAction(
+    flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Attributes,
+    actions: Record<string, Attributes>,
+    defaultValue: string,
+  ): { variation: string; action: string | null } {
+    const variation = this.getStringAssignment(
+      flagKey,
+      subjectKey,
+      subjectAttributes,
+      defaultValue,
+    );
+    let action: string | null = null;
+    const banditParameters = this.banditConfigurationStore?.get(variation);
+    if (banditParameters) {
+      // For now, we use the shortcut of assuming if a variation value is the key of a known bandit, that is the bandit we want
+      const banditModelData = banditParameters.modelData;
+      const banditEvaluation = this.banditEvaluator.evaluateBandit(
+        flagKey,
+        subjectKey,
+        subjectAttributes,
+        actions,
+        banditModelData,
+      );
+      // TODO: log bandit assignment
+      action = banditEvaluation.actionKey;
+    }
+    return { variation, action };
   }
 
   private getAssignmentVariation(

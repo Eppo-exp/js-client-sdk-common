@@ -190,9 +190,10 @@ export class BanditEvaluator {
         `${flagKey}-${subjectKey}-${b[0]}`,
         this.assignmentShards,
       );
+      console.log('>> SORTING >> ', { [a[0]]: actionAShard, [b[0]]: actionBShard });
       let result = actionAShard - actionBShard;
       if (result === 0) {
-        // Break the unlikely case of a tie in randomized assigned shards by action name
+        // In the unlikely case of a tie in randomized assigned shards, break the tie with the action names
         result = a[0] < b[0] ? -1 : 1;
       }
       return result;
@@ -201,11 +202,12 @@ export class BanditEvaluator {
     // Select action from the shuffled actions, based on weight
     const assignedShard = this.sharder.getShard(`${flagKey}-${subjectKey}`, this.assignmentShards);
     const assignmentWeightThreshold = assignedShard / this.assignmentShards;
+    console.log({ assignedShard, assignmentWeightThreshold, shuffledActions });
     let cumulativeWeight = 0;
     let assignedAction: string | null = null;
     for (const actionWeight of shuffledActions) {
       cumulativeWeight += actionWeight[1];
-      if (cumulativeWeight > assignmentWeightThreshold) {
+      if (cumulativeWeight > assignmentWeightThreshold) { // TODO: should this be >= ?
         assignedAction = actionWeight[0];
         break;
       }
