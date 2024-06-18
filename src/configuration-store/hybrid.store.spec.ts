@@ -9,6 +9,7 @@ describe('HybridConfigurationStore', () => {
   beforeEach(() => {
     syncStoreMock = {
       get: jest.fn(),
+      getAll: jest.fn(),
       getKeys: jest.fn(),
       isInitialized: jest.fn(),
       setEntries: jest.fn(),
@@ -64,6 +65,14 @@ describe('HybridConfigurationStore', () => {
       (asyncStoreMock.isInitialized as jest.Mock).mockReturnValue(true);
 
       expect(store.isInitialized()).toBe(false);
+    });
+  });
+
+  describe('getAll', () => {
+    it('should return all entries from the serving store', () => {
+      const entries = { key1: 'value1', key2: 'value2' };
+      (syncStoreMock.getAll as jest.Mock).mockReturnValue(entries);
+      expect(store.getAll()).toEqual(entries);
     });
   });
 

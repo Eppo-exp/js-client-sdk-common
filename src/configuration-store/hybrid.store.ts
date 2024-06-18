@@ -49,6 +49,10 @@ export class HybridConfigurationStore<T> implements IConfigurationStore<T> {
     return this.servingStore.get(key);
   }
 
+  public getAll(): Record<string, T> {
+    return this.servingStore.getAll();
+  }
+
   public getKeys(): string[] {
     return this.servingStore.getKeys();
   }

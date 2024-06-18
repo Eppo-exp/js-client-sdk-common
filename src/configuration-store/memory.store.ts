@@ -8,6 +8,10 @@ export class MemoryStore<T> implements ISyncStore<T> {
     return this.store[key] ?? null;
   }
 
+  getAll(): Record<string, T> {
+    return this.store;
+  }
+
   getKeys(): string[] {
     return Object.keys(this.store);
   }
@@ -33,6 +37,10 @@ export class MemoryOnlyConfigurationStore<T> implements IConfigurationStore<T> {
 
   get(key: string): T | null {
     return this.servingStore.get(key);
+  }
+
+  getAll(): Record<string, T> {
+    return this.servingStore.getAll();
   }
 
   getKeys(): string[] {

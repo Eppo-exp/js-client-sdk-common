@@ -36,6 +36,12 @@ describe('MemoryOnlyConfigurationStore', () => {
     expect(memoryStore.getKeys()).toEqual(['key1', 'key2', 'key3']);
   });
 
+  it('should return all entries', async () => {
+    const entries = { key1: 'value1', key2: 'value2', key3: 'value3' };
+    await memoryStore.setEntries(entries);
+    expect(memoryStore.getAll()).toEqual(entries);
+  });
+
   it('should overwrite existing entries', async () => {
     await memoryStore.setEntries({ toBeReplaced: 'old value', toBeRemoved: 'delete me' });
     expect(memoryStore.get('toBeReplaced')).toBe('old value');

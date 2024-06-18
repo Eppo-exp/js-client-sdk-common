@@ -19,7 +19,7 @@ import { decodeFlag } from '../decoding';
 import { EppoValue } from '../eppo_value';
 import { Evaluator, FlagEvaluation, noneResult } from '../evaluator';
 import FlagConfigurationRequestor from '../flag-configuration-requestor';
-import FetchHttpClient from '../http-client';
+import FetchHttpClient, { IUniversalFlagConfig } from '../http-client';
 import { Flag, ObfuscatedFlag, VariationType } from '../interfaces';
 import { getMD5Hash } from '../obfuscation';
 import initPoller, { IPoller } from '../poller';
@@ -143,6 +143,8 @@ export interface IEppoClient {
   setIsGracefulFailureMode(gracefulFailureMode: boolean): void;
 
   getFlagKeys(): string[];
+
+  getConfiguration(): IUniversalFlagConfig;
 
   isInitialized(): boolean;
 }
@@ -495,6 +497,14 @@ export default class EppoClient implements IEppoClient {
 
   public setIsGracefulFailureMode(gracefulFailureMode: boolean) {
     this.isGracefulFailureMode = gracefulFailureMode;
+  }
+
+  public getConfiguration(): IUniversalFlagConfig {
+    const flags = this.configurationStore.getAll();
+    const ufc: IUniversalFlagConfig = {
+      flags,
+    };
+    return ufc;
   }
 
   private flushQueuedEvents() {
