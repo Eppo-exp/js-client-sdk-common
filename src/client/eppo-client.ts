@@ -19,6 +19,7 @@ import { decodeFlag } from '../decoding';
 import { EppoValue } from '../eppo_value';
 import { Evaluator, FlagEvaluation, noneResult } from '../evaluator';
 import FlagConfigurationRequestor from '../flag-configuration-requestor';
+import { FlagEvaluationDetails, FlagEvaluationDetailsBuilder } from '../flag-evaluation-details';
 import FetchHttpClient from '../http-client';
 import { Flag, ObfuscatedFlag, Variation, VariationType } from '../interfaces';
 import { getMD5Hash } from '../obfuscation';
@@ -27,10 +28,9 @@ import { AttributeType, ValueType } from '../types';
 import { validateNotBlank } from '../validation';
 import { LIB_VERSION } from '../version';
 
-export type AssignmentDetails<T extends Variation['value']> = {
+export interface AssignmentDetails<T extends Variation['value']> extends FlagEvaluationDetails {
   value: T;
-  reason: string;
-};
+}
 
 export type FlagConfigurationRequestParameters = {
   apiKey: string;
@@ -145,7 +145,7 @@ export default class EppoClient {
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: string,
   ): AssignmentDetails<string> {
-    const { eppoValue, reason } = this.getAssignmentVariation(
+    const { eppoValue, flagEvaluationDetails } = this.getAssignmentVariation(
       flagKey,
       subjectKey,
       subjectAttributes,
@@ -154,7 +154,7 @@ export default class EppoClient {
     );
     return {
       value: eppoValue.stringValue ?? defaultValue,
-      reason,
+      ...flagEvaluationDetails,
     };
   }
 
@@ -237,7 +237,7 @@ export default class EppoClient {
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: EppoValue,
     expectedVariationType: VariationType,
-  ): { eppoValue: EppoValue; reason: string } {
+  ): { eppoValue: EppoValue; flagEvaluationDetails: FlagEvaluationDetails } {
     try {
       const result = this.getAssignmentDetail(
         flagKey,
@@ -249,18 +249,23 @@ export default class EppoClient {
       if (!result.variation) {
         return {
           eppoValue: defaultValue,
-          reason: result.reason,
+          flagEvaluationDetails: result.flagEvaluationDetails,
         };
       }
 
       return {
         eppoValue: EppoValue.valueOf(result.variation.value, expectedVariationType),
-        reason: result.reason,
+        flagEvaluationDetails: result.flagEvaluationDetails,
       };
     } catch (error) {
+      const eppoValue = this.rethrowIfNotGraceful(error, defaultValue);
+      const flagEvaluationDetails = new FlagEvaluationDetailsBuilder().buildForNoneResult(
+        'ASSIGNMENT_ERROR',
+        `Assignment Error: ${error.message}`,
+      );
       return {
-        eppoValue: this.rethrowIfNotGraceful(error, defaultValue),
-        reason: `error getting assignment: ${error.message}`,
+        eppoValue,
+        flagEvaluationDetails,
       };
     }
   }
@@ -295,12 +300,16 @@ export default class EppoClient {
     validateNotBlank(flagKey, 'Invalid argument: flagKey cannot be blank');
 
     const flag = this.getFlag(flagKey);
+    const flagEvaluationDetailsBuilder = new FlagEvaluationDetailsBuilder();
 
     if (flag === null) {
       logger.warn(`[Eppo SDK] No assigned variation. Flag not found: ${flagKey}`);
       // note: this is different from the Python SDK, which returns None instead
-      const reason = `flag not found: ${flagKey}`;
-      return noneResult(flagKey, subjectKey, subjectAttributes, reason);
+      const flagEvaluationDetails = flagEvaluationDetailsBuilder.buildForNoneResult(
+        'FLAG_NOT_FOUND',
+        `Flag not found: ${flagKey}`,
+      );
+      return noneResult(flagKey, subjectKey, subjectAttributes, flagEvaluationDetails);
     }
 
     if (!checkTypeMatch(expectedVariationType, flag.variationType)) {
@@ -312,8 +321,11 @@ export default class EppoClient {
     if (!flag.enabled) {
       logger.info(`[Eppo SDK] No assigned variation. Flag is disabled: ${flagKey}`);
       // note: this is different from the Python SDK, which returns None instead
-      const reason = `flag not enabled: ${flagKey}`;
-      return noneResult(flagKey, subjectKey, subjectAttributes, reason);
+      const flagEvaluationDetails = flagEvaluationDetailsBuilder.buildForNoneResult(
+        'FLAG_DISABLED',
+        `Flag not enabled: ${flagKey}`,
+      );
+      return noneResult(flagKey, subjectKey, subjectAttributes, flagEvaluationDetails);
     }
 
     const result = this.evaluator.evaluateFlag(
@@ -328,8 +340,13 @@ export default class EppoClient {
     }
 
     if (result?.variation && !checkValueTypeMatch(expectedVariationType, result.variation.value)) {
-      const reason = `expected type ${expectedVariationType} does not match for value ${result.variation.value}`;
-      return noneResult(flagKey, subjectKey, subjectAttributes, reason);
+      const { key: vKey, value: vValue } = result.variation;
+      const reason = `Expected variation type ${expectedVariationType} does not match for variation '${vKey}' with value ${vValue}`;
+      const flagEvaluationDetails = flagEvaluationDetailsBuilder.buildForNoneResult(
+        'TYPE_MISMATCH',
+        reason,
+      );
+      return noneResult(flagKey, subjectKey, subjectAttributes, flagEvaluationDetails);
     }
 
     try {
