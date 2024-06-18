@@ -1,6 +1,8 @@
 import ApiEndpoints from '../api-endpoints';
 import { logger } from '../application-logger';
 import { IAssignmentEvent, IAssignmentLogger } from '../assignment-logger';
+import { BanditEvaluator } from '../bandit-evaluator';
+import { IBanditEvent, IBanditLogger } from '../bandit-logger';
 import {
   AssignmentCache,
   LRUInMemoryAssignmentCache,
@@ -26,7 +28,6 @@ import initPoller, { IPoller } from '../poller';
 import { Attributes, AttributeType, ValueType } from '../types';
 import { validateNotBlank } from '../validation';
 import { LIB_VERSION } from '../version';
-import { BanditEvaluator } from '../bandit-evaluator';
 
 /**
  * Client for assigning experiment variations.
@@ -125,7 +126,9 @@ export interface IEppoClient {
     defaultValue: object,
   ): object;
 
-  setLogger(logger: IAssignmentLogger): void;
+  setAssignmentLogger(assignmentLogger: IAssignmentLogger): void;
+
+  setBanditLogger(banditLogger: IBanditLogger): void;
 
   useLRUInMemoryAssignmentCache(maxSize: number): void;
 
@@ -163,8 +166,10 @@ export type FlagConfigurationRequestParameters = {
 };
 
 export default class EppoClient implements IEppoClient {
-  private queuedEvents: IAssignmentEvent[] = [];
+  private queuedAssignmentEvents: IAssignmentEvent[] = [];
   private assignmentLogger?: IAssignmentLogger;
+  private queuedBanditEvents: IBanditEvent[] = [];
+  private banditLogger?: IBanditLogger;
   private isGracefulFailureMode = true;
   private assignmentCache?: AssignmentCache;
   private requestPoller?: IPoller;
@@ -367,7 +372,8 @@ export default class EppoClient implements IEppoClient {
       defaultValue,
     );
     let action: string | null = null;
-    const banditParameters = this.banditConfigurationStore?.get(variation);
+    const banditKey = variation;
+    const banditParameters = this.banditConfigurationStore?.get(banditKey);
     if (banditParameters) {
       // For now, we use the shortcut of assuming if a variation value is the key of a known bandit, that is the bandit we want
       const banditModelData = banditParameters.modelData;
@@ -378,10 +384,50 @@ export default class EppoClient implements IEppoClient {
         actions,
         banditModelData,
       );
-      // TODO: log bandit assignment
       action = banditEvaluation.actionKey;
+
+      // TODO: fold into private helper method like logAssignment that flushes and stuff
+      if (this.banditLogger) {
+        try {
+          this.banditLogger.logBanditAction({
+            timestamp: new Date().toISOString(),
+            featureFlag: flagKey,
+            bandit: banditKey,
+            subject: subjectKey,
+            action,
+            actionProbability: banditEvaluation.actionWeight,
+            optimalityGap: banditEvaluation.optimalityGap,
+            modelVersion: banditParameters.modelVersion,
+            // TODO: bucket these out ahead of time
+            subjectNumericAttributes: this.pruneValuesByType(subjectAttributes, true),
+            subjectCategoricalAttributes: this.pruneValuesByType(subjectAttributes, false),
+            actionNumericAttributes: this.pruneValuesByType(actions[action], true),
+            actionCategoricalAttributes: this.pruneValuesByType(actions[action], false),
+            metaData: {
+              // TODO: dedupe
+              obfuscated: this.isObfuscated,
+              sdkLanguage: 'javascript',
+              sdkLibVersion: LIB_VERSION,
+            },
+          });
+        } catch (err) {
+          logger.warn('Error encountered logging bandit action', err);
+        }
+      }
     }
     return { variation, action };
+  }
+
+  // TODO: this method can be repurposed to bucket attributes once bandit signatures updated
+  private pruneValuesByType(attributes: Attributes, numeric: boolean): Attributes {
+    const result: Attributes = {};
+    Object.entries(attributes).forEach(([key, value]) => {
+      const isNumeric = typeof value === 'number' && isFinite(value);
+      if (isNumeric === numeric) {
+        result[key] = value;
+      }
+    });
+    return result;
   }
 
   private getAssignmentVariation(
@@ -515,9 +561,14 @@ export default class EppoClient implements IEppoClient {
     );
   }
 
-  public setLogger(logger: IAssignmentLogger) {
+  public setAssignmentLogger(logger: IAssignmentLogger) {
     this.assignmentLogger = logger;
-    this.flushQueuedEvents(); // log any events that may have been queued while initializing
+    this.flushQueuedAssignmentEvents(); // log any assignment events that may have been queued while initializing
+  }
+
+  public setBanditLogger(logger: IBanditLogger) {
+    this.banditLogger = logger;
+    this.flushQueuedBanditEvents(); // log any bandit events that may have been queued while initializing
   }
 
   /**
@@ -543,15 +594,28 @@ export default class EppoClient implements IEppoClient {
     this.isGracefulFailureMode = gracefulFailureMode;
   }
 
-  private flushQueuedEvents() {
-    const eventsToFlush = this.queuedEvents;
-    this.queuedEvents = [];
-    try {
-      for (const event of eventsToFlush) {
+  private flushQueuedAssignmentEvents() {
+    const assignmentEventsToFlush = this.queuedAssignmentEvents;
+    this.queuedAssignmentEvents = [];
+    for (const event of assignmentEventsToFlush) {
+      try {
         this.assignmentLogger?.logAssignment(event);
+      } catch (error) {
+        logger.error(`[Eppo SDK] Error flushing assignment event: ${error.message}`);
       }
-    } catch (error) {
-      logger.error(`[Eppo SDK] Error flushing assignment events: ${error.message}`);
+    }
+  }
+
+  private flushQueuedBanditEvents() {
+    const banditEventsToFlush = this.queuedBanditEvents;
+    // TODO: Dedupe if possible
+    this.queuedBanditEvents = [];
+    for (const event of banditEventsToFlush) {
+      try {
+        this.banditLogger?.logBanditAction(event);
+      } catch (error) {
+        logger.error(`[Eppo SDK] Error flushing bandit event: ${error.message}`);
+      }
     }
   }
 
@@ -587,7 +651,8 @@ export default class EppoClient implements IEppoClient {
 
     // assignment logger may be null while waiting for initialization
     if (this.assignmentLogger == null) {
-      this.queuedEvents.length < MAX_EVENT_QUEUE_SIZE && this.queuedEvents.push(event);
+      this.queuedAssignmentEvents.length < MAX_EVENT_QUEUE_SIZE &&
+        this.queuedAssignmentEvents.push(event);
       return;
     }
     try {

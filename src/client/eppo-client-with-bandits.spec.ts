@@ -13,11 +13,15 @@ import { BanditParameters, Flag } from '../interfaces';
 import { Attributes } from '../types';
 
 import EppoClient from './eppo-client';
+import { IAssignmentEvent, IAssignmentLogger } from '../assignment-logger';
+import { IBanditEvent, IBanditLogger } from '../bandit-logger';
 
 describe('EppoClient Bandits E2E test', () => {
   const flagStore = new MemoryOnlyConfigurationStore<Flag>();
   const banditStore = new MemoryOnlyConfigurationStore<BanditParameters>();
   let client: EppoClient;
+  const mockLogAssignment = jest.fn();
+  const mockLogBanditAction = jest.fn();
 
   beforeAll(async () => {
     // Mock out fetch to return the bandit flag configuration and model parameters
@@ -48,20 +52,23 @@ describe('EppoClient Bandits E2E test', () => {
   beforeEach(() => {
     client = new EppoClient(flagStore, banditStore);
     client.setIsGracefulFailureMode(false);
+    client.setAssignmentLogger({ logAssignment: mockLogAssignment });
+    client.setBanditLogger({ logBanditAction: mockLogBanditAction });
+    jest.clearAllMocks();
   });
 
   afterAll(() => {
     jest.restoreAllMocks();
   });
 
-  describe('Shared test data', () => {
+  describe('Shared test cases', () => {
     const testData = readBanditTestData();
     // Build a map for more useful test names
     const testsByFlagKey: Record<string, BanditTestCase> = {};
     testData.forEach((testCase) => (testsByFlagKey[testCase.flag] = testCase));
 
     it.each(Object.keys(testsByFlagKey))(
-      'Shared bandit test data - %s',
+      'Shared bandit test case - %s',
       async (flagKey: string) => {
         const { defaultValue, subjects } = testsByFlagKey[flagKey];
         let numAssignmentsChecked = 0;
@@ -111,5 +118,61 @@ describe('EppoClient Bandits E2E test', () => {
     );
   });
 
-  //TODO: test that verifies that the bandit logger called with expected values
+  describe('BanditAssignmentLogger', () => {
+    it('Passes the correct information to the logger', () => {
+      const testStart = Date.now();
+      const flagKey = 'banner_bandit_flag';
+      const subjectKey = 'alice';
+      const subjectAttributes: Attributes = { age: 25, country: 'USA', gender_identity: 'woman' };
+      const actions: Record<string, Attributes> = {
+        nike: { brand_affinity: 1.5, loyalty_tier: 'silver' },
+        adidas: { brand_affinity: -1.0, loyalty_tier: 'bronze' },
+        reebok: { brand_affinity: 0.5, loyalty_tier: 'gold' },
+      };
+
+      const banditAssignment = client.getBanditAction(
+        flagKey,
+        subjectKey,
+        subjectAttributes,
+        actions,
+        'control',
+      );
+
+      expect(banditAssignment.variation).toBe('banner_bandit');
+      expect(banditAssignment.action).toBe('nike');
+
+      // TODO: update shared bandit test UFC to have doLog: true for bandit
+      /*
+      expect(mockLogAssignment).toHaveBeenCalledTimes(1);
+      const assignmentEvent: IAssignmentEvent = mockLogAssignment.mock.calls[0][0];
+      expect(new Date(assignmentEvent.timestamp).getTime()).toBeGreaterThanOrEqual(testStart);
+      expect(assignmentEvent.featureFlag).toBe(flagKey);
+      expect(assignmentEvent.allocation).toBe('analysis');
+      expect(assignmentEvent.experiment).toBe('banner_bandit-analysis');
+      expect(assignmentEvent.variation).toBe('banner_bandit');
+      expect(assignmentEvent.subject).toBe(subjectKey);
+      expect(assignmentEvent.subjectAttributes).toStrictEqual(subjectAttributes);
+      expect(assignmentEvent.metaData?.obfuscated).toBe(false);
+       */
+
+      expect(mockLogBanditAction).toHaveBeenCalledTimes(1);
+      const banditEvent: IBanditEvent = mockLogBanditAction.mock.calls[0][0];
+      expect(new Date(banditEvent.timestamp).getTime()).toBeGreaterThanOrEqual(testStart);
+      expect(banditEvent.featureFlag).toBe(flagKey);
+      expect(banditEvent.bandit).toBe('banner_bandit');
+      expect(banditEvent.subject).toBe(subjectKey);
+      expect(banditEvent.action).toBe('nike');
+      expect(banditEvent.actionProbability).toBeCloseTo(0.8218);
+      expect(banditEvent.optimalityGap).toBe(0);
+      expect(banditEvent.modelVersion).toBe('v123');
+      expect(banditEvent.subjectNumericAttributes).toStrictEqual({ age: 25 });
+      expect(banditEvent.subjectCategoricalAttributes).toStrictEqual({
+        country: 'USA',
+        gender_identity: 'woman',
+      });
+      expect(banditEvent.actionNumericAttributes).toStrictEqual({ brand_affinity: 1.5 });
+      expect(banditEvent.actionCategoricalAttributes).toStrictEqual({ loyalty_tier: 'silver' });
+      expect(banditEvent.metaData?.obfuscated).toBe(false);
+    });
+  });
 });

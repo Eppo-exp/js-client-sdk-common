@@ -49,8 +49,6 @@ export class BanditEvaluator {
     );
     const optimalityGap = topScore - actionScores[selectedActionKey];
 
-    console.log('>>>>>>>', { actionScores, actionWeights, selectedActionKey, optimalityGap });
-
     return {
       flagKey,
       subjectKey,
