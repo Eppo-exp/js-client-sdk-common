@@ -41,7 +41,15 @@ export class BanditEvaluator {
       banditModel.actionProbabilityFloor,
     );
     const selectedActionKey: string = this.selectAction(flagKey, subjectKey, actionWeights);
-    const optimalityGap = 0; // TODO: compute difference between selected and max
+
+    // Compute optimality gap in terms of score
+    const topScore = Object.values(actionScores).reduce(
+      (maxScore, score) => (score > maxScore ? score : maxScore),
+      -Infinity,
+    );
+    const optimalityGap = topScore - actionScores[selectedActionKey];
+
+    console.log('>>>>>>>', { actionScores, actionWeights, selectedActionKey, optimalityGap });
 
     return {
       flagKey,
@@ -190,7 +198,6 @@ export class BanditEvaluator {
         `${flagKey}-${subjectKey}-${b[0]}`,
         this.assignmentShards,
       );
-      //console.log('>> SORTING >> ', { [a[0]]: actionAShard, [b[0]]: actionBShard });
       let result = actionAShard - actionBShard;
       if (result === 0) {
         // In the unlikely case of a tie in randomized assigned shards, break the tie with the action names
@@ -202,7 +209,6 @@ export class BanditEvaluator {
     // Select action from the shuffled actions, based on weight
     const assignedShard = this.sharder.getShard(`${flagKey}-${subjectKey}`, this.assignmentShards);
     const assignmentWeightThreshold = assignedShard / this.assignmentShards;
-    //console.log('>>>>>>', { assignedShard, assignmentWeightThreshold, shuffledActions });
     let cumulativeWeight = 0;
     let assignedAction: string | null = null;
     for (const actionWeight of shuffledActions) {

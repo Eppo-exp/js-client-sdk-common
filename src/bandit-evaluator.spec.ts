@@ -312,20 +312,21 @@ describe('BanditEvaluator', () => {
       expect(exposedEvaluator.selectAction(flagKey, 'subjectB', actionWeights)).toBe('action2');
       expect(exposedEvaluator.selectAction(flagKey, 'subjectV', actionWeights)).toBe('action3');
 
+      /*
       const assignmentCounts: Record<string, number> = { action1: 0, action2: 0, action3: 0 };
       for (let i = 0; i < 100000; i += 1) {
-        const subjectKey = `subject${i}`;
+        const subjectKey = Math.random().toString(36).substring(2);
         const assignment = exposedEvaluator.selectAction(flagKey, subjectKey, actionWeights);
         assignmentCounts[assignment] += 1;
       }
       console.log('>>>>>>', assignmentCounts); // { action1: 33526, action2: 53152, action3: 13322 }
+      */
     });
   });
 
   describe('evaluateBandit', () => {
-    it('evaluates the bandit', () => {
+    it('evaluates the bandit with action contexts', () => {
       const flagKey = 'test_flag';
-      const subjectKey = 'test_subject';
       const subjectAttributes = { age: 25, location: 'US' };
       const actions: Record<string, Attributes> = {
         action1: { price: 10, category: 'A' },
@@ -360,26 +361,72 @@ describe('BanditEvaluator', () => {
               },
             ],
           },
+          action2: {
+            actionKey: 'action2',
+            intercept: 0.3,
+            subjectNumericCoefficients: [
+              { attributeKey: 'age', coefficient: 0.1, missingValueCoefficient: 0.0 },
+            ],
+            subjectCategoricalCoefficients: [
+              {
+                attributeKey: 'location',
+                missingValueCoefficient: 0.0,
+                valueCoefficients: { US: 0.2 },
+              },
+            ],
+            actionNumericCoefficients: [
+              { attributeKey: 'price', coefficient: 0.05, missingValueCoefficient: 0.0 },
+            ],
+            actionCategoricalCoefficients: [
+              {
+                attributeKey: 'category',
+                missingValueCoefficient: 0.0,
+                valueCoefficients: { B: 0.3 },
+              },
+            ],
+          },
         },
       };
 
-      const result = banditEvaluator.evaluateBandit(
+      // Subject A gets assigned action 2
+      const subjectKeyA = 'subjectA';
+      const resultA = banditEvaluator.evaluateBandit(
         flagKey,
-        subjectKey,
+        subjectKeyA,
         subjectAttributes,
         actions,
         banditModel,
       );
 
-      expect(result.flagKey).toBe(flagKey);
-      expect(result.subjectKey).toBe(subjectKey);
-      expect(result.subjectAttributes).toStrictEqual(subjectAttributes);
-      expect(result.actionKey).toBe('action1');
-      expect(result.actionAttributes).toStrictEqual(actions.action1);
-      expect(result.actionScore).toBe(3.2);
-      expect(result.actionWeight).toBeCloseTo(0.417);
-      expect(result.gamma).toBe(banditModel.gamma);
-      expect(result.optimalityGap).toBe(0);
+      expect(resultA.flagKey).toBe(flagKey);
+      expect(resultA.subjectKey).toBe(subjectKeyA);
+      expect(resultA.subjectAttributes).toStrictEqual(subjectAttributes);
+      expect(resultA.actionKey).toBe('action2');
+      expect(resultA.actionAttributes).toStrictEqual(actions.action2);
+      expect(resultA.actionScore).toBe(4.3);
+      expect(resultA.actionWeight).toBeCloseTo(0.5074);
+      expect(resultA.gamma).toBe(banditModel.gamma);
+      expect(resultA.optimalityGap).toBe(0);
+
+      // Subject B gets assigned action 1
+      const subjectKeyB = 'subjectB';
+      const resultB = banditEvaluator.evaluateBandit(
+        flagKey,
+        subjectKeyB,
+        subjectAttributes,
+        actions,
+        banditModel,
+      );
+
+      expect(resultB.flagKey).toBe(flagKey);
+      expect(resultB.subjectKey).toBe(subjectKeyB);
+      expect(resultB.subjectAttributes).toStrictEqual(subjectAttributes);
+      expect(resultB.actionKey).toBe('action1');
+      expect(resultB.actionAttributes).toStrictEqual(actions.action1);
+      expect(resultB.actionScore).toBe(4);
+      expect(resultB.actionWeight).toBeCloseTo(0.4926);
+      expect(resultB.gamma).toBe(banditModel.gamma);
+      expect(resultB.optimalityGap).toBeCloseTo(0.3);
     });
   });
 });
