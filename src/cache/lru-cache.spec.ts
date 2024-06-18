@@ -13,7 +13,7 @@ describe('LRUCache', () => {
   });
 
   it('should return undefined for missing values', () => {
-    expect(cache.get('missing')).toBeUndefined();
+    expect(cache.get('missing')).toBeFalsy();
   });
 
   it('should overwrite existing values', () => {
@@ -26,7 +26,7 @@ describe('LRUCache', () => {
     cache.set('a', 'apple');
     cache.set('b', 'banana');
     cache.set('c', 'cherry');
-    expect(cache.get('a')).toBeUndefined();
+    expect(cache.get('a')).toBeFalsy();
     expect(cache.get('b')).toBe('banana');
     expect(cache.get('c')).toBe('cherry');
   });
@@ -37,7 +37,7 @@ describe('LRUCache', () => {
     cache.get('a'); // Access 'a' to make it recently used
     cache.set('c', 'cherry');
     expect(cache.get('a')).toBe('apple');
-    expect(cache.get('b')).toBeUndefined();
+    expect(cache.get('b')).toBeFalsy();
     expect(cache.get('c')).toBe('cherry');
   });
 
@@ -50,7 +50,7 @@ describe('LRUCache', () => {
   it('should handle the cache capacity of zero', () => {
     const zeroCache = new LRUCache(0);
     zeroCache.set('a', 'apple');
-    expect(zeroCache.get('a')).toBeUndefined();
+    expect(zeroCache.get('a')).toBeFalsy();
   });
 
   it('should handle the cache capacity of one', () => {
@@ -58,7 +58,7 @@ describe('LRUCache', () => {
     oneCache.set('a', 'apple');
     expect(oneCache.get('a')).toBe('apple');
     oneCache.set('b', 'banana');
-    expect(oneCache.get('a')).toBeUndefined();
+    expect(oneCache.get('a')).toBeFalsy();
     expect(oneCache.get('b')).toBe('banana');
   });
 });

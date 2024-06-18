@@ -1,10 +1,15 @@
 /**
- * LRUCache is a cache that stores a maximum number of items.
+ * LRUCache is a simple implementation of a Least Recently Used (LRU) cache.
  *
- * Items are removed from the cache when the cache is full.
+ * Old items are evicted when the cache reaches its capacity.
  *
- * The cache is implemented as a Map, which is a built-in JavaScript object.
- * The Map object holds key-value pairs and remembers the order of key-value pairs as they were inserted.
+ * The cache is implemented as a Map, which maintains insertion order:
+ * ```
+ * Iteration happens in insertion order, which corresponds to the order in which each key-value pair
+ * was first inserted into the map by the set() method (that is, there wasn't a key with the same
+ * value already in the map when set() was called).
+ * ```
+ * Source: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map
  */
 export class LRUCache implements Map<string, string> {
   private readonly cache = new Map<string, string>();

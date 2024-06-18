@@ -4,8 +4,8 @@ import { IAsyncStore, IConfigurationStore, ISyncStore } from './configuration-st
 
 export class HybridConfigurationStore<T> implements IConfigurationStore<T> {
   constructor(
-    private readonly servingStore: ISyncStore<T>,
-    private readonly persistentStore: IAsyncStore<T> | null,
+    protected readonly servingStore: ISyncStore<T>,
+    protected readonly persistentStore: IAsyncStore<T> | null,
   ) {}
 
   /**

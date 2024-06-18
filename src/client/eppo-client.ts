@@ -5,7 +5,7 @@ import {
   AssignmentCache,
   LRUInMemoryAssignmentCache,
   NonExpiringInMemoryAssignmentCache,
-} from '../cache/assignment-cache';
+} from '../cache/abstract-assignment-cache';
 import { IConfigurationStore } from '../configuration-store/configuration-store';
 import {
   BASE_URL as DEFAULT_BASE_URL,
@@ -540,17 +540,17 @@ export default class EppoClient implements IEppoClient {
     }
 
     // assignment logger may be null while waiting for initialization
-    if (this.assignmentLogger == null) {
+    if (!this.assignmentLogger) {
       this.queuedEvents.length < MAX_EVENT_QUEUE_SIZE && this.queuedEvents.push(event);
       return;
     }
     try {
       this.assignmentLogger.logAssignment(event);
       this.assignmentCache?.set({
-        flagKey: flagKey,
-        subjectKey: result.subjectKey,
-        allocationKey: result.allocationKey ?? '__eppo_no_allocation',
-        variationKey: result.variation?.key ?? '__eppo_no_variation',
+        flagKey,
+        subjectKey,
+        allocationKey: allocationKey ?? '__eppo_no_allocation',
+        variationKey: variation?.key ?? '__eppo_no_variation',
       });
     } catch (error) {
       logger.error(`[Eppo SDK] Error logging assignment event: ${error.message}`);
