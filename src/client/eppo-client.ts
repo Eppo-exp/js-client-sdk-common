@@ -362,7 +362,7 @@ export default class EppoClient implements IEppoClient {
     flagKey: string,
     subjectKey: string,
     subjectAttributes: Attributes,
-    actions: Record<string, Attributes>,
+    actions: Record<string, Attributes>, // TODO: ability to provide a set of actions with no context, or context broken out by numeric/categorical
     defaultValue: string,
   ): { variation: string; action: string | null } {
     let variation = this.getStringAssignment(flagKey, subjectKey, subjectAttributes, defaultValue);
