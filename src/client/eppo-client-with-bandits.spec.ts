@@ -6,6 +6,7 @@ import {
   BanditTestCase,
 } from '../../test/testHelpers';
 import ApiEndpoints from '../api-endpoints';
+import { BanditEvaluator } from '../bandit-evaluator';
 import { IBanditEvent } from '../bandit-logger';
 import ConfigurationRequestor from '../configuration-requestor';
 import { MemoryOnlyConfigurationStore } from '../configuration-store/memory.store';
@@ -131,18 +132,18 @@ describe('EppoClient Bandits E2E test', () => {
     });
   });
 
-  describe('BanditAssignmentLogger', () => {
-    it('Passes the correct information to the logger', () => {
-      const testStart = Date.now();
-      const flagKey = 'banner_bandit_flag';
-      const subjectKey = 'bob';
-      const subjectAttributes: Attributes = { age: 25, country: 'USA', gender_identity: 'female' };
-      const actions: Record<string, Attributes> = {
-        nike: { brand_affinity: 1.5, loyalty_tier: 'silver' }, // score of 6.2, weight of 0.7923
-        adidas: { brand_affinity: -1.0, loyalty_tier: 'bronze' }, // score of -0.9, we
-        reebok: { brand_affinity: 0.5, loyalty_tier: 'gold' }, // score of 0
-      };
+  describe('Client-specific tests', () => {
+    const testStart = Date.now();
+    const flagKey = 'banner_bandit_flag'; // piggyback off shared test flag
+    const subjectKey = 'bob';
+    const subjectAttributes: Attributes = { age: 25, country: 'USA', gender_identity: 'female' };
+    const actions: Record<string, Attributes> = {
+      nike: { brand_affinity: 1.5, loyalty_tier: 'silver' },
+      adidas: { brand_affinity: -1.0, loyalty_tier: 'bronze' },
+      reebok: { brand_affinity: 0.5, loyalty_tier: 'gold' },
+    };
 
+    it('Passes the correct information to the logger', () => {
       const banditAssignment = client.getBanditAction(
         flagKey,
         subjectKey,
@@ -186,6 +187,39 @@ describe('EppoClient Bandits E2E test', () => {
       expect(banditEvent.actionNumericAttributes).toStrictEqual({ brand_affinity: -1 });
       expect(banditEvent.actionCategoricalAttributes).toStrictEqual({ loyalty_tier: 'bronze' });
       expect(banditEvent.metaData?.obfuscated).toBe(false);
+    });
+
+    describe('Bandit evaluation errors', () => {
+      beforeEach(() => {
+        jest
+          .spyOn(
+            (client as unknown as { banditEvaluator: BanditEvaluator }).banditEvaluator,
+            'evaluateBandit',
+          )
+          .mockImplementation(() => {
+            throw new Error('Intentional Error For Test');
+          });
+      });
+
+      it('Returns default value when graceful mode is on', () => {
+        client.setIsGracefulFailureMode(true);
+        const banditAssignment = client.getBanditAction(
+          flagKey,
+          subjectKey,
+          subjectAttributes,
+          actions,
+          'control',
+        );
+        expect(banditAssignment.variation).toBe('control');
+        expect(banditAssignment.action).toBeNull();
+      });
+
+      it('Throws the error when graceful mode is off', () => {
+        client.setIsGracefulFailureMode(false); // Note: this is superfluous to beforeEach(), but done for clarity
+        expect(() =>
+          client.getBanditAction(flagKey, subjectKey, subjectAttributes, actions, 'control'),
+        ).toThrow();
+      });
     });
   });
 });

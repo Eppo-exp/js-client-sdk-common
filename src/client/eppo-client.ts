@@ -370,7 +370,7 @@ export default class EppoClient implements IEppoClient {
     const banditKey = variation;
     try {
       const banditParameters = this.banditConfigurationStore?.get(banditKey);
-      if (banditParameters && !actions?.length) {
+      if (banditParameters && !Object.keys(actions ?? {}).length) {
         // If it's a bandit, but we have no actions, just return default value
         variation = defaultValue;
       } else if (banditParameters) {

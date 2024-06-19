@@ -40,7 +40,6 @@ export class BanditEvaluator {
       banditModel.gamma,
       banditModel.actionProbabilityFloor,
     );
-    console.log('>>>>>', { actionScores, actionWeights });
     const selectedActionKey: string = this.selectAction(flagKey, subjectKey, actionWeights);
 
     // Compute optimality gap in terms of score
