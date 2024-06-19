@@ -575,12 +575,14 @@ export default class EppoClient implements IEppoClient {
 
   public setAssignmentLogger(logger: IAssignmentLogger) {
     this.assignmentLogger = logger;
-    this.flushQueuedAssignmentEvents(); // log any assignment events that may have been queued while initializing
+    // log any assignment events that may have been queued while initializing
+    this.flushQueuedEvents(this.queuedAssignmentEvents, this.assignmentLogger?.logAssignment);
   }
 
   public setBanditLogger(logger: IBanditLogger) {
     this.banditLogger = logger;
-    this.flushQueuedBanditEvents(); // log any bandit events that may have been queued while initializing
+    // log any bandit events that may have been queued while initializing
+    this.flushQueuedEvents(this.queuedBanditEvents, this.banditLogger?.logBanditAction);
   }
 
   /**
@@ -606,29 +608,21 @@ export default class EppoClient implements IEppoClient {
     this.isGracefulFailureMode = gracefulFailureMode;
   }
 
-  private flushQueuedAssignmentEvents() {
-    const assignmentEventsToFlush = this.queuedAssignmentEvents;
-    this.queuedAssignmentEvents = [];
-    for (const event of assignmentEventsToFlush) {
-      try {
-        this.assignmentLogger?.logAssignment(event);
-      } catch (error) {
-        logger.error(`[Eppo SDK] Error flushing assignment event: ${error.message}`);
-      }
-    }
-  }
+  private flushQueuedEvents<T>(eventQueue: T[], logFunction?: (event: T) => void) {
+    const eventsToFlush = [...eventQueue]; // defensive copy
+    eventQueue.length = 0; // Truncate the array
 
-  private flushQueuedBanditEvents() {
-    const banditEventsToFlush = this.queuedBanditEvents;
-    // TODO: Dedupe if possible
-    this.queuedBanditEvents = [];
-    for (const event of banditEventsToFlush) {
-      try {
-        this.banditLogger?.logBanditAction(event);
-      } catch (error) {
-        logger.error(`[Eppo SDK] Error flushing bandit event: ${error.message}`);
-      }
+    if (!logFunction) {
+      return;
     }
+
+    eventsToFlush.forEach((event) => {
+      try {
+        logFunction(event);
+      } catch (error) {
+        logger.error(`[Eppo SDK] Error flushing event to logger: ${error.message}`);
+      }
+    });
   }
 
   private logAssignment(result: FlagEvaluation) {

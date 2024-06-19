@@ -7,9 +7,10 @@ import {
   OBFUSCATED_MOCK_UFC_RESPONSE_FILE,
   SubjectTestCase,
   getTestAssignments,
-  readAssignmentTestData,
   readMockUFCResponse,
   validateTestAssignments,
+  readTestData,
+  ASSIGNMENT_TEST_DATA_DIR,
 } from '../../test/testHelpers';
 import ApiEndpoints from '../api-endpoints';
 import { IAssignmentLogger } from '../assignment-logger';
@@ -205,7 +206,7 @@ describe('EppoClient E2E test', () => {
       jest.restoreAllMocks();
     });
 
-    it.each(readAssignmentTestData())(
+    it.each(readTestData<IAssignmentTestCase>(ASSIGNMENT_TEST_DATA_DIR))(
       'test variation assignment splits',
       async ({ flag, variationType, defaultValue, subjects }: IAssignmentTestCase) => {
         const client = new EppoClient(storage);
@@ -256,7 +257,7 @@ describe('EppoClient E2E test', () => {
       jest.restoreAllMocks();
     });
 
-    it.each(readAssignmentTestData())(
+    it.each(readTestData<IAssignmentTestCase>(ASSIGNMENT_TEST_DATA_DIR))(
       'test variation assignment splits',
       async ({ flag, variationType, defaultValue, subjects }: IAssignmentTestCase) => {
         const client = new EppoClient(storage, undefined, undefined, true);

@@ -211,7 +211,7 @@ export class BanditEvaluator {
     let assignedAction: string | null = null;
     for (const actionWeight of shuffledActions) {
       cumulativeWeight += actionWeight[1];
-      if (cumulativeWeight > assignmentWeightThreshold) { // TODO: should this be >= ?
+      if (cumulativeWeight > assignmentWeightThreshold) {
         assignedAction = actionWeight[0];
         break;
       }

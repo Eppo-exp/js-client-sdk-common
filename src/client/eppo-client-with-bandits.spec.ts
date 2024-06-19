@@ -2,12 +2,14 @@ import {
   readMockUFCResponse,
   MOCK_BANDIT_MODELS_RESPONSE_FILE,
   MOCK_FLAGS_WITH_BANDITS_RESPONSE_FILE,
-  readBanditTestData,
+  readTestData,
   BanditTestCase,
+  BANDIT_TEST_DATA_DIR,
 } from '../../test/testHelpers';
 import ApiEndpoints from '../api-endpoints';
+import { IAssignmentLogger } from '../assignment-logger';
 import { BanditEvaluator } from '../bandit-evaluator';
-import { IBanditEvent } from '../bandit-logger';
+import { IBanditEvent, IBanditLogger } from '../bandit-logger';
 import ConfigurationRequestor from '../configuration-requestor';
 import { MemoryOnlyConfigurationStore } from '../configuration-store/memory.store';
 import FetchHttpClient from '../http-client';
@@ -62,7 +64,7 @@ describe('EppoClient Bandits E2E test', () => {
   });
 
   describe('Shared test cases', () => {
-    const testData = readBanditTestData();
+    const testData = readTestData<BanditTestCase>(BANDIT_TEST_DATA_DIR);
     // Build a map for more useful test names
     const testsByFlagKey: Record<string, BanditTestCase> = {};
     testData.forEach((testCase) => (testsByFlagKey[testCase.flag] = testCase));
@@ -134,7 +136,7 @@ describe('EppoClient Bandits E2E test', () => {
 
   describe('Client-specific tests', () => {
     const testStart = Date.now();
-    const flagKey = 'banner_bandit_flag'; // piggyback off shared test flag
+    const flagKey = 'banner_bandit_flag'; // piggyback off a shared test data flag
     const subjectKey = 'bob';
     const subjectAttributes: Attributes = { age: 25, country: 'USA', gender_identity: 'female' };
     const actions: Record<string, Attributes> = {
@@ -187,6 +189,39 @@ describe('EppoClient Bandits E2E test', () => {
       expect(banditEvent.actionNumericAttributes).toStrictEqual({ brand_affinity: -1 });
       expect(banditEvent.actionCategoricalAttributes).toStrictEqual({ loyalty_tier: 'bronze' });
       expect(banditEvent.metaData?.obfuscated).toBe(false);
+    });
+
+    it('Flushed queued logging events when a logger is set', () => {
+      client.setAssignmentLogger(null as unknown as IAssignmentLogger);
+      client.setBanditLogger(null as unknown as IBanditLogger);
+      const banditAssignment = client.getBanditAction(
+        flagKey,
+        subjectKey,
+        subjectAttributes,
+        actions,
+        'control',
+      );
+
+      expect(banditAssignment.variation).toBe('banner_bandit');
+      expect(banditAssignment.action).toBe('adidas');
+
+      expect(mockLogAssignment).not.toHaveBeenCalled();
+      expect(mockLogBanditAction).not.toHaveBeenCalled();
+
+      client.setAssignmentLogger({ logAssignment: mockLogAssignment });
+      client.setBanditLogger({ logBanditAction: mockLogBanditAction });
+
+      // TODO: update shared bandit test UFC to have doLog: true for bandit
+      /*
+      expect(mockLogAssignment).toHaveBeenCalledTimes(1);
+      const assignmentEvent: IAssignmentEvent = mockLogAssignment.mock.calls[0][0];
+      expect(assignmentEvent.variation).toBe('banner_bandit');
+      */
+
+      expect(mockLogBanditAction).toHaveBeenCalledTimes(1);
+      const banditEvent: IBanditEvent = mockLogBanditAction.mock.calls[0][0];
+      expect(new Date(banditEvent.timestamp).getTime()).toBeGreaterThanOrEqual(testStart);
+      expect(banditEvent.action).toBe('adidas');
     });
 
     describe('Bandit evaluation errors', () => {
