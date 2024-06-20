@@ -8,7 +8,6 @@ import {
 } from '../cache/abstract-assignment-cache';
 import { IConfigurationStore } from '../configuration-store/configuration-store';
 import {
-  BASE_URL as DEFAULT_BASE_URL,
   DEFAULT_INITIAL_CONFIG_REQUEST_RETRIES,
   DEFAULT_POLL_CONFIG_REQUEST_RETRIES,
   DEFAULT_REQUEST_TIMEOUT_MS as DEFAULT_REQUEST_TIMEOUT_MS,
@@ -173,7 +172,7 @@ export default class EppoClient implements IEppoClient {
     private configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>,
     private configurationRequestParameters?: FlagConfigurationRequestParameters,
     private readonly isObfuscated = false,
-  ) {}
+  ) { }
 
   public setConfigurationRequestParameters(
     configurationRequestParameters: FlagConfigurationRequestParameters,
@@ -208,7 +207,7 @@ export default class EppoClient implements IEppoClient {
       apiKey,
       sdkName,
       sdkVersion,
-      baseUrl = DEFAULT_BASE_URL,
+      baseUrl, // Default is set in ApiEndpoints constructor if undefined
       requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
       numInitialRequestRetries = DEFAULT_INITIAL_CONFIG_REQUEST_RETRIES,
       numPollRequestRetries = DEFAULT_POLL_CONFIG_REQUEST_RETRIES,

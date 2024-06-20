@@ -24,7 +24,7 @@ import { MemoryStore, MemoryOnlyConfigurationStore } from './configuration-store
 import * as constants from './constants';
 import ApiEndpoints from './api-endpoints';
 import FlagConfigRequestor from './flag-configuration-requestor';
-import HttpClient from './http-client';
+import HttpClient, { ISdkParams } from './http-client';
 import { Flag, VariationType } from './interfaces';
 import { AttributeType, SubjectAttributes } from './types';
 import * as validation from './validation';
@@ -68,4 +68,5 @@ export {
   VariationType,
   AttributeType,
   SubjectAttributes,
+  ISdkParams
 };
