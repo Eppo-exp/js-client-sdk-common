@@ -22,6 +22,7 @@ import {
 import { HybridConfigurationStore } from './configuration-store/hybrid.store';
 import { MemoryStore, MemoryOnlyConfigurationStore } from './configuration-store/memory.store';
 import * as constants from './constants';
+import ApiEndpoints from './api-endpoints';
 import FlagConfigRequestor from './flag-configuration-requestor';
 import HttpClient from './http-client';
 import { Flag, VariationType } from './interfaces';
@@ -37,6 +38,7 @@ export {
   EppoClient,
   IEppoClient,
   constants,
+  ApiEndpoints,
   FlagConfigRequestor,
   HttpClient,
   validation,
