@@ -24,7 +24,7 @@ import { MemoryStore, MemoryOnlyConfigurationStore } from './configuration-store
 import * as constants from './constants';
 import FlagConfigRequestor from './flag-configuration-requestor';
 import HttpClient from './http-client';
-import { Flag, VariationType } from './interfaces';
+import { Flag, ObfuscatedFlag, VariationType } from './interfaces';
 import { AttributeType, SubjectAttributes } from './types';
 import * as validation from './validation';
 
@@ -63,6 +63,7 @@ export {
   // Interfaces
   FlagConfigurationRequestParameters,
   Flag,
+  ObfuscatedFlag,
   VariationType,
   AttributeType,
   SubjectAttributes,
