@@ -38,6 +38,16 @@ export interface Allocation {
   doLog: boolean;
 }
 
+export interface Environment {
+  name: string;
+}
+
+export interface ConfigDetails {
+  configFetchedAt: string;
+  configPublishedAt: string;
+  configEnvironment: Environment;
+}
+
 export interface Flag {
   key: string;
   enabled: boolean;
@@ -49,6 +59,7 @@ export interface Flag {
 
 export interface ObfuscatedFlag {
   key: string;
+  environment: Environment;
   enabled: boolean;
   variationType: VariationType;
   variations: Record<string, ObfuscatedVariation>;

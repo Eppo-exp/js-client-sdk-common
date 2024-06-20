@@ -15,7 +15,10 @@ import {
   assignmentCacheKeyToString,
   assignmentCacheValueToString,
 } from './cache/abstract-assignment-cache';
-import EppoClient, { FlagConfigurationRequestParameters, IEppoClient } from './client/eppo-client';
+import EppoClient, {
+  FlagConfigurationRequestParameters,
+  IAssignmentDetails,
+} from './client/eppo-client';
 import FlagConfigRequestor from './configuration-requestor';
 import {
   IConfigurationStore,
@@ -39,13 +42,13 @@ import * as validation from './validation';
 export {
   applicationLogger,
   AbstractAssignmentCache,
+  IAssignmentDetails,
   IAssignmentHooks,
   IAssignmentLogger,
   IAssignmentEvent,
   IBanditLogger,
   IBanditEvent,
   EppoClient,
-  IEppoClient,
   constants,
   ApiEndpoints,
   FlagConfigRequestor,

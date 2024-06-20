@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 
-import { VariationType, AttributeType } from '../src';
+import { AttributeType, VariationType } from '../src';
+import { IAssignmentDetails } from '../src/client/eppo-client';
 import { IBanditParametersResponse, IUniversalFlagConfigResponse } from '../src/http-client';
 import { ContextAttributes } from '../src/types';
 
@@ -16,6 +17,7 @@ export interface SubjectTestCase {
   subjectKey: string;
   subjectAttributes: Record<string, AttributeType>;
   assignment: string | number | boolean | object;
+  assignmentDetails: IAssignmentDetails<string | number | boolean | object>;
 }
 
 export interface IAssignmentTestCase {
@@ -91,6 +93,29 @@ export function getTestAssignments(
   return assignments;
 }
 
+export function getTestAssignmentDetails(
+  testCase: IAssignmentTestCase,
+  assignmentDetailsFn: (
+    flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
+    defaultValue: string | number | boolean | object,
+  ) => never,
+): {
+  subject: SubjectTestCase;
+  assignmentDetails: IAssignmentDetails<string | boolean | number | object>;
+}[] {
+  return testCase.subjects.map((subject) => ({
+    subject,
+    assignmentDetails: assignmentDetailsFn(
+      testCase.flag,
+      subject.subjectKey,
+      subject.subjectAttributes,
+      testCase.defaultValue,
+    ),
+  }));
+}
+
 export function validateTestAssignments(
   assignments: {
     subject: SubjectTestCase;
@@ -110,5 +135,26 @@ export function validateTestAssignments(
       }
     }
     expect(subject.assignment).toEqual(assignment);
+  }
+}
+
+export function validateTestAssignmentDetails(
+  assignments: {
+    subject: SubjectTestCase;
+    assignmentDetails: IAssignmentDetails<string | boolean | number | object>;
+  }[],
+  flag: string,
+) {
+  for (const { subject, assignmentDetails } of assignments) {
+    try {
+      expect(assignmentDetails).toMatchObject({
+        ...subject.assignmentDetails,
+        configFetchedAt: expect.any(String),
+        configPublishedAt: expect.any(String),
+      });
+    } catch (err) {
+      err.message = `The assignment details for subject ${subject.subjectKey} did not match the expected value for flag ${flag}. ${err.message}`;
+      throw err;
+    }
   }
 }
