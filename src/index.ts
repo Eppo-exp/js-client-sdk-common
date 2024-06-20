@@ -1,3 +1,4 @@
+import ApiEndpoints from './api-endpoints';
 import { logger } from './application-logger';
 import { IAssignmentHooks } from './assignment-hooks';
 import { IAssignmentLogger, IAssignmentEvent } from './assignment-logger';
@@ -22,9 +23,8 @@ import {
 import { HybridConfigurationStore } from './configuration-store/hybrid.store';
 import { MemoryStore, MemoryOnlyConfigurationStore } from './configuration-store/memory.store';
 import * as constants from './constants';
-import ApiEndpoints from './api-endpoints';
 import FlagConfigRequestor from './flag-configuration-requestor';
-import HttpClient, { ISdkParams } from './http-client';
+import HttpClient from './http-client';
 import { Flag, VariationType } from './interfaces';
 import { AttributeType, SubjectAttributes } from './types';
 import * as validation from './validation';
