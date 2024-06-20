@@ -171,7 +171,7 @@ export default class EppoClient implements IEppoClient {
   constructor(
     private configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>,
     private configurationRequestParameters?: FlagConfigurationRequestParameters,
-    private readonly isObfuscated = false,
+    private isObfuscated = false,
   ) {}
 
   public setConfigurationRequestParameters(
@@ -182,6 +182,10 @@ export default class EppoClient implements IEppoClient {
 
   public setConfigurationStore(configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>) {
     this.configurationStore = configurationStore;
+  }
+
+  public setIsObfuscated(isObfuscated: boolean) {
+    this.isObfuscated = isObfuscated;
   }
 
   public async fetchFlagConfigurations() {
