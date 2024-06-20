@@ -4,8 +4,8 @@ import {
   BanditModelData,
   BanditNumericAttributeCoefficients,
 } from './interfaces';
-import { Attributes } from './types';
 import { MD5Sharder, Sharder } from './sharders';
+import { Attributes } from './types';
 
 export interface BanditEvaluation {
   flagKey: string;

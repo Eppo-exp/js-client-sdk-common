@@ -126,6 +126,28 @@ export interface IEppoClient {
     defaultValue: object,
   ): object;
 
+  /**
+   * Maps a subject to a string assignment for a given experiment.
+   * This variation may be a bandit-selected action.
+   *
+   * @param flagKey feature flag identifier
+   * @param subjectKey an identifier of the experiment subject, for example a user ID.
+   * @param subjectAttributes optional (can be empty) attributes associated with the subject, for example name and email.
+   * @param actions possible attributes and their optional (can be empty) attributes to be evaluated by a contextual,
+   * multi-armed bandit--if one is assigned to the subject.
+   * @param defaultValue default value to return if the subject is not part of the experiment sample,
+   * there are no bandit actions, or an error is countered evaluating the feature flag or bandit action */
+  getBanditAction(
+    flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Attributes,
+    actions: Record<string, Attributes>,
+    defaultValue: string,
+  ): { variation: string; action: string | null };
+
+  /** @Deprecated Renamed to setAssignmentLogger for clarity */
+  setLogger(logger: IAssignmentLogger): void;
+
   setAssignmentLogger(assignmentLogger: IAssignmentLogger): void;
 
   setBanditLogger(banditLogger: IBanditLogger): void;
@@ -166,15 +188,15 @@ export type FlagConfigurationRequestParameters = {
 };
 
 export default class EppoClient implements IEppoClient {
-  private queuedAssignmentEvents: IAssignmentEvent[] = [];
+  private readonly queuedAssignmentEvents: IAssignmentEvent[] = [];
   private assignmentLogger?: IAssignmentLogger;
-  private queuedBanditEvents: IBanditEvent[] = [];
+  private readonly queuedBanditEvents: IBanditEvent[] = [];
   private banditLogger?: IBanditLogger;
   private isGracefulFailureMode = true;
   private assignmentCache?: AssignmentCache;
   private requestPoller?: IPoller;
-  private evaluator = new Evaluator();
-  private banditEvaluator = new BanditEvaluator();
+  private readonly evaluator = new Evaluator();
+  private readonly banditEvaluator = new BanditEvaluator();
 
   constructor(
     private flagConfigurationStore: IConfigurationStore<Flag | ObfuscatedFlag>,
@@ -561,7 +583,7 @@ export default class EppoClient implements IEppoClient {
      * Returns a list of all flag keys that have been initialized.
      * This can be useful to debug the initialization process.
      *
-     * Note that it is generally not a good idea to pre-load all flag configurations.
+     * Note that it is generally not a good idea to preload all flag configurations.
      */
     return this.flagConfigurationStore.getKeys();
   }
@@ -571,6 +593,11 @@ export default class EppoClient implements IEppoClient {
       this.flagConfigurationStore.isInitialized() &&
       (!this.banditConfigurationStore || this.banditConfigurationStore.isInitialized())
     );
+  }
+
+  /** @deprecated Renamed to setAssignmentLogger */
+  public setLogger(logger: IAssignmentLogger) {
+    this.setAssignmentLogger(logger);
   }
 
   public setAssignmentLogger(logger: IAssignmentLogger) {
