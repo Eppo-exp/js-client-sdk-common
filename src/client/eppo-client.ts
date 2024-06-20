@@ -172,7 +172,7 @@ export default class EppoClient implements IEppoClient {
     private configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>,
     private configurationRequestParameters?: FlagConfigurationRequestParameters,
     private readonly isObfuscated = false,
-  ) {}
+  ) { }
 
   public setConfigurationRequestParameters(
     configurationRequestParameters: FlagConfigurationRequestParameters,
@@ -217,7 +217,10 @@ export default class EppoClient implements IEppoClient {
       skipInitialPoll = false,
     } = this.configurationRequestParameters;
     // todo: Inject the chain of dependencies below
-    const apiEndpoints = new ApiEndpoints(baseUrl, { apiKey, sdkName, sdkVersion });
+    const apiEndpoints = new ApiEndpoints({
+      baseUrl,
+      queryParams: { apiKey, sdkName, sdkVersion },
+    });
     const httpClient = new FetchHttpClient(apiEndpoints, requestTimeoutMs);
     const configurationRequestor = new FlagConfigurationRequestor(
       this.configurationStore,
