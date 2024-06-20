@@ -1,4 +1,19 @@
-import { Flag, Shard, Range, Variation } from './interfaces';
+import {
+  AllocationEvaluation,
+  AllocationEvaluationCode,
+  IFlagEvaluationDetails,
+  FlagEvaluationDetailsBuilder,
+} from './flag-evaluation-details-builder';
+import {
+  Flag,
+  Shard,
+  Range,
+  Variation,
+  Allocation,
+  Split,
+  VariationType,
+  ConfigDetails,
+} from './interfaces';
 import { Rule, matchesRule } from './rules';
 import { MD5Sharder, Sharder } from './sharders';
 import { Attributes } from './types';
@@ -11,6 +26,7 @@ export interface FlagEvaluation {
   variation: Variation | null;
   extraLogging: Record<string, string>;
   doLog: boolean;
+  flagEvaluationDetails: IFlagEvaluationDetails;
 }
 
 export class Evaluator {
@@ -22,47 +38,129 @@ export class Evaluator {
 
   evaluateFlag(
     flag: Flag,
+    configDetails: ConfigDetails,
     subjectKey: string,
     subjectAttributes: Attributes,
     obfuscated: boolean,
+    expectedVariationType?: VariationType,
   ): FlagEvaluation {
+    const flagEvaluationDetailsBuilder = new FlagEvaluationDetailsBuilder(
+      configDetails.configEnvironment.name,
+      flag.allocations,
+      configDetails.configFetchedAt,
+      configDetails.configPublishedAt,
+    );
+
     if (!flag.enabled) {
-      return noneResult(flag.key, subjectKey, subjectAttributes);
+      return noneResult(
+        flag.key,
+        subjectKey,
+        subjectAttributes,
+        flagEvaluationDetailsBuilder.buildForNoneResult(
+          'FLAG_UNRECOGNIZED_OR_DISABLED',
+          `Unrecognized or disabled flag: ${flag.key}`,
+        ),
+      );
     }
 
     const now = new Date();
-    for (const allocation of flag.allocations) {
-      if (allocation.startAt && now < new Date(allocation.startAt)) continue;
-      if (allocation.endAt && now > new Date(allocation.endAt)) continue;
+    const unmatchedAllocations: Array<AllocationEvaluation> = [];
+    for (let i = 0; i < flag.allocations.length; i++) {
+      const allocation = flag.allocations[i];
+      const addUnmatchedAllocation = (code: AllocationEvaluationCode) => {
+        unmatchedAllocations.push({
+          key: allocation.key,
+          allocationEvaluationCode: code,
+          orderPosition: i + 1,
+        });
+      };
 
-      if (
-        matchesRules(allocation?.rules ?? [], { id: subjectKey, ...subjectAttributes }, obfuscated)
-      ) {
+      if (allocation.startAt && now < new Date(allocation.startAt)) {
+        addUnmatchedAllocation(AllocationEvaluationCode.BEFORE_START_TIME);
+        continue;
+      }
+      if (allocation.endAt && now > new Date(allocation.endAt)) {
+        addUnmatchedAllocation(AllocationEvaluationCode.AFTER_END_TIME);
+        continue;
+      }
+      const { matched, matchedRule } = matchesRules(
+        allocation?.rules ?? [],
+        { id: subjectKey, ...subjectAttributes },
+        obfuscated,
+      );
+      if (matched) {
         for (const split of allocation.splits) {
           if (
             split.shards.every((shard) => this.matchesShard(shard, subjectKey, flag.totalShards))
           ) {
+            const variation = flag.variations[split.variationKey];
+            const flagEvaluationDetails = flagEvaluationDetailsBuilder
+              .setMatch(
+                i,
+                variation,
+                allocation,
+                matchedRule,
+                unmatchedAllocations,
+                expectedVariationType,
+              )
+              .build(
+                'MATCH',
+                this.getMatchedEvaluationDetailsMessage(allocation, split, subjectKey),
+              );
             return {
               flagKey: flag.key,
               subjectKey,
               subjectAttributes,
               allocationKey: allocation.key,
-              variation: flag.variations[split.variationKey],
+              variation,
               extraLogging: split.extraLogging ?? {},
               doLog: allocation.doLog,
+              flagEvaluationDetails,
             };
           }
         }
+        // matched, but does not fall within split range
+        addUnmatchedAllocation(AllocationEvaluationCode.TRAFFIC_EXPOSURE_MISS);
+      } else {
+        addUnmatchedAllocation(AllocationEvaluationCode.FAILING_RULE);
       }
     }
-
-    return noneResult(flag.key, subjectKey, subjectAttributes);
+    return noneResult(
+      flag.key,
+      subjectKey,
+      subjectAttributes,
+      flagEvaluationDetailsBuilder
+        .setNoMatchFound(unmatchedAllocations)
+        .build(
+          'DEFAULT_ALLOCATION_NULL',
+          'No allocations matched. Falling back to "Default Allocation", serving NULL',
+        ),
+    );
   }
 
   matchesShard(shard: Shard, subjectKey: string, totalShards: number): boolean {
     const assignedShard = this.sharder.getShard(hashKey(shard.salt, subjectKey), totalShards);
     return shard.ranges.some((range) => isInShardRange(assignedShard, range));
   }
+
+  private getMatchedEvaluationDetailsMessage = (
+    allocation: Allocation,
+    split: Split,
+    subjectKey: string,
+  ): string => {
+    const hasDefinedRules = !!allocation.rules?.length;
+    const isExperiment = allocation.splits.length > 1;
+    const isPartialRollout = split.shards.length > 1;
+    const isExperimentOrPartialRollout = isExperiment || isPartialRollout;
+
+    if (hasDefinedRules && isExperimentOrPartialRollout) {
+      return `Supplied attributes match rules defined in allocation "${allocation.key}" and ${subjectKey} belongs to the range of traffic assigned to "${split.variationKey}".`;
+    }
+    if (hasDefinedRules && !isExperimentOrPartialRollout) {
+      return `Supplied attributes match rules defined in allocation "${allocation.key}".`;
+    }
+    return `${subjectKey} belongs to the range of traffic assigned to "${split.variationKey}" defined in allocation "${allocation.key}".`;
+  };
 }
 
 export function isInShardRange(shard: number, range: Range): boolean {
@@ -77,6 +175,7 @@ export function noneResult(
   flagKey: string,
   subjectKey: string,
   subjectAttributes: Attributes,
+  flagEvaluationDetails: IFlagEvaluationDetails,
 ): FlagEvaluation {
   return {
     flagKey,
@@ -86,6 +185,7 @@ export function noneResult(
     variation: null,
     extraLogging: {},
     doLog: false,
+    flagEvaluationDetails,
   };
 }
 
@@ -93,6 +193,28 @@ export function matchesRules(
   rules: Rule[],
   subjectAttributes: Attributes,
   obfuscated: boolean,
-): boolean {
-  return !rules.length || rules.some((rule) => matchesRule(rule, subjectAttributes, obfuscated));
+): { matched: boolean; matchedRule: Rule | null } {
+  if (!rules.length) {
+    return {
+      matched: true,
+      matchedRule: null,
+    };
+  }
+  let matchedRule: Rule | null = null;
+  const hasMatch = rules.some((rule) => {
+    const matched = matchesRule(rule, subjectAttributes, obfuscated);
+    if (matched) {
+      matchedRule = rule;
+    }
+    return matched;
+  });
+  return hasMatch
+    ? {
+        matched: true,
+        matchedRule,
+      }
+    : {
+        matched: false,
+        matchedRule: null,
+      };
 }

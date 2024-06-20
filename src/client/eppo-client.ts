@@ -13,26 +13,32 @@ import { IConfigurationStore } from '../configuration-store/configuration-store'
 import {
   DEFAULT_INITIAL_CONFIG_REQUEST_RETRIES,
   DEFAULT_POLL_CONFIG_REQUEST_RETRIES,
-  DEFAULT_REQUEST_TIMEOUT_MS as DEFAULT_REQUEST_TIMEOUT_MS,
+  DEFAULT_REQUEST_TIMEOUT_MS,
   MAX_EVENT_QUEUE_SIZE,
   POLL_INTERVAL_MS,
 } from '../constants';
 import { decodeFlag } from '../decoding';
 import { EppoValue } from '../eppo_value';
 import { Evaluator, FlagEvaluation, noneResult } from '../evaluator';
+import {
+  FlagEvaluationDetailsBuilder,
+  IFlagEvaluationDetails,
+} from '../flag-evaluation-details-builder';
 import FetchHttpClient from '../http-client';
 import {
-  BanditVariation,
   BanditParameters,
+  BanditVariation,
+  ConfigDetails,
   Flag,
   ObfuscatedFlag,
+  Variation,
   VariationType,
 } from '../interfaces';
 import { getMD5Hash } from '../obfuscation';
 import initPoller, { IPoller } from '../poller';
 import {
-  Attributes,
   AttributeType,
+  Attributes,
   BanditActions,
   BanditSubjectAttributes,
   ContextAttributes,
@@ -41,160 +47,10 @@ import {
 import { validateNotBlank } from '../validation';
 import { LIB_VERSION } from '../version';
 
-/**
- * Client for assigning experiment variations.
- * @public
- */
-export interface IEppoClient {
-  /**
-   * Maps a subject to a variation for a given experiment.
-   *
-   * @param flagKey feature flag identifier
-   * @param subjectKey an identifier of the experiment subject, for example a user ID.
-   * @param subjectAttributes optional attributes associated with the subject, for example name and email.
-   * @param defaultValue default value to return if the subject is not part of the experiment sample
-   * The subject attributes are used for evaluating any targeting rules tied to the experiment.
-   * @returns a variation value if the subject is part of the experiment sample, otherwise the default value
-   * @public
-   */
-  getStringAssignment(
-    flagKey: string,
-    subjectKey: string,
-    subjectAttributes: Attributes,
-    defaultValue: string,
-  ): string;
-
-  /**
-   * @deprecated use getBooleanAssignment instead.
-   */
-  getBoolAssignment(
-    flagKey: string,
-    subjectKey: string,
-    subjectAttributes: Attributes,
-    defaultValue: boolean,
-  ): boolean;
-
-  /**
-   * Maps a subject to a boolean variation for a given experiment.
-   *
-   * @param flagKey feature flag identifier
-   * @param subjectKey an identifier of the experiment subject, for example a user ID.
-   * @param subjectAttributes optional attributes associated with the subject, for example name and email.
-   * @param defaultValue default value to return if the subject is not part of the experiment sample
-   * @returns a boolean variation value if the subject is part of the experiment sample, otherwise the default value
-   */
-  getBooleanAssignment(
-    flagKey: string,
-    subjectKey: string,
-    subjectAttributes: Attributes,
-    defaultValue: boolean,
-  ): boolean;
-
-  /**
-   * Maps a subject to an Integer variation for a given experiment.
-   *
-   * @param flagKey feature flag identifier
-   * @param subjectKey an identifier of the experiment subject, for example a user ID.
-   * @param subjectAttributes optional attributes associated with the subject, for example name and email.
-   * @param defaultValue default value to return if the subject is not part of the experiment sample
-   * @returns a number variation value if the subject is part of the experiment sample, otherwise the default value
-   */
-  getIntegerAssignment(
-    flagKey: string,
-    subjectKey: string,
-    subjectAttributes: Attributes,
-    defaultValue: number,
-  ): number;
-
-  /**
-   * Maps a subject to a Numeric variation for a given experiment.
-   *
-   * @param flagKey feature flag identifier
-   * @param subjectKey an identifier of the experiment subject, for example a user ID.
-   * @param subjectAttributes optional attributes associated with the subject, for example name and email.
-   * @param defaultValue default value to return if the subject is not part of the experiment sample
-   * @returns a number variation value if the subject is part of the experiment sample, otherwise the default value
-   */
-  getNumericAssignment(
-    flagKey: string,
-    subjectKey: string,
-    subjectAttributes: Attributes,
-    defaultValue: number,
-  ): number;
-
-  /**
-   * Maps a subject to a JSON variation for a given experiment.
-   *
-   * @param flagKey feature flag identifier
-   * @param subjectKey an identifier of the experiment subject, for example a user ID.
-   * @param subjectAttributes optional attributes associated with the subject, for example name and email.
-   * @param defaultValue default value to return if the subject is not part of the experiment sample
-   * @returns a JSON object variation value if the subject is part of the experiment sample, otherwise the default value
-   */
-  getJSONAssignment(
-    flagKey: string,
-    subjectKey: string,
-    subjectAttributes: Attributes,
-    defaultValue: object,
-  ): object;
-
-  /**
-   * Maps a subject to a string assignment for a given experiment.
-   * This variation may be a bandit-selected action.
-   *
-   * @param flagKey feature flag identifier
-   * @param subjectKey an identifier of the experiment subject, for example a user ID.
-   * @param subjectAttributes optional (can be empty) attributes associated with the subject, for example name and email.
-   * @param actions possible attributes and their optional (can be empty) attributes to be evaluated by a contextual,
-   * multi-armed bandit--if one is assigned to the subject.
-   * @param defaultValue default value to return if the subject is not part of the experiment sample,
-   * there are no bandit actions, or an error is countered evaluating the feature flag or bandit action */
-  getBanditAction(
-    flagKey: string,
-    subjectKey: string,
-    subjectAttributes: BanditSubjectAttributes,
-    actions: BanditActions,
-    defaultValue: string,
-  ): { variation: string; action: string | null };
-
-  /** @Deprecated Renamed to setAssignmentLogger for clarity */
-  setLogger(logger: IAssignmentLogger): void;
-
-  setAssignmentLogger(assignmentLogger: IAssignmentLogger): void;
-
-  setBanditLogger(banditLogger: IBanditLogger): void;
-
-  useLRUInMemoryAssignmentCache(maxSize: number): void;
-
-  useCustomAssignmentCache(cache: AssignmentCache): void;
-
-  setConfigurationRequestParameters(
-    configurationRequestParameters: FlagConfigurationRequestParameters,
-  ): void;
-
-  setFlagConfigurationStore(configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>): void;
-
-  setBanditVariationConfigurationStore(
-    banditVariationConfigurationStore: IConfigurationStore<BanditVariation[]>,
-  ): void;
-
-  setBanditModelConfigurationStore(
-    banditModelConfigurationStore: IConfigurationStore<BanditParameters>,
-  ): void;
-
-  setIsObfuscated(isObfuscated: boolean): void;
-
-  fetchFlagConfigurations(): void;
-
-  stopPolling(): void;
-
-  setIsGracefulFailureMode(gracefulFailureMode: boolean): void;
-
-  getFlagKeys(): string[];
-
-  getFlagConfigurations(): Record<string, Flag>;
-
-  isInitialized(): boolean;
+export interface IAssignmentDetails<T extends Variation['value'] | object> {
+  variation: T;
+  action: string | null;
+  evaluationDetails: IFlagEvaluationDetails;
 }
 
 export type FlagConfigurationRequestParameters = {
@@ -211,7 +67,7 @@ export type FlagConfigurationRequestParameters = {
   skipInitialPoll?: boolean;
 };
 
-export default class EppoClient implements IEppoClient {
+export default class EppoClient {
   private readonly queuedAssignmentEvents: IAssignmentEvent[] = [];
   private assignmentLogger?: IAssignmentLogger;
   private readonly queuedBanditEvents: IBanditEvent[] = [];
@@ -325,23 +181,62 @@ export default class EppoClient implements IEppoClient {
     }
   }
 
+  /**
+   * Maps a subject to a string variation for a given experiment.
+   *
+   * @param flagKey feature flag identifier
+   * @param subjectKey an identifier of the experiment subject, for example a user ID.
+   * @param subjectAttributes optional attributes associated with the subject, for example name and email.
+   * @param defaultValue default value to return if the subject is not part of the experiment sample
+   * The subject attributes are used for evaluating any targeting rules tied to the experiment.
+   * @returns a variation value if the subject is part of the experiment sample, otherwise the default value
+   * @public
+   */
   public getStringAssignment(
     flagKey: string,
     subjectKey: string,
     subjectAttributes: Attributes,
     defaultValue: string,
   ): string {
-    return (
-      this.getAssignmentVariation(
-        flagKey,
-        subjectKey,
-        subjectAttributes,
-        EppoValue.String(defaultValue),
-        VariationType.STRING,
-      ).stringValue ?? defaultValue
-    );
+    return this.getStringAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue)
+      .variation;
   }
 
+  /**
+   * Maps a subject to a string variation for a given experiment and provides additional details about the
+   * variation assigned and the reason for the assignment.
+   *
+   * @param flagKey feature flag identifier
+   * @param subjectKey an identifier of the experiment subject, for example a user ID.
+   * @param subjectAttributes optional attributes associated with the subject, for example name and email.
+   * @param defaultValue default value to return if the subject is not part of the experiment sample
+   * The subject attributes are used for evaluating any targeting rules tied to the experiment.
+   * @returns an object that includes the variation value along with additional metadata about the assignment
+   * @public
+   */
+  public getStringAssignmentDetails(
+    flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
+    defaultValue: string,
+  ): IAssignmentDetails<string> {
+    const { eppoValue, flagEvaluationDetails } = this.getAssignmentVariation(
+      flagKey,
+      subjectKey,
+      subjectAttributes,
+      EppoValue.String(defaultValue),
+      VariationType.STRING,
+    );
+    return {
+      variation: eppoValue.stringValue ?? defaultValue,
+      action: null,
+      evaluationDetails: flagEvaluationDetails,
+    };
+  }
+
+  /**
+   * @deprecated use getBooleanAssignment instead.
+   */
   public getBoolAssignment(
     flagKey: string,
     subjectKey: string,
@@ -351,72 +246,196 @@ export default class EppoClient implements IEppoClient {
     return this.getBooleanAssignment(flagKey, subjectKey, subjectAttributes, defaultValue);
   }
 
+  /**
+   * Maps a subject to a boolean variation for a given experiment.
+   *
+   * @param flagKey feature flag identifier
+   * @param subjectKey an identifier of the experiment subject, for example a user ID.
+   * @param subjectAttributes optional attributes associated with the subject, for example name and email.
+   * @param defaultValue default value to return if the subject is not part of the experiment sample
+   * @returns a boolean variation value if the subject is part of the experiment sample, otherwise the default value
+   */
   public getBooleanAssignment(
     flagKey: string,
     subjectKey: string,
     subjectAttributes: Attributes,
     defaultValue: boolean,
   ): boolean {
-    return (
-      this.getAssignmentVariation(
-        flagKey,
-        subjectKey,
-        subjectAttributes,
-        EppoValue.Bool(defaultValue),
-        VariationType.BOOLEAN,
-      ).boolValue ?? defaultValue
-    );
+    return this.getBooleanAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue)
+      .variation;
   }
 
+  /**
+   * Maps a subject to a boolean variation for a given experiment and provides additional details about the
+   * variation assigned and the reason for the assignment.
+   *
+   * @param flagKey feature flag identifier
+   * @param subjectKey an identifier of the experiment subject, for example a user ID.
+   * @param subjectAttributes optional attributes associated with the subject, for example name and email.
+   * @param defaultValue default value to return if the subject is not part of the experiment sample
+   * The subject attributes are used for evaluating any targeting rules tied to the experiment.
+   * @returns an object that includes the variation value along with additional metadata about the assignment
+   * @public
+   */
+  public getBooleanAssignmentDetails(
+    flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
+    defaultValue: boolean,
+  ): IAssignmentDetails<boolean> {
+    const { eppoValue, flagEvaluationDetails } = this.getAssignmentVariation(
+      flagKey,
+      subjectKey,
+      subjectAttributes,
+      EppoValue.Bool(defaultValue),
+      VariationType.BOOLEAN,
+    );
+    return {
+      variation: eppoValue.boolValue ?? defaultValue,
+      action: null,
+      evaluationDetails: flagEvaluationDetails,
+    };
+  }
+
+  /**
+   * Maps a subject to an Integer variation for a given experiment.
+   *
+   * @param flagKey feature flag identifier
+   * @param subjectKey an identifier of the experiment subject, for example a user ID.
+   * @param subjectAttributes optional attributes associated with the subject, for example name and email.
+   * @param defaultValue default value to return if the subject is not part of the experiment sample
+   * @returns an integer variation value if the subject is part of the experiment sample, otherwise the default value
+   */
   public getIntegerAssignment(
     flagKey: string,
     subjectKey: string,
     subjectAttributes: Attributes,
     defaultValue: number,
   ): number {
-    return (
-      this.getAssignmentVariation(
-        flagKey,
-        subjectKey,
-        subjectAttributes,
-        EppoValue.Numeric(defaultValue),
-        VariationType.INTEGER,
-      ).numericValue ?? defaultValue
-    );
+    return this.getIntegerAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue)
+      .variation;
   }
 
+  /**
+   * Maps a subject to an Integer variation for a given experiment and provides additional details about the
+   * variation assigned and the reason for the assignment.
+   *
+   * @param flagKey feature flag identifier
+   * @param subjectKey an identifier of the experiment subject, for example a user ID.
+   * @param subjectAttributes optional attributes associated with the subject, for example name and email.
+   * @param defaultValue default value to return if the subject is not part of the experiment sample
+   * The subject attributes are used for evaluating any targeting rules tied to the experiment.
+   * @returns an object that includes the variation value along with additional metadata about the assignment
+   * @public
+   */
+  public getIntegerAssignmentDetails(
+    flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
+    defaultValue: number,
+  ): IAssignmentDetails<number> {
+    const { eppoValue, flagEvaluationDetails } = this.getAssignmentVariation(
+      flagKey,
+      subjectKey,
+      subjectAttributes,
+      EppoValue.Numeric(defaultValue),
+      VariationType.INTEGER,
+    );
+    return {
+      variation: eppoValue.numericValue ?? defaultValue,
+      action: null,
+      evaluationDetails: flagEvaluationDetails,
+    };
+  }
+
+  /**
+   * Maps a subject to a numeric variation for a given experiment.
+   *
+   * @param flagKey feature flag identifier
+   * @param subjectKey an identifier of the experiment subject, for example a user ID.
+   * @param subjectAttributes optional attributes associated with the subject, for example name and email.
+   * @param defaultValue default value to return if the subject is not part of the experiment sample
+   * @returns a number variation value if the subject is part of the experiment sample, otherwise the default value
+   */
   public getNumericAssignment(
     flagKey: string,
     subjectKey: string,
     subjectAttributes: Attributes,
     defaultValue: number,
   ): number {
-    return (
-      this.getAssignmentVariation(
-        flagKey,
-        subjectKey,
-        subjectAttributes,
-        EppoValue.Numeric(defaultValue),
-        VariationType.NUMERIC,
-      ).numericValue ?? defaultValue
-    );
+    return this.getNumericAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue)
+      .variation;
   }
 
+  /**
+   * Maps a subject to a numeric variation for a given experiment and provides additional details about the
+   * variation assigned and the reason for the assignment.
+   *
+   * @param flagKey feature flag identifier
+   * @param subjectKey an identifier of the experiment subject, for example a user ID.
+   * @param subjectAttributes optional attributes associated with the subject, for example name and email.
+   * @param defaultValue default value to return if the subject is not part of the experiment sample
+   * The subject attributes are used for evaluating any targeting rules tied to the experiment.
+   * @returns an object that includes the variation value along with additional metadata about the assignment
+   * @public
+   */
+  public getNumericAssignmentDetails(
+    flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
+    defaultValue: number,
+  ): IAssignmentDetails<number> {
+    const { eppoValue, flagEvaluationDetails } = this.getAssignmentVariation(
+      flagKey,
+      subjectKey,
+      subjectAttributes,
+      EppoValue.Numeric(defaultValue),
+      VariationType.NUMERIC,
+    );
+    return {
+      variation: eppoValue.numericValue ?? defaultValue,
+      action: null,
+      evaluationDetails: flagEvaluationDetails,
+    };
+  }
+
+  /**
+   * Maps a subject to a JSON variation for a given experiment.
+   *
+   * @param flagKey feature flag identifier
+   * @param subjectKey an identifier of the experiment subject, for example a user ID.
+   * @param subjectAttributes optional attributes associated with the subject, for example name and email.
+   * @param defaultValue default value to return if the subject is not part of the experiment sample
+   * @returns a JSON object variation value if the subject is part of the experiment sample, otherwise the default value
+   */
   public getJSONAssignment(
     flagKey: string,
     subjectKey: string,
     subjectAttributes: Attributes,
     defaultValue: object,
   ): object {
-    return (
-      this.getAssignmentVariation(
-        flagKey,
-        subjectKey,
-        subjectAttributes,
-        EppoValue.JSON(defaultValue),
-        VariationType.JSON,
-      ).objectValue ?? defaultValue
+    return this.getJSONAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue)
+      .variation;
+  }
+
+  public getJSONAssignmentDetails(
+    flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
+    defaultValue: object,
+  ): IAssignmentDetails<object> {
+    const { eppoValue, flagEvaluationDetails } = this.getAssignmentVariation(
+      flagKey,
+      subjectKey,
+      subjectAttributes,
+      EppoValue.JSON(defaultValue),
+      VariationType.JSON,
     );
+    return {
+      variation: eppoValue.objectValue ?? defaultValue,
+      action: null,
+      evaluationDetails: flagEvaluationDetails,
+    };
   }
 
   public getBanditAction(
@@ -425,7 +444,25 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes: BanditSubjectAttributes,
     actions: BanditActions,
     defaultValue: string,
-  ): { variation: string; action: string | null } {
+  ): Omit<IAssignmentDetails<string>, 'evaluationDetails'> {
+    const { variation, action } = this.getBanditActionDetails(
+      flagKey,
+      subjectKey,
+      subjectAttributes,
+      actions,
+      defaultValue,
+    );
+    return { variation, action };
+  }
+
+  public getBanditActionDetails(
+    flagKey: string,
+    subjectKey: string,
+    subjectAttributes: BanditSubjectAttributes,
+    actions: BanditActions,
+    defaultValue: string,
+  ): IAssignmentDetails<string> {
+    const flagEvaluationDetailsBuilder = this.flagEvaluationDetailsBuilder(flagKey);
     const defaultResult = { variation: defaultValue, action: null };
     let variation = defaultValue;
     let action: string | null = null;
@@ -434,19 +471,26 @@ export default class EppoClient implements IEppoClient {
       if (banditVariations && !Object.keys(actions).length) {
         // No actions passed for a flag known to have an active bandit, so we just return the default values so that
         // we don't log a variation or bandit assignment
-        return defaultResult;
+        return {
+          ...defaultResult,
+          evaluationDetails: flagEvaluationDetailsBuilder.buildForNoneResult(
+            'NO_ACTIONS_SUPPLIED_FOR_BANDIT',
+            'No bandit actions passed for a flag known to have an active bandit',
+          ),
+        };
       }
 
       // Get the assigned variation for the flag with a possible bandit
       // Note for getting assignments, we don't care about context
       const nonContextualSubjectAttributes =
         this.ensureNonContextualSubjectAttributes(subjectAttributes);
-      variation = this.getStringAssignment(
+      const { variation: _variation, evaluationDetails } = this.getStringAssignmentDetails(
         flagKey,
         subjectKey,
         nonContextualSubjectAttributes,
         defaultValue,
       );
+      variation = _variation;
 
       // Check if the assigned variation is an active bandit
       // Note: the reason for non-bandit assignments include the subject being bucketed into a non-bandit variation or
@@ -475,6 +519,8 @@ export default class EppoClient implements IEppoClient {
           banditModelData,
         );
         action = banditEvaluation.actionKey;
+        evaluationDetails.banditAction = action;
+        evaluationDetails.banditKey = banditKey;
 
         const banditEvent: IBanditEvent = {
           timestamp: new Date().toISOString(),
@@ -491,18 +537,24 @@ export default class EppoClient implements IEppoClient {
           actionCategoricalAttributes:
             actionsWithContextualAttributes[action].categoricalAttributes,
           metaData: this.buildLoggerMetadata(),
+          evaluationDetails,
         };
         this.logBanditAction(banditEvent);
       }
+      return { variation, action, evaluationDetails };
     } catch (err) {
       logger.error('Error evaluating bandit action', err);
       if (!this.isGracefulFailureMode) {
         throw err;
       }
-      return defaultResult;
+      return {
+        ...defaultResult,
+        evaluationDetails: flagEvaluationDetailsBuilder.buildForNoneResult(
+          'ASSIGNMENT_ERROR',
+          `Error evaluating bandit action: ${err.message}`,
+        ),
+      };
     }
-
-    return { variation, action };
   }
 
   private ensureNonContextualSubjectAttributes(
@@ -602,7 +654,7 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes: Attributes,
     defaultValue: EppoValue,
     expectedVariationType: VariationType,
-  ): EppoValue {
+  ): { eppoValue: EppoValue; flagEvaluationDetails: IFlagEvaluationDetails } {
     try {
       const result = this.getAssignmentDetail(
         flagKey,
@@ -612,12 +664,28 @@ export default class EppoClient implements IEppoClient {
       );
 
       if (!result.variation) {
-        return defaultValue;
+        return {
+          eppoValue: defaultValue,
+          flagEvaluationDetails: result.flagEvaluationDetails,
+        };
       }
 
-      return EppoValue.valueOf(result.variation.value, expectedVariationType);
+      return {
+        eppoValue: EppoValue.valueOf(result.variation.value, expectedVariationType),
+        flagEvaluationDetails: result.flagEvaluationDetails,
+      };
     } catch (error) {
-      return this.rethrowIfNotGraceful(error, defaultValue);
+      const eppoValue = this.rethrowIfNotGraceful(error, defaultValue);
+      const flagEvaluationDetails = new FlagEvaluationDetailsBuilder(
+        '',
+        [],
+        '',
+        '',
+      ).buildForNoneResult('ASSIGNMENT_ERROR', `Assignment Error: ${error.message}`);
+      return {
+        eppoValue,
+        flagEvaluationDetails,
+      };
     }
   }
 
@@ -650,12 +718,18 @@ export default class EppoClient implements IEppoClient {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
     validateNotBlank(flagKey, 'Invalid argument: flagKey cannot be blank');
 
+    const flagEvaluationDetailsBuilder = this.flagEvaluationDetailsBuilder(flagKey);
+    const configDetails = this.getConfigDetails();
     const flag = this.getFlag(flagKey);
 
     if (flag === null) {
       logger.warn(`[Eppo SDK] No assigned variation. Flag not found: ${flagKey}`);
       // note: this is different from the Python SDK, which returns None instead
-      return noneResult(flagKey, subjectKey, subjectAttributes);
+      const flagEvaluationDetails = flagEvaluationDetailsBuilder.buildForNoneResult(
+        'FLAG_UNRECOGNIZED_OR_DISABLED',
+        `Unrecognized or disabled flag: ${flagKey}`,
+      );
+      return noneResult(flagKey, subjectKey, subjectAttributes, flagEvaluationDetails);
     }
 
     if (!checkTypeMatch(expectedVariationType, flag.variationType)) {
@@ -667,14 +741,20 @@ export default class EppoClient implements IEppoClient {
     if (!flag.enabled) {
       logger.info(`[Eppo SDK] No assigned variation. Flag is disabled: ${flagKey}`);
       // note: this is different from the Python SDK, which returns None instead
-      return noneResult(flagKey, subjectKey, subjectAttributes);
+      const flagEvaluationDetails = flagEvaluationDetailsBuilder.buildForNoneResult(
+        'FLAG_UNRECOGNIZED_OR_DISABLED',
+        `Unrecognized or disabled flag: ${flagKey}`,
+      );
+      return noneResult(flagKey, subjectKey, subjectAttributes, flagEvaluationDetails);
     }
 
     const result = this.evaluator.evaluateFlag(
       flag,
+      configDetails,
       subjectKey,
       subjectAttributes,
       this.isObfuscated,
+      expectedVariationType,
     );
     if (this.isObfuscated) {
       // flag.key is obfuscated, replace with requested flag key
@@ -682,7 +762,13 @@ export default class EppoClient implements IEppoClient {
     }
 
     if (result?.variation && !checkValueTypeMatch(expectedVariationType, result.variation.value)) {
-      return noneResult(flagKey, subjectKey, subjectAttributes);
+      const { key: vKey, value: vValue } = result.variation;
+      const reason = `Expected variation type ${expectedVariationType} does not match for variation '${vKey}' with value ${vValue}`;
+      const flagEvaluationDetails = flagEvaluationDetailsBuilder.buildForNoneResult(
+        'TYPE_MISMATCH',
+        reason,
+      );
+      return noneResult(flagKey, subjectKey, subjectAttributes, flagEvaluationDetails);
     }
 
     try {
@@ -696,11 +782,29 @@ export default class EppoClient implements IEppoClient {
     return result;
   }
 
+  private flagEvaluationDetailsBuilder(flagKey: string): FlagEvaluationDetailsBuilder {
+    const flag = this.getFlag(flagKey);
+    const configDetails = this.getConfigDetails();
+    return new FlagEvaluationDetailsBuilder(
+      configDetails.configEnvironment.name,
+      flag?.allocations ?? [],
+      configDetails.configFetchedAt,
+      configDetails.configPublishedAt,
+    );
+  }
+
+  private getConfigDetails(): ConfigDetails {
+    return {
+      configFetchedAt: this.flagConfigurationStore.getConfigFetchedAt() ?? '',
+      configPublishedAt: this.flagConfigurationStore.getConfigPublishedAt() ?? '',
+      configEnvironment: this.flagConfigurationStore.getEnvironment() ?? { name: '' },
+    };
+  }
+
   private getFlag(flagKey: string): Flag | null {
-    if (this.isObfuscated) {
-      return this.getObfuscatedFlag(flagKey);
-    }
-    return this.flagConfigurationStore.get(flagKey);
+    return this.isObfuscated
+      ? this.getObfuscatedFlag(flagKey)
+      : this.flagConfigurationStore.get(flagKey);
   }
 
   private getObfuscatedFlag(flagKey: string): Flag | null {
@@ -802,6 +906,7 @@ export default class EppoClient implements IEppoClient {
       timestamp: new Date().toISOString(),
       subjectAttributes,
       metaData: this.buildLoggerMetadata(),
+      evaluationDetails: result.flagEvaluationDetails,
     };
 
     if (variation && allocationKey) {

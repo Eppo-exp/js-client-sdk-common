@@ -1,6 +1,8 @@
 import * as fs from 'fs';
 
-import { VariationType, AttributeType } from '../src';
+import { AttributeType, VariationType } from '../src';
+import { IAssignmentDetails } from '../src/client/eppo-client';
+import { IFlagEvaluationDetails } from '../src/flag-evaluation-details-builder';
 import { IBanditParametersResponse, IUniversalFlagConfigResponse } from '../src/http-client';
 import { ContextAttributes } from '../src/types';
 
@@ -16,6 +18,7 @@ export interface SubjectTestCase {
   subjectKey: string;
   subjectAttributes: Record<string, AttributeType>;
   assignment: string | number | boolean | object;
+  evaluationDetails: IFlagEvaluationDetails;
 }
 
 export interface IAssignmentTestCase {
@@ -89,6 +92,29 @@ export function getTestAssignments(
     assignments.push({ subject, assignment });
   }
   return assignments;
+}
+
+export function getTestAssignmentDetails(
+  testCase: IAssignmentTestCase,
+  assignmentDetailsFn: (
+    flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
+    defaultValue: string | number | boolean | object,
+  ) => never,
+): {
+  subject: SubjectTestCase;
+  assignmentDetails: IAssignmentDetails<string | boolean | number | object>;
+}[] {
+  return testCase.subjects.map((subject) => ({
+    subject,
+    assignmentDetails: assignmentDetailsFn(
+      testCase.flag,
+      subject.subjectKey,
+      subject.subjectAttributes,
+      testCase.defaultValue,
+    ),
+  }));
 }
 
 export function validateTestAssignments(

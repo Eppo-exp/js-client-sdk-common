@@ -1,3 +1,5 @@
+import { IFlagEvaluationDetails } from './flag-evaluation-details-builder';
+
 export enum HoldoutVariationEnum {
   STATUS_QUO = 'status_quo',
   ALL_SHIPPED = 'all_shipped_variants',
@@ -46,6 +48,11 @@ export interface IAssignmentEvent {
   [propName: string]: unknown;
 
   metaData?: Record<string, unknown>;
+
+  /**
+   * The flag evaluation details
+   */
+  evaluationDetails: IFlagEvaluationDetails;
 }
 
 /**

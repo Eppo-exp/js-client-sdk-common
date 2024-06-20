@@ -1,3 +1,4 @@
+import { IFlagEvaluationDetails } from './flag-evaluation-details-builder';
 import { Attributes } from './types';
 
 export interface IBanditEvent {
@@ -14,6 +15,7 @@ export interface IBanditEvent {
   actionNumericAttributes: Attributes;
   actionCategoricalAttributes: Attributes;
   metaData?: Record<string, unknown>;
+  evaluationDetails: IFlagEvaluationDetails;
 }
 
 export interface IBanditLogger {
