@@ -172,7 +172,7 @@ export default class EppoClient implements IEppoClient {
     private configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>,
     private configurationRequestParameters?: FlagConfigurationRequestParameters,
     private readonly isObfuscated = false,
-  ) { }
+  ) {}
 
   public setConfigurationRequestParameters(
     configurationRequestParameters: FlagConfigurationRequestParameters,
