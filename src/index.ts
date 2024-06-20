@@ -68,5 +68,4 @@ export {
   VariationType,
   AttributeType,
   SubjectAttributes,
-  ISdkParams
 };
