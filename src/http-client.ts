@@ -1,7 +1,7 @@
 import ApiEndpoints from './api-endpoints';
 import { Flag } from './interfaces';
 
-export interface ISdkParams {
+export interface IQueryParams {
   apiKey: string;
   sdkVersion: string;
   sdkName: string;

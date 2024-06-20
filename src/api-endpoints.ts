@@ -1,8 +1,8 @@
 import { BASE_URL as DEFAULT_BASE_URL, UFC_ENDPOINT } from './constants';
-import { ISdkParams } from './http-client';
+import { IQueryParams } from './http-client';
 
 interface IApiEndpointsParams {
-  queryParams: ISdkParams;
+  queryParams: IQueryParams;
   baseUrl?: string;
 }
 
