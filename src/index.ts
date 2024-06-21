@@ -1,3 +1,4 @@
+import ApiEndpoints from './api-endpoints';
 import { logger } from './application-logger';
 import { IAssignmentHooks } from './assignment-hooks';
 import { IAssignmentLogger, IAssignmentEvent } from './assignment-logger';
@@ -37,6 +38,7 @@ export {
   EppoClient,
   IEppoClient,
   constants,
+  ApiEndpoints,
   FlagConfigRequestor,
   HttpClient,
   validation,

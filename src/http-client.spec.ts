@@ -1,15 +1,15 @@
 import ApiEndpoints from './api-endpoints';
-import FetchHttpClient, { HttpRequestError, ISdkParams } from './http-client';
+import FetchHttpClient, { HttpRequestError, IQueryParams } from './http-client';
 
 describe('FetchHttpClient', () => {
   const baseUrl = 'http://api.example.com';
-  const sdkParams: ISdkParams = {
+  const queryParams: IQueryParams = {
     apiKey: '12345',
     sdkVersion: '1.0',
     sdkName: 'ExampleSDK',
   };
   const timeout = 5000; // 5 seconds
-  const apiEndpoints = new ApiEndpoints(baseUrl, sdkParams);
+  const apiEndpoints = new ApiEndpoints({ baseUrl, queryParams });
   const httpClient = new FetchHttpClient(apiEndpoints, timeout);
 
   beforeEach(() => {

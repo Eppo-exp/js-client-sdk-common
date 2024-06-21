@@ -1,14 +1,22 @@
-import { ISdkParams } from './http-client';
+import { BASE_URL as DEFAULT_BASE_URL, UFC_ENDPOINT } from './constants';
+import { IQueryParams } from './http-client';
 
-const UFC_ENDPOINT = '/flag-config/v1/config';
+interface IApiEndpointsParams {
+  queryParams?: IQueryParams;
+  baseUrl?: string;
+}
 
 /** Utility class for constructing an Eppo API endpoint URL given a provided baseUrl and query parameters */
 export default class ApiEndpoints {
-  constructor(private readonly baseUrl: string, private readonly queryParams: ISdkParams) {}
+  constructor(private readonly params: IApiEndpointsParams) {
+    this.params.baseUrl = params.baseUrl ?? DEFAULT_BASE_URL;
+  }
 
   endpoint(resource: string): URL {
-    const url = new URL(this.baseUrl + resource);
-    Object.entries(this.queryParams).forEach(([key, value]) => url.searchParams.append(key, value));
+    const url = new URL(this.params.baseUrl + resource);
+    Object.entries(this.params.queryParams ?? {}).forEach(([key, value]) =>
+      url.searchParams.append(key, value),
+    );
     return url;
   }
 
