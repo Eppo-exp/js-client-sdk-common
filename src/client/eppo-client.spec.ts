@@ -247,6 +247,13 @@ describe('EppoClient E2E test', () => {
             orderPosition: 0,
           },
           unmatchedAllocations: [],
+          unevaluatedAllocations: [
+            {
+              key: '50/50 split',
+              allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
+              orderPosition: 1,
+            },
+          ],
         };
         expect(result).toEqual(expected);
       });
@@ -266,7 +273,8 @@ describe('EppoClient E2E test', () => {
           variationKey: 'two',
           variationValue: 2,
           flagEvaluationCode: 'MATCH',
-          flagEvaluationDescription: 'alice belongs to the range of traffic assigned to "two".',
+          flagEvaluationDescription:
+            'alice belongs to the range of traffic assigned to "two" defined in allocation "50/50 split".',
           matchedRule: null,
           matchedAllocation: {
             key: '50/50 split',
@@ -280,6 +288,7 @@ describe('EppoClient E2E test', () => {
               orderPosition: 0,
             },
           ],
+          unevaluatedAllocations: [],
         };
         expect(result).toEqual(expected);
       });
@@ -327,6 +336,13 @@ describe('EppoClient E2E test', () => {
               orderPosition: 1,
             },
           ],
+          unevaluatedAllocations: [
+            {
+              key: 'rollout',
+              allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
+              orderPosition: 3,
+            },
+          ],
         };
         expect(result).toEqual(expected);
       });
@@ -345,7 +361,8 @@ describe('EppoClient E2E test', () => {
           matchedRule: null,
           matchedAllocation: null,
           unmatchedAllocations: [],
-        });
+          unevaluatedAllocations: [],
+        } as AssignmentDetails<number>);
       });
     });
 

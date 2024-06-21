@@ -404,7 +404,7 @@ export default class EppoClient {
       };
     } catch (error) {
       const eppoValue = this.rethrowIfNotGraceful(error, defaultValue);
-      const flagEvaluationDetails = new FlagEvaluationDetailsBuilder().buildForNoneResult(
+      const flagEvaluationDetails = new FlagEvaluationDetailsBuilder([]).buildForNoneResult(
         'ASSIGNMENT_ERROR',
         `Assignment Error: ${error.message}`,
       );
@@ -445,7 +445,7 @@ export default class EppoClient {
     validateNotBlank(flagKey, 'Invalid argument: flagKey cannot be blank');
 
     const flag = this.getFlag(flagKey);
-    const flagEvaluationDetailsBuilder = new FlagEvaluationDetailsBuilder();
+    const flagEvaluationDetailsBuilder = new FlagEvaluationDetailsBuilder(flag?.allocations ?? []);
 
     if (flag === null) {
       logger.warn(`[Eppo SDK] No assigned variation. Flag not found: ${flagKey}`);

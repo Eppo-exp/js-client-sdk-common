@@ -33,7 +33,7 @@ export class Evaluator {
     subjectAttributes: SubjectAttributes,
     obfuscated: boolean,
   ): FlagEvaluation {
-    const flagEvaluationDetailsBuilder = new FlagEvaluationDetailsBuilder();
+    const flagEvaluationDetailsBuilder = new FlagEvaluationDetailsBuilder(flag.allocations);
 
     if (!flag.enabled) {
       return noneResult(
@@ -106,11 +106,12 @@ export class Evaluator {
       flag.key,
       subjectKey,
       subjectAttributes,
-      flagEvaluationDetailsBuilder.buildForNoneResult(
-        'DEFAULT_ALLOCATION',
-        'No allocations matched. Falling back to "Default Allocation", serving NULL',
-        unmatchedAllocations,
-      ),
+      flagEvaluationDetailsBuilder
+        .setNoMatchFound(unmatchedAllocations)
+        .build(
+          'DEFAULT_ALLOCATION_NULL',
+          'No allocations matched. Falling back to "Default Allocation", serving NULL',
+        ),
     );
   }
 

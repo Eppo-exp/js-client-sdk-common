@@ -6,17 +6,18 @@ export const flagEvaluationCodes = [
   'FLAG_UNRECOGNIZED_OR_DISABLED',
   'TYPE_MISMATCH',
   'ASSIGNMENT_ERROR',
-  'DEFAULT_ALLOCATION',
+  'DEFAULT_ALLOCATION_NULL',
 ] as const;
 
 export type FlagEvaluationCode = typeof flagEvaluationCodes[number];
 
 export enum AllocationEvaluationCode {
+  UNEVALUATED = 'UNEVALUATED',
   MATCH = 'MATCH',
   BEFORE_START_TIME = 'BEFORE_START_TIME',
+  TRAFFIC_EXPOSURE_MISS = 'TRAFFIC_EXPOSURE_MISS',
   AFTER_END_TIME = 'AFTER_END_TIME',
   FAILING_RULE = 'FAILING_RULE',
-  TRAFFIC_EXPOSURE_MISS = 'TRAFFIC_EXPOSURE_MISS',
 }
 
 export interface AllocationEvaluation {
@@ -33,6 +34,7 @@ export interface FlagEvaluationDetails {
   matchedRule: Rule | null;
   matchedAllocation: AllocationEvaluation | null;
   unmatchedAllocations: Array<AllocationEvaluation>;
+  unevaluatedAllocations: Array<AllocationEvaluation>;
 }
 
 export class FlagEvaluationDetailsBuilder {
@@ -41,12 +43,23 @@ export class FlagEvaluationDetailsBuilder {
   private matchedRule: FlagEvaluationDetails['matchedRule'];
   private matchedAllocation: FlagEvaluationDetails['matchedAllocation'];
   private unmatchedAllocations: FlagEvaluationDetails['unmatchedAllocations'];
+  private unevaluatedAllocations: FlagEvaluationDetails['unevaluatedAllocations'];
 
-  constructor() {
+  constructor(private readonly allocations: Allocation[]) {
     this.setNone();
   }
 
-  setNone = (
+  setNone = (): FlagEvaluationDetailsBuilder => {
+    this.variationKey = null;
+    this.variationValue = null;
+    this.matchedAllocation = null;
+    this.matchedRule = null;
+    this.unmatchedAllocations = [];
+    this.unevaluatedAllocations = [];
+    return this;
+  };
+
+  setNoMatchFound = (
     unmatchedAllocations: Array<AllocationEvaluation> = [],
   ): FlagEvaluationDetailsBuilder => {
     this.variationKey = null;
@@ -54,6 +67,14 @@ export class FlagEvaluationDetailsBuilder {
     this.matchedAllocation = null;
     this.matchedRule = null;
     this.unmatchedAllocations = unmatchedAllocations;
+    this.unevaluatedAllocations = this.allocations.map(
+      (allocation, i) =>
+        ({
+          key: allocation.key,
+          allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
+          orderPosition: i,
+        } as AllocationEvaluation),
+    );
     return this;
   };
 
@@ -73,15 +94,22 @@ export class FlagEvaluationDetailsBuilder {
       orderPosition,
     };
     this.unmatchedAllocations = unmatchedAllocations;
+    const unevaluatedStartIndex = orderPosition + 1;
+    this.unevaluatedAllocations = this.allocations.slice(unevaluatedStartIndex).map(
+      (allocation, i) =>
+        ({
+          key: allocation.key,
+          allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
+          orderPosition: unevaluatedStartIndex + i,
+        } as AllocationEvaluation),
+    );
     return this;
   };
 
   buildForNoneResult = (
     flagEvaluationCode: FlagEvaluationCode,
     flagEvaluationDescription: string,
-    unmatchedAllocations: Array<AllocationEvaluation> = [],
-  ): FlagEvaluationDetails =>
-    this.setNone(unmatchedAllocations).build(flagEvaluationCode, flagEvaluationDescription);
+  ): FlagEvaluationDetails => this.setNone().build(flagEvaluationCode, flagEvaluationDescription);
 
   build = (
     flagEvaluationCode: FlagEvaluationCode,
@@ -94,5 +122,6 @@ export class FlagEvaluationDetailsBuilder {
     matchedRule: this.matchedRule,
     matchedAllocation: this.matchedAllocation,
     unmatchedAllocations: this.unmatchedAllocations,
+    unevaluatedAllocations: this.unevaluatedAllocations,
   });
 }
