@@ -2,7 +2,7 @@ import { BASE_URL as DEFAULT_BASE_URL, UFC_ENDPOINT } from './constants';
 import { IQueryParams } from './http-client';
 
 interface IApiEndpointsParams {
-  queryParams: IQueryParams;
+  queryParams?: IQueryParams;
   baseUrl?: string;
 }
 
@@ -14,7 +14,7 @@ export default class ApiEndpoints {
 
   endpoint(resource: string): URL {
     const url = new URL(this.params.baseUrl + resource);
-    Object.entries(this.params.queryParams).forEach(([key, value]) =>
+    Object.entries(this.params.queryParams ?? {}).forEach(([key, value]) =>
       url.searchParams.append(key, value),
     );
     return url;

@@ -21,7 +21,6 @@ describe('ApiEndpoints', () => {
 
   it('should use default base URL if not provided', () => {
     const apiEndpoints = new ApiEndpoints({
-      baseUrl: undefined,
       queryParams: {
         apiKey: '12345',
         sdkVersion: 'foobar',
@@ -33,6 +32,14 @@ describe('ApiEndpoints', () => {
     );
     expect(apiEndpoints.ufcEndpoint().toString()).toEqual(
       `${DEFAULT_BASE_URL}/flag-config/v1/config?apiKey=12345&sdkVersion=foobar&sdkName=ExampleSDK`,
+    );
+  });
+
+  it('should not append query parameters if not provided', () => {
+    const apiEndpoints = new ApiEndpoints({});
+    expect(apiEndpoints.endpoint('/data').toString()).toEqual(`${DEFAULT_BASE_URL}/data`);
+    expect(apiEndpoints.ufcEndpoint().toString()).toEqual(
+      `${DEFAULT_BASE_URL}/flag-config/v1/config`,
     );
   });
 });
