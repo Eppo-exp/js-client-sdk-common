@@ -19,10 +19,13 @@ describe('ConfigurationRequestor', () => {
   let configurationRequestor: ConfigurationRequestor;
 
   beforeEach(async () => {
-    const apiEndpoints = new ApiEndpoints('http://127.0.0.1:4000', {
-      apiKey: 'dummy',
-      sdkName: 'js-client-sdk-common',
-      sdkVersion: '1.0.0',
+    const apiEndpoints = new ApiEndpoints({
+      baseUrl: 'http://127.0.0.1:4000',
+      queryParams: {
+        apiKey: 'dummy',
+        sdkName: 'js-client-sdk-common',
+        sdkVersion: '1.0.0',
+      },
     });
     httpClient = new FetchHttpClient(apiEndpoints, 1000);
     flagStore = new MemoryOnlyConfigurationStore<Flag>();

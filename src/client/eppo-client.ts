@@ -8,6 +8,7 @@ import {
   LRUInMemoryAssignmentCache,
   NonExpiringInMemoryAssignmentCache,
 } from '../cache/abstract-assignment-cache';
+import ConfigurationRequestor from '../configuration-requestor';
 import { IConfigurationStore } from '../configuration-store/configuration-store';
 import {
   DEFAULT_INITIAL_CONFIG_REQUEST_RETRIES,

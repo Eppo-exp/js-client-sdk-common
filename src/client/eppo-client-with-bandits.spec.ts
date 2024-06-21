@@ -41,10 +41,13 @@ describe('EppoClient Bandits E2E test', () => {
     }) as jest.Mock;
 
     // Initialize a configuration requestor
-    const apiEndpoints = new ApiEndpoints('http://127.0.0.1:4000', {
-      apiKey: 'dummy',
-      sdkName: 'js-client-sdk-common',
-      sdkVersion: '1.0.0',
+    const apiEndpoints = new ApiEndpoints({
+      baseUrl: 'http://127.0.0.1:4000',
+      queryParams: {
+        apiKey: 'dummy',
+        sdkName: 'js-client-sdk-common',
+        sdkVersion: '1.0.0',
+      },
     });
     const httpClient = new FetchHttpClient(apiEndpoints, 1000);
     const configurationRequestor = new ConfigurationRequestor(httpClient, flagStore, banditStore);
