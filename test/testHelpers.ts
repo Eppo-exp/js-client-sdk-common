@@ -1,10 +1,11 @@
 import * as fs from 'fs';
 
-import { VariationType, AttributeType } from '../src';
+import { VariationType, AttributeType, Attributes } from '../src';
 import { IBanditParametersResponse, IUniversalFlagConfigResponse } from '../src/http-client';
 
 export const TEST_DATA_DIR = './test/data/ufc/';
 export const ASSIGNMENT_TEST_DATA_DIR = TEST_DATA_DIR + 'tests/';
+export const BANDIT_TEST_DATA_DIR = TEST_DATA_DIR + 'bandit-tests/';
 const MOCK_UFC_FILENAME = 'flags-v1';
 export const MOCK_UFC_RESPONSE_FILE = `${MOCK_UFC_FILENAME}.json`;
 export const MOCK_FLAGS_WITH_BANDITS_RESPONSE_FILE = `bandit-flags-v1.json`;
@@ -23,16 +24,39 @@ export interface IAssignmentTestCase {
   subjects: SubjectTestCase[];
 }
 
+export interface BanditTestCase {
+  flag: string;
+  defaultValue: string;
+  subjects: BanditTestCaseSubject[];
+}
+
+interface BanditTestCaseSubject {
+  subjectKey: string;
+  subjectAttributes: { numeric_attributes: Attributes; categorical_attributes: Attributes };
+  actions: BanditTestCaseAction[];
+  assignment: { variation: string; action: string | null };
+}
+
+interface BanditTestCaseAction {
+  actionKey: string;
+  numericAttributes: Attributes;
+  categoricalAttributes: Attributes;
+}
+
 export function readMockUFCResponse(
   filename: string,
 ): IUniversalFlagConfigResponse | IBanditParametersResponse {
   return JSON.parse(fs.readFileSync(TEST_DATA_DIR + filename, 'utf-8'));
 }
 
-export function readAssignmentTestData(): IAssignmentTestCase[] {
-  return fs
-    .readdirSync(ASSIGNMENT_TEST_DATA_DIR)
-    .map((file) => JSON.parse(fs.readFileSync(ASSIGNMENT_TEST_DATA_DIR + file, 'utf8')));
+export function readTestData<T>(testDirectory: string): T[] {
+  const testCases = fs
+    .readdirSync(testDirectory)
+    .map((file) => JSON.parse(fs.readFileSync(testDirectory + file, 'utf8')));
+  if (!testCases.length) {
+    throw new Error('No test cases at ' + testDirectory);
+  }
+  return testCases;
 }
 
 export function getTestAssignments(

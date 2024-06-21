@@ -7,9 +7,10 @@ import {
   OBFUSCATED_MOCK_UFC_RESPONSE_FILE,
   SubjectTestCase,
   getTestAssignments,
-  readAssignmentTestData,
   readMockUFCResponse,
   validateTestAssignments,
+  readTestData,
+  ASSIGNMENT_TEST_DATA_DIR,
 } from '../../test/testHelpers';
 import ApiEndpoints from '../api-endpoints';
 import { IAssignmentLogger } from '../assignment-logger';
@@ -153,7 +154,7 @@ describe('EppoClient E2E test', () => {
 
       const client = new EppoClient(storage);
       client.getStringAssignment(flagKey, 'subject-to-be-logged', {}, 'default-value');
-      client.setLogger(mockLogger);
+      client.setAssignmentLogger(mockLogger);
 
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
       expect(td.explain(mockLogger.logAssignment).calls[0].args[0].subject).toEqual(
@@ -167,9 +168,9 @@ describe('EppoClient E2E test', () => {
       const client = new EppoClient(storage);
 
       client.getStringAssignment(flagKey, 'subject-to-be-logged', {}, 'default-value');
-      client.setLogger(mockLogger);
+      client.setAssignmentLogger(mockLogger);
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
-      client.setLogger(mockLogger);
+      client.setAssignmentLogger(mockLogger);
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(1);
     });
 
@@ -180,7 +181,7 @@ describe('EppoClient E2E test', () => {
       times(MAX_EVENT_QUEUE_SIZE + 100, (i) =>
         client.getStringAssignment(flagKey, `subject-to-be-logged-${i}`, {}, 'default-value'),
       );
-      client.setLogger(mockLogger);
+      client.setAssignmentLogger(mockLogger);
       expect(td.explain(mockLogger.logAssignment).callCount).toEqual(MAX_EVENT_QUEUE_SIZE);
     });
   });
@@ -208,7 +209,7 @@ describe('EppoClient E2E test', () => {
       jest.restoreAllMocks();
     });
 
-    it.each(readAssignmentTestData())(
+    it.each(readTestData<IAssignmentTestCase>(ASSIGNMENT_TEST_DATA_DIR))(
       'test variation assignment splits',
       async ({ flag, variationType, defaultValue, subjects }: IAssignmentTestCase) => {
         const client = new EppoClient(storage);
@@ -259,7 +260,7 @@ describe('EppoClient E2E test', () => {
       jest.restoreAllMocks();
     });
 
-    it.each(readAssignmentTestData())(
+    it.each(readTestData<IAssignmentTestCase>(ASSIGNMENT_TEST_DATA_DIR))(
       'test variation assignment splits',
       async ({ flag, variationType, defaultValue, subjects }: IAssignmentTestCase) => {
         const client = new EppoClient(storage, undefined, undefined, true);
@@ -315,7 +316,7 @@ describe('EppoClient E2E test', () => {
 
     storage.setEntries({ [flagKey]: mockFlag });
     const client = new EppoClient(storage);
-    client.setLogger(mockLogger);
+    client.setAssignmentLogger(mockLogger);
 
     const subjectAttributes = { foo: 3 };
     const assignment = client.getStringAssignment(
@@ -341,7 +342,7 @@ describe('EppoClient E2E test', () => {
 
     storage.setEntries({ [flagKey]: mockFlag });
     const client = new EppoClient(storage);
-    client.setLogger(mockLogger);
+    client.setAssignmentLogger(mockLogger);
 
     const subjectAttributes = { foo: 3 };
     const assignment = client.getStringAssignment(
@@ -363,7 +364,7 @@ describe('EppoClient E2E test', () => {
 
       storage.setEntries({ [flagKey]: mockFlag });
       client = new EppoClient(storage);
-      client.setLogger(mockLogger);
+      client.setAssignmentLogger(mockLogger);
     });
 
     it('logs duplicate assignments without an assignment cache', async () => {
@@ -405,7 +406,7 @@ describe('EppoClient E2E test', () => {
         new Error('logging error'),
       );
 
-      client.setLogger(mockLogger);
+      client.setAssignmentLogger(mockLogger);
 
       client.getStringAssignment(flagKey, 'subject-10', {}, 'default');
       client.getStringAssignment(flagKey, 'subject-10', {}, 'default');

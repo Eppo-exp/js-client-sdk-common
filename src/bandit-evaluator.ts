@@ -1,8 +1,10 @@
+import { BANDIT_ASSIGNMENT_SHARDS } from './constants';
 import {
   BanditCategoricalAttributeCoefficients,
   BanditModelData,
   BanditNumericAttributeCoefficients,
 } from './interfaces';
+import { MD5Sharder, Sharder } from './sharders';
 import { Attributes } from './types';
 
 export interface BanditEvaluation {
@@ -18,6 +20,9 @@ export interface BanditEvaluation {
 }
 
 export class BanditEvaluator {
+  private assignmentShards = BANDIT_ASSIGNMENT_SHARDS; // We just hard code this for now
+  private sharder: Sharder = new MD5Sharder();
+
   public evaluateBandit(
     flagKey: string,
     subjectKey: string,
@@ -36,7 +41,13 @@ export class BanditEvaluator {
       banditModel.actionProbabilityFloor,
     );
     const selectedActionKey: string = this.selectAction(flagKey, subjectKey, actionWeights);
-    const optimalityGap = 0; // TODO: compute difference between selected and max
+
+    // Compute optimality gap in terms of score
+    const topScore = Object.values(actionScores).reduce(
+      (maxScore, score) => (score > maxScore ? score : maxScore),
+      -Infinity,
+    );
+    const optimalityGap = topScore - actionScores[selectedActionKey];
 
     return {
       flagKey,
@@ -173,6 +184,43 @@ export class BanditEvaluator {
     subjectKey: string,
     actionWeights: Record<string, number>,
   ): string {
-    return Object.keys(actionWeights)[0]; // TODO: math and stuff
+    // Deterministically "shuffle" the actions
+    // This way as action weights shift, a bunch of users who were on the edge of one action won't all be shifted to the
+    // same new action at the same time.
+    const shuffledActions = Object.entries(actionWeights).sort((a, b) => {
+      const actionAShard = this.sharder.getShard(
+        `${flagKey}-${subjectKey}-${a[0]}`,
+        this.assignmentShards,
+      );
+      const actionBShard = this.sharder.getShard(
+        `${flagKey}-${subjectKey}-${b[0]}`,
+        this.assignmentShards,
+      );
+      let result = actionAShard - actionBShard;
+      if (result === 0) {
+        // In the unlikely case of a tie in randomized assigned shards, break the tie with the action names
+        result = a[0] < b[0] ? -1 : 1;
+      }
+      return result;
+    });
+
+    // Select action from the shuffled actions, based on weight
+    const assignedShard = this.sharder.getShard(`${flagKey}-${subjectKey}`, this.assignmentShards);
+    const assignmentWeightThreshold = assignedShard / this.assignmentShards;
+    let cumulativeWeight = 0;
+    let assignedAction: string | null = null;
+    for (const actionWeight of shuffledActions) {
+      cumulativeWeight += actionWeight[1];
+      if (cumulativeWeight > assignmentWeightThreshold) {
+        assignedAction = actionWeight[0];
+        break;
+      }
+    }
+    if (assignedAction === null) {
+      throw new Error(
+        `No bandit action selected for flag "${flagKey}" and subject "${subjectKey}"`,
+      );
+    }
+    return assignedAction;
   }
 }
