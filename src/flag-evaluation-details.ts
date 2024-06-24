@@ -31,6 +31,8 @@ export interface FlagEvaluationDetails {
   variationValue: Variation['value'] | null;
   flagEvaluationCode: FlagEvaluationCode;
   flagEvaluationDescription: string;
+  configFetchedAt: string;
+  configPublishedAt: string;
   matchedRule: Rule | null;
   matchedAllocation: AllocationEvaluation | null;
   unmatchedAllocations: Array<AllocationEvaluation>;
@@ -45,7 +47,11 @@ export class FlagEvaluationDetailsBuilder {
   private unmatchedAllocations: FlagEvaluationDetails['unmatchedAllocations'];
   private unevaluatedAllocations: FlagEvaluationDetails['unevaluatedAllocations'];
 
-  constructor(private readonly allocations: Allocation[]) {
+  constructor(
+    private readonly allocations: Allocation[],
+    private readonly configFetchedAt: string,
+    private readonly configPublishedAt: string,
+  ) {
     this.setNone();
   }
 
@@ -119,6 +125,8 @@ export class FlagEvaluationDetailsBuilder {
     flagEvaluationDescription,
     variationKey: this.variationKey,
     variationValue: this.variationValue,
+    configFetchedAt: this.configFetchedAt,
+    configPublishedAt: this.configPublishedAt,
     matchedRule: this.matchedRule,
     matchedAllocation: this.matchedAllocation,
     unmatchedAllocations: this.unmatchedAllocations,

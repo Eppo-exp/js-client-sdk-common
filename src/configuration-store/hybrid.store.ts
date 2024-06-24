@@ -8,6 +8,9 @@ export class HybridConfigurationStore<T> implements IConfigurationStore<T> {
     protected readonly persistentStore: IAsyncStore<T> | null,
   ) {}
 
+  private configFetchedAt: string;
+  private configPublishedAt: string;
+
   /**
    * Initialize the configuration store by loading the entries from the persistent store into the serving store.
    */
@@ -57,11 +60,28 @@ export class HybridConfigurationStore<T> implements IConfigurationStore<T> {
     return this.servingStore.getKeys();
   }
 
-  public async setEntries(entries: Record<string, T>): Promise<void> {
+  public async setEntries(entries: Record<string, T>): Promise<boolean> {
     if (this.persistentStore) {
       // Persistence store is now initialized and should mark itself accordingly.
       await this.persistentStore.setEntries(entries);
     }
     this.servingStore.setEntries(entries);
+    return true;
+  }
+
+  public getConfigFetchedAt(): string {
+    return this.configFetchedAt;
+  }
+
+  public setConfigFetchedAt(configFetchedAt: string): void {
+    this.configFetchedAt = configFetchedAt;
+  }
+
+  public getConfigPublishedAt(): string {
+    return this.configPublishedAt;
+  }
+
+  public setConfigPublishedAt(configPublishedAt: string): void {
+    this.configPublishedAt = configPublishedAt;
   }
 }

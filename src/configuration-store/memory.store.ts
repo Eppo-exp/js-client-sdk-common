@@ -3,6 +3,8 @@ import { IConfigurationStore, ISyncStore } from './configuration-store';
 export class MemoryStore<T> implements ISyncStore<T> {
   private store: Record<string, T> = {};
   private initialized = false;
+  private configFetchedAt: string;
+  private configPublishedAt: string;
 
   get(key: string): T | null {
     return this.store[key] ?? null;
@@ -29,6 +31,8 @@ export class MemoryStore<T> implements ISyncStore<T> {
 export class MemoryOnlyConfigurationStore<T> implements IConfigurationStore<T> {
   private readonly servingStore: ISyncStore<T> = new MemoryStore<T>();
   private initialized = false;
+  private configFetchedAt: string;
+  private configPublishedAt: string;
 
   init(): Promise<void> {
     this.initialized = true;
@@ -55,8 +59,25 @@ export class MemoryOnlyConfigurationStore<T> implements IConfigurationStore<T> {
     return this.initialized;
   }
 
-  async setEntries(entries: Record<string, T>): Promise<void> {
+  async setEntries(entries: Record<string, T>): Promise<boolean> {
     this.servingStore.setEntries(entries);
     this.initialized = true;
+    return true;
+  }
+
+  public getConfigFetchedAt(): string {
+    return this.configFetchedAt;
+  }
+
+  public setConfigFetchedAt(configFetchedAt: string): void {
+    this.configFetchedAt = configFetchedAt;
+  }
+
+  public getConfigPublishedAt(): string {
+    return this.configPublishedAt;
+  }
+
+  public setConfigPublishedAt(configPublishedAt: string): void {
+    this.configPublishedAt = configPublishedAt;
   }
 }
