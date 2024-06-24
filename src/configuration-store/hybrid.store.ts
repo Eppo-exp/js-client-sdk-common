@@ -8,8 +8,8 @@ export class HybridConfigurationStore<T> implements IConfigurationStore<T> {
     protected readonly persistentStore: IAsyncStore<T> | null,
   ) {}
 
-  private configFetchTime: string;
-  private configPublishTime: string;
+  private configFetchedAt: string;
+  private configPublishedAt: string;
 
   /**
    * Initialize the configuration store by loading the entries from the persistent store into the serving store.
@@ -65,19 +65,19 @@ export class HybridConfigurationStore<T> implements IConfigurationStore<T> {
     return true;
   }
 
-  public getConfigFetchTime(): string {
-    return this.configFetchTime;
+  public getConfigFetchedAt(): string {
+    return this.configFetchedAt;
   }
 
-  public setConfigFetchTime(configFetchTime: string): void {
-    this.configFetchTime = configFetchTime;
+  public setConfigFetchedAt(configFetchedAt: string): void {
+    this.configFetchedAt = configFetchedAt;
   }
 
-  public getConfigPublishTime(): string {
-    return this.configPublishTime;
+  public getConfigPublishedAt(): string {
+    return this.configPublishedAt;
   }
 
-  public setConfigPublishTime(configPublishTime: string): void {
-    this.configPublishTime = configPublishTime;
+  public setConfigPublishedAt(configPublishedAt: string): void {
+    this.configPublishedAt = configPublishedAt;
   }
 }

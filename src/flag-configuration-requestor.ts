@@ -16,8 +16,8 @@ export default class FlagConfigurationRequestor {
     }
     const didUpdateServingStore = await this.configurationStore.setEntries(responseData.flags);
     if (didUpdateServingStore) {
-      this.configurationStore.setConfigFetchTime(new Date().toISOString());
-      this.configurationStore.setConfigPublishTime(responseData.createdAt);
+      this.configurationStore.setConfigFetchedAt(new Date().toISOString());
+      this.configurationStore.setConfigPublishedAt(responseData.createdAt);
     }
     return responseData.flags;
   }

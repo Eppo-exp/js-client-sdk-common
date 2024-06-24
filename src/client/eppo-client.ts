@@ -459,11 +459,11 @@ export default class EppoClient {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
     validateNotBlank(flagKey, 'Invalid argument: flagKey cannot be blank');
 
-    const { flag, configFetchTime, configPublishTime } = this.getFlagDetails(flagKey);
+    const { flag, configFetchedAt, configPublishedAt } = this.getFlagDetails(flagKey);
     const flagEvaluationDetailsBuilder = new FlagEvaluationDetailsBuilder(
       flag?.allocations ?? [],
-      configFetchTime,
-      configPublishTime,
+      configFetchedAt,
+      configPublishedAt,
     );
 
     if (flag === null) {
@@ -497,8 +497,8 @@ export default class EppoClient {
       subjectKey,
       subjectAttributes,
       this.isObfuscated,
-      configFetchTime,
-      configPublishTime,
+      configFetchedAt,
+      configPublishedAt,
     );
     if (this.isObfuscated) {
       // flag.key is obfuscated, replace with requested flag key
@@ -528,16 +528,16 @@ export default class EppoClient {
 
   private getFlagDetails(flagKey: string): {
     flag: Flag | null;
-    configFetchTime: string;
-    configPublishTime: string;
+    configFetchedAt: string;
+    configPublishedAt: string;
   } {
     const flag = this.isObfuscated
       ? this.getObfuscatedFlag(flagKey)
       : this.configurationStore.get(flagKey);
     return {
       flag,
-      configFetchTime: this.configurationStore.getConfigFetchTime(),
-      configPublishTime: this.configurationStore.getConfigPublishTime(),
+      configFetchedAt: this.configurationStore.getConfigFetchedAt(),
+      configPublishedAt: this.configurationStore.getConfigPublishedAt(),
     };
   }
 

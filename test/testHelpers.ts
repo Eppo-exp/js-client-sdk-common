@@ -116,8 +116,8 @@ export function validateTestAssignmentDetails(
     try {
       expect(assignmentDetails).toMatchObject({
         ...subject.assignmentDetails,
-        configFetchTime: expect.any(String),
-        configPublishTime: expect.any(String),
+        configFetchedAt: expect.any(String),
+        configPublishedAt: expect.any(String),
       });
     } catch (err) {
       err.message = `The assignment details for subject ${subject.subjectKey} did not match the expected value for flag ${flag}. ${err.message}`;

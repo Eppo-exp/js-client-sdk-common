@@ -27,10 +27,10 @@ export interface IConfigurationStore<T> {
   isInitialized(): boolean;
   isExpired(): Promise<boolean>;
   setEntries(entries: Record<string, T>): Promise<boolean>;
-  getConfigFetchTime(): string;
-  setConfigFetchTime(configFetchTime: string): void;
-  getConfigPublishTime(): string;
-  setConfigPublishTime(configPublishTime: string): void;
+  getConfigFetchedAt(): string;
+  setConfigFetchedAt(configFetchedAt: string): void;
+  getConfigPublishedAt(): string;
+  setConfigPublishedAt(configPublishedAt: string): void;
 }
 
 export interface ISyncStore<T> {

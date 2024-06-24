@@ -234,8 +234,8 @@ describe('EppoClient E2E test', () => {
           flagEvaluationCode: 'MATCH',
           flagEvaluationDescription:
             'Supplied attributes match rules defined in allocation "targeted allocation".',
-          configFetchTime: expect.any(String),
-          configPublishTime: expect.any(String),
+          configFetchedAt: expect.any(String),
+          configPublishedAt: expect.any(String),
           matchedRule: {
             conditions: [
               {
@@ -279,8 +279,8 @@ describe('EppoClient E2E test', () => {
           flagEvaluationCode: 'MATCH',
           flagEvaluationDescription:
             'alice belongs to the range of traffic assigned to "two" defined in allocation "50/50 split".',
-          configFetchTime: expect.any(String),
-          configPublishTime: expect.any(String),
+          configFetchedAt: expect.any(String),
+          configPublishedAt: expect.any(String),
           matchedRule: null,
           matchedAllocation: {
             key: '50/50 split',
@@ -316,8 +316,8 @@ describe('EppoClient E2E test', () => {
             'Supplied attributes match rules defined in allocation "experiment" and alice belongs to the range of traffic assigned to "control".',
           variationKey: 'control',
           variationValue: 'control',
-          configFetchTime: expect.any(String),
-          configPublishTime: expect.any(String),
+          configFetchedAt: expect.any(String),
+          configPublishedAt: expect.any(String),
           matchedRule: {
             conditions: [
               {
@@ -366,8 +366,8 @@ describe('EppoClient E2E test', () => {
           flagEvaluationDescription: 'Unrecognized or disabled flag: asdf',
           variationKey: null,
           variationValue: null,
-          configFetchTime: expect.any(String),
-          configPublishTime: expect.any(String),
+          configFetchedAt: expect.any(String),
+          configPublishedAt: expect.any(String),
           matchedRule: null,
           matchedAllocation: null,
           unmatchedAllocations: [],

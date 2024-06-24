@@ -3,8 +3,8 @@ import { IConfigurationStore, ISyncStore } from './configuration-store';
 export class MemoryStore<T> implements ISyncStore<T> {
   private store: Record<string, T> = {};
   private initialized = false;
-  private configFetchTime: string;
-  private configPublishTime: string;
+  private configFetchedAt: string;
+  private configPublishedAt: string;
 
   get(key: string): T | null {
     return this.store[key] ?? null;
@@ -27,8 +27,8 @@ export class MemoryStore<T> implements ISyncStore<T> {
 export class MemoryOnlyConfigurationStore<T> implements IConfigurationStore<T> {
   private readonly servingStore: ISyncStore<T> = new MemoryStore<T>();
   private initialized = false;
-  private configFetchTime: string;
-  private configPublishTime: string;
+  private configFetchedAt: string;
+  private configPublishedAt: string;
 
   init(): Promise<void> {
     this.initialized = true;
@@ -57,19 +57,19 @@ export class MemoryOnlyConfigurationStore<T> implements IConfigurationStore<T> {
     return true;
   }
 
-  public getConfigFetchTime(): string {
-    return this.configFetchTime;
+  public getConfigFetchedAt(): string {
+    return this.configFetchedAt;
   }
 
-  public setConfigFetchTime(configFetchTime: string): void {
-    this.configFetchTime = configFetchTime;
+  public setConfigFetchedAt(configFetchedAt: string): void {
+    this.configFetchedAt = configFetchedAt;
   }
 
-  public getConfigPublishTime(): string {
-    return this.configPublishTime;
+  public getConfigPublishedAt(): string {
+    return this.configPublishedAt;
   }
 
-  public setConfigPublishTime(configPublishTime: string): void {
-    this.configPublishTime = configPublishTime;
+  public setConfigPublishedAt(configPublishedAt: string): void {
+    this.configPublishedAt = configPublishedAt;
   }
 }
