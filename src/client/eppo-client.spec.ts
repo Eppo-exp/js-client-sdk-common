@@ -17,10 +17,16 @@ import { IConfigurationStore } from '../configuration-store/configuration-store'
 import { MemoryOnlyConfigurationStore } from '../configuration-store/memory.store';
 import { MAX_EVENT_QUEUE_SIZE, POLL_INTERVAL_MS, POLL_JITTER_PCT } from '../constants';
 import FlagConfigurationRequestor from '../flag-configuration-requestor';
+import { AllocationEvaluationCode } from '../flag-evaluation-details';
 import FetchHttpClient from '../http-client';
 import { Flag, ObfuscatedFlag, VariationType } from '../interfaces';
+import { OperatorType } from '../rules';
 
-import EppoClient, { FlagConfigurationRequestParameters, checkTypeMatch } from './eppo-client';
+import EppoClient, {
+  AssignmentDetails,
+  FlagConfigurationRequestParameters,
+  checkTypeMatch,
+} from './eppo-client';
 
 export async function init(configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>) {
   const apiEndpoints = new ApiEndpoints({
@@ -206,6 +212,158 @@ describe('EppoClient E2E test', () => {
 
     afterAll(() => {
       jest.restoreAllMocks();
+    });
+
+    describe('get*AssignmentDetails', () => {
+      it('should set the details for a matched rule', () => {
+        const client = new EppoClient(storage);
+        client.setIsGracefulFailureMode(false);
+        const subjectAttributes = { email: 'alice@mycompany.com', country: 'US' };
+        const result = client.getIntegerAssignmentDetails(
+          'integer-flag',
+          'alice',
+          subjectAttributes,
+          0,
+        );
+        const expected: AssignmentDetails<number> = {
+          value: 3,
+          variationKey: 'three',
+          variationValue: 3,
+          flagEvaluationCode: 'MATCH',
+          flagEvaluationDescription:
+            'Supplied attributes match rules defined in allocation "targeted allocation".',
+          matchedRule: {
+            conditions: [
+              {
+                attribute: 'country',
+                operator: OperatorType.ONE_OF,
+                value: ['US', 'Canada', 'Mexico'],
+              },
+            ],
+          },
+          matchedAllocation: {
+            key: 'targeted allocation',
+            allocationEvaluationCode: AllocationEvaluationCode.MATCH,
+            orderPosition: 0,
+          },
+          unmatchedAllocations: [],
+          unevaluatedAllocations: [
+            {
+              key: '50/50 split',
+              allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
+              orderPosition: 1,
+            },
+          ],
+        };
+        expect(result).toEqual(expected);
+      });
+
+      it('should set the details for a matched split', () => {
+        const client = new EppoClient(storage);
+        client.setIsGracefulFailureMode(false);
+        const subjectAttributes = { email: 'alice@mycompany.com', country: 'Brazil' };
+        const result = client.getIntegerAssignmentDetails(
+          'integer-flag',
+          'alice',
+          subjectAttributes,
+          0,
+        );
+        const expected: AssignmentDetails<number> = {
+          value: 2,
+          variationKey: 'two',
+          variationValue: 2,
+          flagEvaluationCode: 'MATCH',
+          flagEvaluationDescription:
+            'alice belongs to the range of traffic assigned to "two" defined in allocation "50/50 split".',
+          matchedRule: null,
+          matchedAllocation: {
+            key: '50/50 split',
+            allocationEvaluationCode: AllocationEvaluationCode.MATCH,
+            orderPosition: 1,
+          },
+          unmatchedAllocations: [
+            {
+              key: 'targeted allocation',
+              allocationEvaluationCode: AllocationEvaluationCode.FAILING_RULE,
+              orderPosition: 0,
+            },
+          ],
+          unevaluatedAllocations: [],
+        };
+        expect(result).toEqual(expected);
+      });
+
+      it('should handle matching a split allocation with a matched rule', () => {
+        const client = new EppoClient(storage);
+        client.setIsGracefulFailureMode(false);
+        const subjectAttributes = { id: 'alice', email: 'alice@external.com', country: 'Brazil' };
+        const result = client.getStringAssignmentDetails(
+          'new-user-onboarding',
+          'alice',
+          subjectAttributes,
+          '',
+        );
+        const expected: AssignmentDetails<string> = {
+          value: 'control',
+          flagEvaluationCode: 'MATCH',
+          flagEvaluationDescription:
+            'Supplied attributes match rules defined in allocation "experiment" and alice belongs to the range of traffic assigned to "control".',
+          variationKey: 'control',
+          variationValue: 'control',
+          matchedRule: {
+            conditions: [
+              {
+                attribute: 'country',
+                operator: OperatorType.NOT_ONE_OF,
+                value: ['US', 'Canada', 'Mexico'],
+              },
+            ],
+          },
+          matchedAllocation: {
+            key: 'experiment',
+            allocationEvaluationCode: AllocationEvaluationCode.MATCH,
+            orderPosition: 2,
+          },
+          unmatchedAllocations: [
+            {
+              key: 'id rule',
+              allocationEvaluationCode: AllocationEvaluationCode.FAILING_RULE,
+              orderPosition: 0,
+            },
+            {
+              key: 'internal users',
+              allocationEvaluationCode: AllocationEvaluationCode.FAILING_RULE,
+              orderPosition: 1,
+            },
+          ],
+          unevaluatedAllocations: [
+            {
+              key: 'rollout',
+              allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
+              orderPosition: 3,
+            },
+          ],
+        };
+        expect(result).toEqual(expected);
+      });
+
+      it('should handle unrecognized flags', () => {
+        const client = new EppoClient(storage);
+        client.setIsGracefulFailureMode(false);
+        const result = client.getIntegerAssignmentDetails('asdf', 'alice', {}, 0);
+        console.log(JSON.stringify(result, null, 2));
+        expect(result).toEqual({
+          value: 0,
+          flagEvaluationCode: 'FLAG_UNRECOGNIZED_OR_DISABLED',
+          flagEvaluationDescription: 'Unrecognized or disabled flag: asdf',
+          variationKey: null,
+          variationValue: null,
+          matchedRule: null,
+          matchedAllocation: null,
+          unmatchedAllocations: [],
+          unevaluatedAllocations: [],
+        } as AssignmentDetails<number>);
+      });
     });
 
     it.each(readAssignmentTestData())(
