@@ -254,7 +254,7 @@ export default class EppoClient {
    * @param subjectKey an identifier of the experiment subject, for example a user ID.
    * @param subjectAttributes optional attributes associated with the subject, for example name and email.
    * @param defaultValue default value to return if the subject is not part of the experiment sample
-   * @returns a boolean variation value if the subject is part of the experiment sample, otherwise the default value
+   * @returns an integer variation value if the subject is part of the experiment sample, otherwise the default value
    */
   public getIntegerAssignment = (
     flagKey: string,
