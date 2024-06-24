@@ -150,12 +150,15 @@ export default class EppoClient {
    * @returns a variation value if the subject is part of the experiment sample, otherwise the default value
    * @public
    */
-  public getStringAssignment = (
+  public getStringAssignment(
     flagKey: string,
     subjectKey: string,
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: string,
-  ) => this.getStringAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue).value;
+  ): string {
+    return this.getStringAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue)
+      .value;
+  }
 
   /**
    * Maps a subject to a string variation for a given experiment and provides additional details about the
@@ -209,12 +212,15 @@ export default class EppoClient {
    * @param defaultValue default value to return if the subject is not part of the experiment sample
    * @returns a boolean variation value if the subject is part of the experiment sample, otherwise the default value
    */
-  public getBooleanAssignment = (
+  public getBooleanAssignment(
     flagKey: string,
     subjectKey: string,
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: boolean,
-  ) => this.getBooleanAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue).value;
+  ): boolean {
+    return this.getBooleanAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue)
+      .value;
+  }
 
   /**
    * Maps a subject to a boolean variation for a given experiment and provides additional details about the
@@ -256,12 +262,15 @@ export default class EppoClient {
    * @param defaultValue default value to return if the subject is not part of the experiment sample
    * @returns an integer variation value if the subject is part of the experiment sample, otherwise the default value
    */
-  public getIntegerAssignment = (
+  public getIntegerAssignment(
     flagKey: string,
     subjectKey: string,
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: number,
-  ) => this.getIntegerAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue).value;
+  ): number {
+    return this.getIntegerAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue)
+      .value;
+  }
 
   /**
    * Maps a subject to an Integer variation for a given experiment and provides additional details about the
@@ -303,12 +312,15 @@ export default class EppoClient {
    * @param defaultValue default value to return if the subject is not part of the experiment sample
    * @returns a number variation value if the subject is part of the experiment sample, otherwise the default value
    */
-  public getNumericAssignment = (
+  public getNumericAssignment(
     flagKey: string,
     subjectKey: string,
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: number,
-  ) => this.getNumericAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue).value;
+  ): number {
+    return this.getNumericAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue)
+      .value;
+  }
 
   /**
    * Maps a subject to a numeric variation for a given experiment and provides additional details about the
@@ -350,12 +362,15 @@ export default class EppoClient {
    * @param defaultValue default value to return if the subject is not part of the experiment sample
    * @returns a JSON object variation value if the subject is part of the experiment sample, otherwise the default value
    */
-  public getJSONAssignment = (
+  public getJSONAssignment(
     flagKey: string,
     subjectKey: string,
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: object,
-  ) => this.getJSONAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue).value;
+  ): object {
+    return this.getJSONAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue)
+      .value;
+  }
 
   public getJSONAssignmentDetails(
     flagKey: string,
