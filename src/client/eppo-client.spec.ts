@@ -6,9 +6,11 @@ import {
   MOCK_UFC_RESPONSE_FILE,
   OBFUSCATED_MOCK_UFC_RESPONSE_FILE,
   SubjectTestCase,
+  getTestAssignmentDetails,
   getTestAssignments,
   readAssignmentTestData,
   readMockUFCResponse,
+  validateTestAssignmentDetails,
   validateTestAssignments,
 } from '../../test/testHelpers';
 import ApiEndpoints from '../api-endpoints';
@@ -396,6 +398,34 @@ describe('EppoClient E2E test', () => {
         );
 
         validateTestAssignments(assignments, flag);
+      },
+    );
+
+    it.each(readAssignmentTestData())(
+      'test variation assignment details',
+      async ({ flag, variationType, defaultValue, subjects }: IAssignmentTestCase) => {
+        const client = new EppoClient(storage);
+        client.setIsGracefulFailureMode(false);
+
+        const typeAssignmentDetailsFunctions = {
+          [VariationType.BOOLEAN]: client.getBooleanAssignmentDetails.bind(client),
+          [VariationType.NUMERIC]: client.getNumericAssignmentDetails.bind(client),
+          [VariationType.INTEGER]: client.getIntegerAssignmentDetails.bind(client),
+          [VariationType.STRING]: client.getStringAssignmentDetails.bind(client),
+          [VariationType.JSON]: client.getJSONAssignmentDetails.bind(client),
+        };
+
+        const assignmentFn = typeAssignmentDetailsFunctions[variationType];
+        if (!assignmentFn) {
+          throw new Error(`Unknown variation type: ${variationType}`);
+        }
+
+        const assignments = getTestAssignmentDetails(
+          { flag, variationType, defaultValue, subjects },
+          assignmentFn,
+        );
+
+        validateTestAssignmentDetails(assignments, flag);
       },
     );
   });

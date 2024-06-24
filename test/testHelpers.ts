@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 
+import { AssignmentDetails } from '../src/client/eppo-client';
 import { Flag, VariationType } from '../src/interfaces';
 import { AttributeType } from '../src/types';
 
@@ -12,6 +13,7 @@ export interface SubjectTestCase {
   subjectKey: string;
   subjectAttributes: Record<string, AttributeType>;
   assignment: string | number | boolean | object;
+  assignmentDetails: AssignmentDetails<string | number | boolean | object>;
 }
 
 export interface IAssignmentTestCase {
@@ -58,6 +60,29 @@ export function getTestAssignments(
   return assignments;
 }
 
+export function getTestAssignmentDetails(
+  testCase: IAssignmentTestCase,
+  assignmentDetailsFn: (
+    flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Record<string, AttributeType>,
+    defaultValue: string | number | boolean | object,
+  ) => never,
+): {
+  subject: SubjectTestCase;
+  assignmentDetails: AssignmentDetails<string | boolean | number | object>;
+}[] {
+  return testCase.subjects.map((subject) => ({
+    subject,
+    assignmentDetails: assignmentDetailsFn(
+      testCase.flag,
+      subject.subjectKey,
+      subject.subjectAttributes,
+      testCase.defaultValue,
+    ),
+  }));
+}
+
 export function validateTestAssignments(
   assignments: {
     subject: SubjectTestCase;
@@ -77,5 +102,22 @@ export function validateTestAssignments(
       }
     }
     expect(subject.assignment).toEqual(assignment);
+  }
+}
+
+export function validateTestAssignmentDetails(
+  assignments: {
+    subject: SubjectTestCase;
+    assignmentDetails: AssignmentDetails<string | boolean | number | object>;
+  }[],
+  flag: string,
+) {
+  for (const { subject, assignmentDetails } of assignments) {
+    try {
+      expect(subject.assignmentDetails).toEqual(assignmentDetails);
+    } catch (err) {
+      err.message = `The assignment details for subject ${subject.subjectKey} did not match the expected value for flag ${flag}. ${err.message}`;
+      throw err;
+    }
   }
 }
