@@ -55,7 +55,14 @@ export class FlagEvaluationDetailsBuilder {
     this.matchedAllocation = null;
     this.matchedRule = null;
     this.unmatchedAllocations = [];
-    this.unevaluatedAllocations = [];
+    this.unevaluatedAllocations = this.allocations.map(
+      (allocation, i) =>
+        ({
+          key: allocation.key,
+          allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
+          orderPosition: i,
+        } as AllocationEvaluation),
+    );
     return this;
   };
 
@@ -67,14 +74,7 @@ export class FlagEvaluationDetailsBuilder {
     this.matchedAllocation = null;
     this.matchedRule = null;
     this.unmatchedAllocations = unmatchedAllocations;
-    this.unevaluatedAllocations = this.allocations.map(
-      (allocation, i) =>
-        ({
-          key: allocation.key,
-          allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
-          orderPosition: i,
-        } as AllocationEvaluation),
-    );
+    this.unevaluatedAllocations = [];
     return this;
   };
 
