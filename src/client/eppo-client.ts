@@ -150,12 +150,15 @@ export default class EppoClient {
    * @returns a variation value if the subject is part of the experiment sample, otherwise the default value
    * @public
    */
-  public getStringAssignment = (
+  public getStringAssignment(
     flagKey: string,
     subjectKey: string,
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: string,
-  ) => this.getStringAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue).value;
+  ): string {
+    return this.getStringAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue)
+      .value;
+  }
 
   /**
    * Maps a subject to a string variation for a given experiment and provides additional details about the
@@ -209,12 +212,15 @@ export default class EppoClient {
    * @param defaultValue default value to return if the subject is not part of the experiment sample
    * @returns a boolean variation value if the subject is part of the experiment sample, otherwise the default value
    */
-  public getBooleanAssignment = (
+  public getBooleanAssignment(
     flagKey: string,
     subjectKey: string,
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: boolean,
-  ) => this.getBooleanAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue).value;
+  ): boolean {
+    return this.getBooleanAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue)
+      .value;
+  }
 
   /**
    * Maps a subject to a boolean variation for a given experiment and provides additional details about the
@@ -256,12 +262,15 @@ export default class EppoClient {
    * @param defaultValue default value to return if the subject is not part of the experiment sample
    * @returns an integer variation value if the subject is part of the experiment sample, otherwise the default value
    */
-  public getIntegerAssignment = (
+  public getIntegerAssignment(
     flagKey: string,
     subjectKey: string,
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: number,
-  ) => this.getIntegerAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue).value;
+  ): number {
+    return this.getIntegerAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue)
+      .value;
+  }
 
   /**
    * Maps a subject to an Integer variation for a given experiment and provides additional details about the
@@ -303,12 +312,15 @@ export default class EppoClient {
    * @param defaultValue default value to return if the subject is not part of the experiment sample
    * @returns a number variation value if the subject is part of the experiment sample, otherwise the default value
    */
-  public getNumericAssignment = (
+  public getNumericAssignment(
     flagKey: string,
     subjectKey: string,
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: number,
-  ) => this.getNumericAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue).value;
+  ): number {
+    return this.getNumericAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue)
+      .value;
+  }
 
   /**
    * Maps a subject to a numeric variation for a given experiment and provides additional details about the
@@ -350,12 +362,15 @@ export default class EppoClient {
    * @param defaultValue default value to return if the subject is not part of the experiment sample
    * @returns a JSON object variation value if the subject is part of the experiment sample, otherwise the default value
    */
-  public getJSONAssignment = (
+  public getJSONAssignment(
     flagKey: string,
     subjectKey: string,
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: object,
-  ) => this.getJSONAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue).value;
+  ): object {
+    return this.getJSONAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue)
+      .value;
+  }
 
   public getJSONAssignmentDetails(
     flagKey: string,
@@ -404,7 +419,7 @@ export default class EppoClient {
       };
     } catch (error) {
       const eppoValue = this.rethrowIfNotGraceful(error, defaultValue);
-      const flagEvaluationDetails = new FlagEvaluationDetailsBuilder([]).buildForNoneResult(
+      const flagEvaluationDetails = new FlagEvaluationDetailsBuilder([], '', '').buildForNoneResult(
         'ASSIGNMENT_ERROR',
         `Assignment Error: ${error.message}`,
       );
@@ -444,8 +459,12 @@ export default class EppoClient {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
     validateNotBlank(flagKey, 'Invalid argument: flagKey cannot be blank');
 
-    const flag = this.getFlag(flagKey);
-    const flagEvaluationDetailsBuilder = new FlagEvaluationDetailsBuilder(flag?.allocations ?? []);
+    const { flag, configFetchedAt, configPublishedAt } = this.getFlagDetails(flagKey);
+    const flagEvaluationDetailsBuilder = new FlagEvaluationDetailsBuilder(
+      flag?.allocations ?? [],
+      configFetchedAt,
+      configPublishedAt,
+    );
 
     if (flag === null) {
       logger.warn(`[Eppo SDK] No assigned variation. Flag not found: ${flagKey}`);
@@ -478,6 +497,8 @@ export default class EppoClient {
       subjectKey,
       subjectAttributes,
       this.isObfuscated,
+      configFetchedAt,
+      configPublishedAt,
     );
     if (this.isObfuscated) {
       // flag.key is obfuscated, replace with requested flag key
@@ -505,11 +526,19 @@ export default class EppoClient {
     return result;
   }
 
-  private getFlag(flagKey: string): Flag | null {
-    if (this.isObfuscated) {
-      return this.getObfuscatedFlag(flagKey);
-    }
-    return this.configurationStore.get(flagKey);
+  private getFlagDetails(flagKey: string): {
+    flag: Flag | null;
+    configFetchedAt: string;
+    configPublishedAt: string;
+  } {
+    const flag = this.isObfuscated
+      ? this.getObfuscatedFlag(flagKey)
+      : this.configurationStore.get(flagKey);
+    return {
+      flag,
+      configFetchedAt: this.configurationStore.getConfigFetchedAt(),
+      configPublishedAt: this.configurationStore.getConfigPublishedAt(),
+    };
   }
 
   private getObfuscatedFlag(flagKey: string): Flag | null {

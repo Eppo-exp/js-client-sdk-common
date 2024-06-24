@@ -32,8 +32,14 @@ export class Evaluator {
     subjectKey: string,
     subjectAttributes: SubjectAttributes,
     obfuscated: boolean,
+    configFetchedAt: string,
+    configPublishedAt: string,
   ): FlagEvaluation {
-    const flagEvaluationDetailsBuilder = new FlagEvaluationDetailsBuilder(flag.allocations);
+    const flagEvaluationDetailsBuilder = new FlagEvaluationDetailsBuilder(
+      flag.allocations,
+      configFetchedAt,
+      configPublishedAt,
+    );
 
     if (!flag.enabled) {
       return noneResult(
