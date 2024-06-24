@@ -404,7 +404,7 @@ export default class EppoClient {
       };
     } catch (error) {
       const eppoValue = this.rethrowIfNotGraceful(error, defaultValue);
-      const flagEvaluationDetails = new FlagEvaluationDetailsBuilder([]).buildForNoneResult(
+      const flagEvaluationDetails = new FlagEvaluationDetailsBuilder([], '', '').buildForNoneResult(
         'ASSIGNMENT_ERROR',
         `Assignment Error: ${error.message}`,
       );
@@ -444,8 +444,12 @@ export default class EppoClient {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
     validateNotBlank(flagKey, 'Invalid argument: flagKey cannot be blank');
 
-    const flag = this.getFlag(flagKey);
-    const flagEvaluationDetailsBuilder = new FlagEvaluationDetailsBuilder(flag?.allocations ?? []);
+    const { flag, configFetchTime, configPublishTime } = this.getFlagDetails(flagKey);
+    const flagEvaluationDetailsBuilder = new FlagEvaluationDetailsBuilder(
+      flag?.allocations ?? [],
+      configFetchTime,
+      configPublishTime,
+    );
 
     if (flag === null) {
       logger.warn(`[Eppo SDK] No assigned variation. Flag not found: ${flagKey}`);
@@ -478,6 +482,8 @@ export default class EppoClient {
       subjectKey,
       subjectAttributes,
       this.isObfuscated,
+      configFetchTime,
+      configPublishTime,
     );
     if (this.isObfuscated) {
       // flag.key is obfuscated, replace with requested flag key
@@ -505,11 +511,19 @@ export default class EppoClient {
     return result;
   }
 
-  private getFlag(flagKey: string): Flag | null {
-    if (this.isObfuscated) {
-      return this.getObfuscatedFlag(flagKey);
-    }
-    return this.configurationStore.get(flagKey);
+  private getFlagDetails(flagKey: string): {
+    flag: Flag | null;
+    configFetchTime: string;
+    configPublishTime: string;
+  } {
+    const flag = this.isObfuscated
+      ? this.getObfuscatedFlag(flagKey)
+      : this.configurationStore.get(flagKey);
+    return {
+      flag,
+      configFetchTime: this.configurationStore.getConfigFetchTime(),
+      configPublishTime: this.configurationStore.getConfigPublishTime(),
+    };
   }
 
   private getObfuscatedFlag(flagKey: string): Flag | null {

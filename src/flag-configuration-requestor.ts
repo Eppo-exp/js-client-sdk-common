@@ -14,7 +14,11 @@ export default class FlagConfigurationRequestor {
     if (!responseData) {
       return {};
     }
-    await this.configurationStore.setEntries(responseData.flags);
+    const didUpdateServingStore = await this.configurationStore.setEntries(responseData.flags);
+    if (didUpdateServingStore) {
+      this.configurationStore.setConfigFetchTime(new Date().toISOString());
+      this.configurationStore.setConfigPublishTime(responseData.createdAt);
+    }
     return responseData.flags;
   }
 }

@@ -17,6 +17,7 @@ export class HttpRequestError extends Error {
 }
 
 export interface IUniversalFlagConfig {
+  createdAt: string; // ISO formatted string
   flags: Record<string, Flag>;
 }
 

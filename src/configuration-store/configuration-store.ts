@@ -26,7 +26,11 @@ export interface IConfigurationStore<T> {
   getKeys(): string[];
   isInitialized(): boolean;
   isExpired(): Promise<boolean>;
-  setEntries(entries: Record<string, T>): Promise<void>;
+  setEntries(entries: Record<string, T>): Promise<boolean>;
+  getConfigFetchTime(): string;
+  setConfigFetchTime(configFetchTime: string): void;
+  getConfigPublishTime(): string;
+  setConfigPublishTime(configPublishTime: string): void;
 }
 
 export interface ISyncStore<T> {

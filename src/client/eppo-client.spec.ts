@@ -234,6 +234,8 @@ describe('EppoClient E2E test', () => {
           flagEvaluationCode: 'MATCH',
           flagEvaluationDescription:
             'Supplied attributes match rules defined in allocation "targeted allocation".',
+          configFetchTime: expect.any(String),
+          configPublishTime: expect.any(String),
           matchedRule: {
             conditions: [
               {
@@ -257,7 +259,7 @@ describe('EppoClient E2E test', () => {
             },
           ],
         };
-        expect(result).toEqual(expected);
+        expect(result).toMatchObject(expected);
       });
 
       it('should set the details for a matched split', () => {
@@ -277,6 +279,8 @@ describe('EppoClient E2E test', () => {
           flagEvaluationCode: 'MATCH',
           flagEvaluationDescription:
             'alice belongs to the range of traffic assigned to "two" defined in allocation "50/50 split".',
+          configFetchTime: expect.any(String),
+          configPublishTime: expect.any(String),
           matchedRule: null,
           matchedAllocation: {
             key: '50/50 split',
@@ -292,7 +296,7 @@ describe('EppoClient E2E test', () => {
           ],
           unevaluatedAllocations: [],
         };
-        expect(result).toEqual(expected);
+        expect(result).toMatchObject(expected);
       });
 
       it('should handle matching a split allocation with a matched rule', () => {
@@ -312,6 +316,8 @@ describe('EppoClient E2E test', () => {
             'Supplied attributes match rules defined in allocation "experiment" and alice belongs to the range of traffic assigned to "control".',
           variationKey: 'control',
           variationValue: 'control',
+          configFetchTime: expect.any(String),
+          configPublishTime: expect.any(String),
           matchedRule: {
             conditions: [
               {
@@ -346,7 +352,7 @@ describe('EppoClient E2E test', () => {
             },
           ],
         };
-        expect(result).toEqual(expected);
+        expect(result).toMatchObject(expected);
       });
 
       it('should handle unrecognized flags', () => {
@@ -354,12 +360,14 @@ describe('EppoClient E2E test', () => {
         client.setIsGracefulFailureMode(false);
         const result = client.getIntegerAssignmentDetails('asdf', 'alice', {}, 0);
         console.log(JSON.stringify(result, null, 2));
-        expect(result).toEqual({
+        expect(result).toMatchObject({
           value: 0,
           flagEvaluationCode: 'FLAG_UNRECOGNIZED_OR_DISABLED',
           flagEvaluationDescription: 'Unrecognized or disabled flag: asdf',
           variationKey: null,
           variationValue: null,
+          configFetchTime: expect.any(String),
+          configPublishTime: expect.any(String),
           matchedRule: null,
           matchedAllocation: null,
           unmatchedAllocations: [],
