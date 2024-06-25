@@ -4,7 +4,7 @@ import {
   FlagEvaluationDetails,
   FlagEvaluationDetailsBuilder,
 } from './flag-evaluation-details';
-import { Flag, Shard, Range, Variation, Allocation, Split } from './interfaces';
+import { Flag, Shard, Range, Variation, Allocation, Split, VariationType } from './interfaces';
 import { Rule, matchesRule } from './rules';
 import { MD5Sharder, Sharder } from './sharders';
 import { SubjectAttributes } from './types';
@@ -34,6 +34,7 @@ export class Evaluator {
     obfuscated: boolean,
     configFetchedAt: string,
     configPublishedAt: string,
+    expectedVariationType?: VariationType,
   ): FlagEvaluation {
     const flagEvaluationDetailsBuilder = new FlagEvaluationDetailsBuilder(
       flag.allocations,
@@ -85,7 +86,14 @@ export class Evaluator {
           ) {
             const variation = flag.variations[split.variationKey];
             const flagEvaluationDetails = flagEvaluationDetailsBuilder
-              .setMatch(i, variation, allocation, matchedRule, unmatchedAllocations)
+              .setMatch(
+                i,
+                variation,
+                allocation,
+                matchedRule,
+                unmatchedAllocations,
+                expectedVariationType,
+              )
               .build(
                 'MATCH',
                 this.getMatchedEvaluationDetailsMessage(allocation, split, subjectKey),
