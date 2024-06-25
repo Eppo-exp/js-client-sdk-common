@@ -151,7 +151,7 @@ describe('ConfigurationRequestor', () => {
       expect(nikeBrandAffinityCoefficient.attributeKey).toBe('brand_affinity');
       expect(nikeBrandAffinityCoefficient.coefficient).toBe(1);
       expect(nikeBrandAffinityCoefficient.missingValueCoefficient).toBe(-0.1);
-      expect(nikeCoefficients.actionCategoricalCoefficients).toHaveLength(1);
+      expect(nikeCoefficients.actionCategoricalCoefficients).toHaveLength(2);
       const nikeLoyaltyTierCoefficient = nikeCoefficients.actionCategoricalCoefficients[0];
       expect(nikeLoyaltyTierCoefficient.attributeKey).toBe('loyalty_tier');
       expect(nikeLoyaltyTierCoefficient.missingValueCoefficient).toBe(0);

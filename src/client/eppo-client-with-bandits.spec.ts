@@ -90,8 +90,8 @@ describe('EppoClient Bandits E2E test', () => {
           });
 
           const subjectAttributes = {
-            ...subject.subjectAttributes.numeric_attributes,
-            ...subject.subjectAttributes.categorical_attributes,
+            ...subject.subjectAttributes.numericAttributes,
+            ...subject.subjectAttributes.categoricalAttributes,
           };
 
           const banditAssignment = client.getBanditAction(
