@@ -499,6 +499,7 @@ export default class EppoClient {
       this.isObfuscated,
       configFetchedAt,
       configPublishedAt,
+      expectedVariationType,
     );
     if (this.isObfuscated) {
       // flag.key is obfuscated, replace with requested flag key
