@@ -1,4 +1,4 @@
-import { Allocation, Variation } from './interfaces';
+import { Allocation, Variation, VariationType } from './interfaces';
 import { Rule } from './rules';
 
 export const flagEvaluationCodes = [
@@ -90,9 +90,15 @@ export class FlagEvaluationDetailsBuilder {
     allocation: Allocation,
     matchedRule: Rule | null,
     unmatchedAllocations: Array<AllocationEvaluation>,
+    expectedVariationType: VariationType | undefined,
   ): FlagEvaluationDetailsBuilder => {
     this.variationKey = variation.key;
-    this.variationValue = variation.value;
+    // variation.value needs to be parsed into a JSON object if the variation type is JSON
+    // or else it will just remain a string
+    this.variationValue =
+      expectedVariationType === VariationType.JSON && typeof variation.value === 'string'
+        ? JSON.parse(variation.value)
+        : variation.value;
     this.matchedRule = matchedRule;
     this.matchedAllocation = {
       key: allocation.key,
