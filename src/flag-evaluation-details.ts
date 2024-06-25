@@ -93,6 +93,8 @@ export class FlagEvaluationDetailsBuilder {
     expectedVariationType: VariationType | undefined,
   ): FlagEvaluationDetailsBuilder => {
     this.variationKey = variation.key;
+    // variation.value needs to be parsed into a JSON object if the variation type is JSON
+    // or else it will just remain a string
     this.variationValue =
       expectedVariationType === VariationType.JSON && typeof variation.value === 'string'
         ? JSON.parse(variation.value)
