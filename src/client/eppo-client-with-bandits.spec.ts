@@ -13,14 +13,15 @@ import { IBanditEvent, IBanditLogger } from '../bandit-logger';
 import ConfigurationRequestor from '../configuration-requestor';
 import { MemoryOnlyConfigurationStore } from '../configuration-store/memory.store';
 import FetchHttpClient from '../http-client';
-import { BanditParameters, Flag } from '../interfaces';
+import { BanditFlagAssociation, BanditParameters, Flag } from '../interfaces';
 import { Attributes } from '../types';
 
 import EppoClient from './eppo-client';
 
 describe('EppoClient Bandits E2E test', () => {
   const flagStore = new MemoryOnlyConfigurationStore<Flag>();
-  const banditStore = new MemoryOnlyConfigurationStore<BanditParameters>();
+  const banditFlagStore = new MemoryOnlyConfigurationStore<BanditFlagAssociation[]>();
+  const banditModelStore = new MemoryOnlyConfigurationStore<BanditParameters>();
   let client: EppoClient;
   const mockLogAssignment = jest.fn();
   const mockLogBanditAction = jest.fn();
@@ -50,12 +51,17 @@ describe('EppoClient Bandits E2E test', () => {
       },
     });
     const httpClient = new FetchHttpClient(apiEndpoints, 1000);
-    const configurationRequestor = new ConfigurationRequestor(httpClient, flagStore, banditStore);
+    const configurationRequestor = new ConfigurationRequestor(
+      httpClient,
+      flagStore,
+      banditFlagStore,
+      banditModelStore,
+    );
     await configurationRequestor.fetchAndStoreConfigurations();
   });
 
   beforeEach(() => {
-    client = new EppoClient(flagStore, banditStore);
+    client = new EppoClient(flagStore, undefined, false, banditFlagStore, banditModelStore);
     client.setIsGracefulFailureMode(false);
     client.setAssignmentLogger({ logAssignment: mockLogAssignment });
     client.setBanditLogger({ logBanditAction: mockLogBanditAction });

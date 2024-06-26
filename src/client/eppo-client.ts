@@ -21,7 +21,13 @@ import { decodeFlag } from '../decoding';
 import { EppoValue } from '../eppo_value';
 import { Evaluator, FlagEvaluation, noneResult } from '../evaluator';
 import FetchHttpClient from '../http-client';
-import { BanditParameters, Flag, ObfuscatedFlag, VariationType } from '../interfaces';
+import {
+  BanditFlagAssociation,
+  BanditParameters,
+  Flag,
+  ObfuscatedFlag,
+  VariationType,
+} from '../interfaces';
 import { getMD5Hash } from '../obfuscation';
 import initPoller, { IPoller } from '../poller';
 import { Attributes, AttributeType, ValueType } from '../types';
@@ -199,9 +205,11 @@ export default class EppoClient implements IEppoClient {
 
   constructor(
     private flagConfigurationStore: IConfigurationStore<Flag | ObfuscatedFlag>,
-    private banditConfigurationStore?: IConfigurationStore<BanditParameters>,
     private configurationRequestParameters?: FlagConfigurationRequestParameters,
     private isObfuscated = false,
+    // Parameter order is for backwards compatibility, and thus related items are not grouped
+    private banditFlagConfigurationStore?: IConfigurationStore<BanditFlagAssociation[]>,
+    private banditModelConfigurationStore?: IConfigurationStore<BanditParameters>,
   ) {}
 
   public setConfigurationRequestParameters(
@@ -216,10 +224,16 @@ export default class EppoClient implements IEppoClient {
     this.flagConfigurationStore = flagConfigurationStore;
   }
 
-  public setBanditConfigurationStore(
-    banditConfigurationStore: IConfigurationStore<BanditParameters>,
+  public setBanditFlagConfigurationStore(
+    banditFlagConfigurationStore: IConfigurationStore<BanditFlagAssociation[]>,
   ) {
-    this.banditConfigurationStore = banditConfigurationStore;
+    this.banditFlagConfigurationStore = banditFlagConfigurationStore;
+  }
+
+  public setBanditModelConfigurationStore(
+    banditModelConfigurationStore: IConfigurationStore<BanditParameters>,
+  ) {
+    this.banditModelConfigurationStore = banditModelConfigurationStore;
   }
 
   public setIsObfuscated(isObfuscated: boolean) {
@@ -267,7 +281,8 @@ export default class EppoClient implements IEppoClient {
     const configurationRequestor = new ConfigurationRequestor(
       httpClient,
       this.flagConfigurationStore,
-      this.banditConfigurationStore ?? null,
+      this.banditFlagConfigurationStore ?? null,
+      this.banditModelConfigurationStore ?? null,
     );
 
     this.requestPoller = initPoller(
@@ -393,14 +408,34 @@ export default class EppoClient implements IEppoClient {
     actions: Record<string, Attributes>, // TODO: ability to provide a set of actions with no context, or context broken out by numeric/categorical
     defaultValue: string,
   ): { variation: string; action: string | null } {
-    // TODO: store bandit flag information so that if no actions provided, we can quickly return with default value
-    let variation = this.getStringAssignment(flagKey, subjectKey, subjectAttributes, defaultValue);
+    let variation = defaultValue;
     let action: string | null = null;
-    const banditKey = variation;
     try {
-      const banditParameters = this.banditConfigurationStore?.get(banditKey);
-      if (banditParameters) {
-        // For now, we use the shortcut of assuming if a variation value is the key of a known bandit, that is the bandit we want
+      const banditFlagAssociations = this.banditFlagConfigurationStore?.get(flagKey);
+      if (banditFlagAssociations && !Object.keys(actions).length) {
+        // No actions passed for a flag known to have an active bandit, so we just return the default values so that
+        // we don't log a variation or bandit assignment
+        return { variation, action };
+      }
+
+      // Get the assigned variation for the flag with a possible bandit
+      variation = this.getStringAssignment(flagKey, subjectKey, subjectAttributes, defaultValue);
+
+      // Check if the assigned variation is an active bandit
+      // Note: the reason for non-bandit assignments include the subject being bucketed into a non-bandit variation or
+      // a rollout having been done.
+      const banditKey = banditFlagAssociations?.find(
+        (banditFlagAssociation) => banditFlagAssociation.variationValue === variation,
+      )?.key;
+
+      if (banditKey) {
+        // Retrieve the model parameters for the bandit
+        const banditParameters = this.banditModelConfigurationStore?.get(banditKey);
+
+        if (!banditParameters) {
+          throw new Error('No model parameters for bandit ' + banditKey);
+        }
+
         const banditModelData = banditParameters.modelData;
         const banditEvaluation = this.banditEvaluator.evaluateBandit(
           flagKey,
@@ -595,7 +630,8 @@ export default class EppoClient implements IEppoClient {
   public isInitialized() {
     return (
       this.flagConfigurationStore.isInitialized() &&
-      (!this.banditConfigurationStore || this.banditConfigurationStore.isInitialized())
+      (!this.banditFlagConfigurationStore || this.banditFlagConfigurationStore.isInitialized()) &&
+      (!this.banditModelConfigurationStore || this.banditModelConfigurationStore.isInitialized())
     );
   }
 
