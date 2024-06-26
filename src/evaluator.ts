@@ -62,7 +62,7 @@ export class Evaluator {
         unmatchedAllocations.push({
           key: allocation.key,
           allocationEvaluationCode: code,
-          orderPosition: i,
+          orderPosition: i + 1,
         });
       };
 
