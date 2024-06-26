@@ -205,11 +205,10 @@ export default class EppoClient implements IEppoClient {
 
   constructor(
     private flagConfigurationStore: IConfigurationStore<Flag | ObfuscatedFlag>,
-    private configurationRequestParameters?: FlagConfigurationRequestParameters,
-    private isObfuscated = false,
-    // Parameter order is for backwards compatibility, and thus related items are not grouped
     private banditFlagConfigurationStore?: IConfigurationStore<BanditFlagAssociation[]>,
     private banditModelConfigurationStore?: IConfigurationStore<BanditParameters>,
+    private configurationRequestParameters?: FlagConfigurationRequestParameters,
+    private isObfuscated = false,
   ) {}
 
   public setConfigurationRequestParameters(

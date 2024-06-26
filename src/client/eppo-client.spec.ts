@@ -269,7 +269,7 @@ describe('EppoClient E2E test', () => {
     it.each(readTestData<IAssignmentTestCase>(ASSIGNMENT_TEST_DATA_DIR))(
       'test variation assignment splits',
       async ({ flag, variationType, defaultValue, subjects }: IAssignmentTestCase) => {
-        const client = new EppoClient(storage, undefined, true);
+        const client = new EppoClient(storage, undefined, undefined, undefined, true);
         client.setIsGracefulFailureMode(false);
 
         const typeAssignmentFunctions = {
@@ -622,7 +622,7 @@ describe('EppoClient E2E test', () => {
     });
 
     it('Fetches initial configuration with parameters in constructor', async () => {
-      client = new EppoClient(thisFlagStorage, requestConfiguration);
+      client = new EppoClient(thisFlagStorage, undefined, undefined, requestConfiguration);
       client.setIsGracefulFailureMode(false);
       // no configuration loaded
       let variation = client.getNumericAssignment(flagKey, subject, {}, 123.4);
@@ -653,7 +653,7 @@ describe('EppoClient E2E test', () => {
         }
       }
 
-      client = new EppoClient(new MockStore(), requestConfiguration);
+      client = new EppoClient(new MockStore(), undefined, undefined, requestConfiguration);
       client.setIsGracefulFailureMode(false);
       // no configuration loaded
       let variation = client.getNumericAssignment(flagKey, subject, {}, 0.0);
@@ -695,7 +695,7 @@ describe('EppoClient E2E test', () => {
         ...requestConfiguration,
         pollAfterSuccessfulInitialization,
       };
-      client = new EppoClient(thisFlagStorage, requestConfiguration);
+      client = new EppoClient(thisFlagStorage, undefined, undefined, requestConfiguration);
       client.setIsGracefulFailureMode(false);
       // no configuration loaded
       let variation = client.getNumericAssignment(flagKey, subject, {}, 0.0);
@@ -760,7 +760,7 @@ describe('EppoClient E2E test', () => {
         throwOnFailedInitialization,
         pollAfterFailedInitialization,
       };
-      client = new EppoClient(thisFlagStorage, requestConfiguration);
+      client = new EppoClient(thisFlagStorage, undefined, undefined, requestConfiguration);
       client.setIsGracefulFailureMode(false);
       // no configuration loaded
       expect(client.getNumericAssignment(flagKey, subject, {}, 0.0)).toBe(0.0);
