@@ -78,9 +78,6 @@ describe('EppoClient Bandits E2E test', () => {
         const { defaultValue, subjects } = testsByFlagKey[flagKey];
         let numAssignmentsChecked = 0;
         subjects.forEach((subject) => {
-          // TODO: handle already-bucketed attributes
-          // TODO: common test case with a numeric value passed as a categorical attribute and vice verse
-
           const actions: Record<string, Attributes> = {};
           subject.actions.forEach((action) => {
             actions[action.actionKey] = {
@@ -89,10 +86,22 @@ describe('EppoClient Bandits E2E test', () => {
             };
           });
 
-          const subjectAttributes = {
-            ...subject.subjectAttributes.numericAttributes,
-            ...subject.subjectAttributes.categoricalAttributes,
-          };
+          // TODO: handle already-bucketed attributes
+          const subjectAttributes: Attributes = {};
+          Object.entries(subject.subjectAttributes.numericAttributes).forEach(
+            ([attribute, value]) => {
+              if (typeof attribute === 'number') {
+                subjectAttributes[attribute] = value;
+              }
+            },
+          );
+          Object.entries(subject.subjectAttributes.categoricalAttributes).forEach(
+            ([attribute, value]) => {
+              if (value) {
+                subjectAttributes[attribute] = value.toString();
+              }
+            },
+          );
 
           const banditAssignment = client.getBanditAction(
             flagKey,
