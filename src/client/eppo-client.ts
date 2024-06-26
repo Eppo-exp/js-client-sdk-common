@@ -18,7 +18,10 @@ import { decodeFlag } from '../decoding';
 import { EppoValue } from '../eppo_value';
 import { Evaluator, FlagEvaluation, noneResult } from '../evaluator';
 import FlagConfigurationRequestor from '../flag-configuration-requestor';
-import { FlagEvaluationDetails, FlagEvaluationDetailsBuilder } from '../flag-evaluation-details';
+import {
+  FlagEvaluationDetails,
+  FlagEvaluationDetailsBuilder,
+} from '../flag-evaluation-details-builder';
 import FetchHttpClient from '../http-client';
 import { Flag, ObfuscatedFlag, Variation, VariationType } from '../interfaces';
 import { getMD5Hash } from '../obfuscation';
