@@ -7,7 +7,7 @@ import {
   BANDIT_TEST_DATA_DIR,
 } from '../../test/testHelpers';
 import ApiEndpoints from '../api-endpoints';
-import { IAssignmentLogger } from '../assignment-logger';
+import { IAssignmentEvent, IAssignmentLogger } from '../assignment-logger';
 import { BanditEvaluator } from '../bandit-evaluator';
 import { IBanditEvent, IBanditLogger } from '../bandit-logger';
 import ConfigurationRequestor from '../configuration-requestor';
@@ -130,20 +130,6 @@ describe('EppoClient Bandits E2E test', () => {
         expect(numAssignmentsChecked).toBeGreaterThan(0);
       },
     );
-
-    //TODO: make this a shared data test case
-    it('Returns default value if no actions provided', () => {
-      const banditAssignment = client.getBanditAction(
-        'banner_bandit_flag',
-        'eve',
-        {},
-        {},
-        'control',
-      );
-
-      expect(banditAssignment.variation).toBe('control');
-      expect(banditAssignment.action).toBeNull();
-    });
   });
 
   describe('Client-specific tests', () => {
@@ -169,19 +155,16 @@ describe('EppoClient Bandits E2E test', () => {
       expect(banditAssignment.variation).toBe('banner_bandit');
       expect(banditAssignment.action).toBe('adidas');
 
-      // TODO: update shared bandit test UFC to have doLog: true for bandit
-      /*
       expect(mockLogAssignment).toHaveBeenCalledTimes(1);
       const assignmentEvent: IAssignmentEvent = mockLogAssignment.mock.calls[0][0];
       expect(new Date(assignmentEvent.timestamp).getTime()).toBeGreaterThanOrEqual(testStart);
       expect(assignmentEvent.featureFlag).toBe(flagKey);
-      expect(assignmentEvent.allocation).toBe('analysis');
-      expect(assignmentEvent.experiment).toBe('banner_bandit-analysis');
+      expect(assignmentEvent.allocation).toBe('training');
+      expect(assignmentEvent.experiment).toBe('banner_bandit_flag-training');
       expect(assignmentEvent.variation).toBe('banner_bandit');
       expect(assignmentEvent.subject).toBe(subjectKey);
       expect(assignmentEvent.subjectAttributes).toStrictEqual(subjectAttributes);
       expect(assignmentEvent.metaData?.obfuscated).toBe(false);
-       */
 
       expect(mockLogBanditAction).toHaveBeenCalledTimes(1);
       const banditEvent: IBanditEvent = mockLogBanditAction.mock.calls[0][0];
@@ -223,17 +206,30 @@ describe('EppoClient Bandits E2E test', () => {
       client.setAssignmentLogger({ logAssignment: mockLogAssignment });
       client.setBanditLogger({ logBanditAction: mockLogBanditAction });
 
-      // TODO: update shared bandit test UFC to have doLog: true for bandit
-      /*
       expect(mockLogAssignment).toHaveBeenCalledTimes(1);
       const assignmentEvent: IAssignmentEvent = mockLogAssignment.mock.calls[0][0];
       expect(assignmentEvent.variation).toBe('banner_bandit');
-      */
 
       expect(mockLogBanditAction).toHaveBeenCalledTimes(1);
       const banditEvent: IBanditEvent = mockLogBanditAction.mock.calls[0][0];
       expect(new Date(banditEvent.timestamp).getTime()).toBeGreaterThanOrEqual(testStart);
       expect(banditEvent.action).toBe('adidas');
+    });
+
+    it('Does not log if no actions provided', () => {
+      const banditAssignment = client.getBanditAction(
+        'banner_bandit_flag',
+        'eve',
+        {},
+        {},
+        'control',
+      );
+
+      expect(banditAssignment.variation).toBe('control');
+      expect(banditAssignment.action).toBeNull();
+
+      expect(mockLogAssignment).not.toHaveBeenCalled();
+      expect(mockLogBanditAction).not.toHaveBeenCalled();
     });
 
     describe('Bandit evaluation errors', () => {

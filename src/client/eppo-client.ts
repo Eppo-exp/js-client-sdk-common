@@ -393,15 +393,13 @@ export default class EppoClient implements IEppoClient {
     actions: Record<string, Attributes>, // TODO: ability to provide a set of actions with no context, or context broken out by numeric/categorical
     defaultValue: string,
   ): { variation: string; action: string | null } {
+    // TODO: store bandit flag information so that if no actions provided, we can quickly return with default value
     let variation = this.getStringAssignment(flagKey, subjectKey, subjectAttributes, defaultValue);
     let action: string | null = null;
     const banditKey = variation;
     try {
       const banditParameters = this.banditConfigurationStore?.get(banditKey);
-      if (banditParameters && !Object.keys(actions ?? {}).length) {
-        // If it's a bandit, but we have no actions, just return default value
-        variation = defaultValue;
-      } else if (banditParameters) {
+      if (banditParameters) {
         // For now, we use the shortcut of assuming if a variation value is the key of a known bandit, that is the bandit we want
         const banditModelData = banditParameters.modelData;
         const banditEvaluation = this.banditEvaluator.evaluateBandit(
