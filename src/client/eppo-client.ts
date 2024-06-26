@@ -30,7 +30,7 @@ import { AttributeType, ValueType } from '../types';
 import { validateNotBlank } from '../validation';
 import { LIB_VERSION } from '../version';
 
-export interface AssignmentDetails<T extends Variation['value'] | object>
+export interface IAssignmentDetails<T extends Variation['value'] | object>
   extends FlagEvaluationDetails {
   value: T;
 }
@@ -180,7 +180,7 @@ export default class EppoClient {
     subjectKey: string,
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: string,
-  ): AssignmentDetails<string> {
+  ): IAssignmentDetails<string> {
     const { eppoValue, flagEvaluationDetails } = this.getAssignmentVariation(
       flagKey,
       subjectKey,
@@ -242,7 +242,7 @@ export default class EppoClient {
     subjectKey: string,
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: boolean,
-  ): AssignmentDetails<boolean> {
+  ): IAssignmentDetails<boolean> {
     const { eppoValue, flagEvaluationDetails } = this.getAssignmentVariation(
       flagKey,
       subjectKey,
@@ -292,7 +292,7 @@ export default class EppoClient {
     subjectKey: string,
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: number,
-  ): AssignmentDetails<number> {
+  ): IAssignmentDetails<number> {
     const { eppoValue, flagEvaluationDetails } = this.getAssignmentVariation(
       flagKey,
       subjectKey,
@@ -342,7 +342,7 @@ export default class EppoClient {
     subjectKey: string,
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: number,
-  ): AssignmentDetails<number> {
+  ): IAssignmentDetails<number> {
     const { eppoValue, flagEvaluationDetails } = this.getAssignmentVariation(
       flagKey,
       subjectKey,
@@ -380,7 +380,7 @@ export default class EppoClient {
     subjectKey: string,
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: object,
-  ): AssignmentDetails<object> {
+  ): IAssignmentDetails<object> {
     const { eppoValue, flagEvaluationDetails } = this.getAssignmentVariation(
       flagKey,
       subjectKey,
