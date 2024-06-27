@@ -10,7 +10,7 @@ import ApiEndpoints from '../api-endpoints';
 import { IConfigurationStore } from '../configuration-store/configuration-store';
 import { MemoryOnlyConfigurationStore } from '../configuration-store/memory.store';
 import FlagConfigurationRequestor from '../flag-configuration-requestor';
-import { AllocationEvaluationCode } from '../flag-evaluation-details';
+import { AllocationEvaluationCode } from '../flag-evaluation-details-builder';
 import FetchHttpClient from '../http-client';
 import { Flag, ObfuscatedFlag, VariationType } from '../interfaces';
 import { OperatorType } from '../rules';

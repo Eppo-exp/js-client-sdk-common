@@ -3,7 +3,7 @@ import {
   AllocationEvaluationCode,
   FlagEvaluationDetails,
   FlagEvaluationDetailsBuilder,
-} from './flag-evaluation-details';
+} from './flag-evaluation-details-builder';
 import { Flag, Shard, Range, Variation, Allocation, Split, VariationType } from './interfaces';
 import { Rule, matchesRule } from './rules';
 import { MD5Sharder, Sharder } from './sharders';
@@ -62,7 +62,7 @@ export class Evaluator {
         unmatchedAllocations.push({
           key: allocation.key,
           allocationEvaluationCode: code,
-          orderPosition: i,
+          orderPosition: i + 1,
         });
       };
 

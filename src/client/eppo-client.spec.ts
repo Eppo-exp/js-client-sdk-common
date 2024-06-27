@@ -19,7 +19,7 @@ import { IConfigurationStore } from '../configuration-store/configuration-store'
 import { MemoryOnlyConfigurationStore } from '../configuration-store/memory.store';
 import { MAX_EVENT_QUEUE_SIZE, POLL_INTERVAL_MS, POLL_JITTER_PCT } from '../constants';
 import FlagConfigurationRequestor from '../flag-configuration-requestor';
-import { AllocationEvaluationCode } from '../flag-evaluation-details';
+import { AllocationEvaluationCode } from '../flag-evaluation-details-builder';
 import FetchHttpClient from '../http-client';
 import { Flag, ObfuscatedFlag, VariationType } from '../interfaces';
 import { OperatorType } from '../rules';
