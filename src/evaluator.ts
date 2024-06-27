@@ -1,7 +1,7 @@
 import {
   AllocationEvaluation,
   AllocationEvaluationCode,
-  FlagEvaluationDetails,
+  IFlagEvaluationDetails,
   FlagEvaluationDetailsBuilder,
 } from './flag-evaluation-details-builder';
 import { Flag, Shard, Range, Variation, Allocation, Split, VariationType } from './interfaces';
@@ -17,7 +17,7 @@ export interface FlagEvaluation {
   variation: Variation | null;
   extraLogging: Record<string, string>;
   doLog: boolean;
-  flagEvaluationDetails: FlagEvaluationDetails;
+  flagEvaluationDetails: IFlagEvaluationDetails;
 }
 
 export class Evaluator {
@@ -166,7 +166,7 @@ export function noneResult(
   flagKey: string,
   subjectKey: string,
   subjectAttributes: SubjectAttributes,
-  flagEvaluationDetails: FlagEvaluationDetails,
+  flagEvaluationDetails: IFlagEvaluationDetails,
 ): FlagEvaluation {
   return {
     flagKey,
