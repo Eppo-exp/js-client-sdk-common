@@ -81,6 +81,13 @@ export interface ObfuscatedShard {
   ranges: Range[];
 }
 
+export interface BanditVariation {
+  key: string;
+  flagKey: string;
+  variationKey: string;
+  variationValue: string;
+}
+
 export interface BanditParameters {
   banditKey: string;
   modelName: string;

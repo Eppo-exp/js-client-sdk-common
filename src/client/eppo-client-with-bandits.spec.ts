@@ -7,20 +7,21 @@ import {
   BANDIT_TEST_DATA_DIR,
 } from '../../test/testHelpers';
 import ApiEndpoints from '../api-endpoints';
-import { IAssignmentLogger } from '../assignment-logger';
+import { IAssignmentEvent, IAssignmentLogger } from '../assignment-logger';
 import { BanditEvaluator } from '../bandit-evaluator';
 import { IBanditEvent, IBanditLogger } from '../bandit-logger';
 import ConfigurationRequestor from '../configuration-requestor';
 import { MemoryOnlyConfigurationStore } from '../configuration-store/memory.store';
 import FetchHttpClient from '../http-client';
-import { BanditParameters, Flag } from '../interfaces';
+import { BanditVariation, BanditParameters, Flag } from '../interfaces';
 import { Attributes } from '../types';
 
 import EppoClient from './eppo-client';
 
 describe('EppoClient Bandits E2E test', () => {
   const flagStore = new MemoryOnlyConfigurationStore<Flag>();
-  const banditStore = new MemoryOnlyConfigurationStore<BanditParameters>();
+  const banditVariationStore = new MemoryOnlyConfigurationStore<BanditVariation[]>();
+  const banditModelStore = new MemoryOnlyConfigurationStore<BanditParameters>();
   let client: EppoClient;
   const mockLogAssignment = jest.fn();
   const mockLogBanditAction = jest.fn();
@@ -50,12 +51,17 @@ describe('EppoClient Bandits E2E test', () => {
       },
     });
     const httpClient = new FetchHttpClient(apiEndpoints, 1000);
-    const configurationRequestor = new ConfigurationRequestor(httpClient, flagStore, banditStore);
+    const configurationRequestor = new ConfigurationRequestor(
+      httpClient,
+      flagStore,
+      banditVariationStore,
+      banditModelStore,
+    );
     await configurationRequestor.fetchAndStoreConfigurations();
   });
 
   beforeEach(() => {
-    client = new EppoClient(flagStore, banditStore);
+    client = new EppoClient(flagStore, banditVariationStore, banditModelStore, undefined, false);
     client.setIsGracefulFailureMode(false);
     client.setAssignmentLogger({ logAssignment: mockLogAssignment });
     client.setBanditLogger({ logBanditAction: mockLogBanditAction });
@@ -78,9 +84,6 @@ describe('EppoClient Bandits E2E test', () => {
         const { defaultValue, subjects } = testsByFlagKey[flagKey];
         let numAssignmentsChecked = 0;
         subjects.forEach((subject) => {
-          // TODO: handle already-bucketed attributes
-          // TODO: common test case with a numeric value passed as a categorical attribute and vice verse
-
           const actions: Record<string, Attributes> = {};
           subject.actions.forEach((action) => {
             actions[action.actionKey] = {
@@ -89,10 +92,22 @@ describe('EppoClient Bandits E2E test', () => {
             };
           });
 
-          const subjectAttributes = {
-            ...subject.subjectAttributes.numeric_attributes,
-            ...subject.subjectAttributes.categorical_attributes,
-          };
+          // TODO: handle already-bucketed attributes
+          const subjectAttributes: Attributes = {};
+          Object.entries(subject.subjectAttributes.numericAttributes).forEach(
+            ([attribute, value]) => {
+              if (typeof attribute === 'number') {
+                subjectAttributes[attribute] = value;
+              }
+            },
+          );
+          Object.entries(subject.subjectAttributes.categoricalAttributes).forEach(
+            ([attribute, value]) => {
+              if (value) {
+                subjectAttributes[attribute] = value.toString();
+              }
+            },
+          );
 
           const banditAssignment = client.getBanditAction(
             flagKey,
@@ -121,20 +136,6 @@ describe('EppoClient Bandits E2E test', () => {
         expect(numAssignmentsChecked).toBeGreaterThan(0);
       },
     );
-
-    //TODO: make this a shared data test case
-    it('Returns default value if no actions provided', () => {
-      const banditAssignment = client.getBanditAction(
-        'banner_bandit_flag',
-        'eve',
-        {},
-        {},
-        'control',
-      );
-
-      expect(banditAssignment.variation).toBe('control');
-      expect(banditAssignment.action).toBeNull();
-    });
   });
 
   describe('Client-specific tests', () => {
@@ -160,19 +161,16 @@ describe('EppoClient Bandits E2E test', () => {
       expect(banditAssignment.variation).toBe('banner_bandit');
       expect(banditAssignment.action).toBe('adidas');
 
-      // TODO: update shared bandit test UFC to have doLog: true for bandit
-      /*
       expect(mockLogAssignment).toHaveBeenCalledTimes(1);
       const assignmentEvent: IAssignmentEvent = mockLogAssignment.mock.calls[0][0];
       expect(new Date(assignmentEvent.timestamp).getTime()).toBeGreaterThanOrEqual(testStart);
       expect(assignmentEvent.featureFlag).toBe(flagKey);
-      expect(assignmentEvent.allocation).toBe('analysis');
-      expect(assignmentEvent.experiment).toBe('banner_bandit-analysis');
+      expect(assignmentEvent.allocation).toBe('training');
+      expect(assignmentEvent.experiment).toBe('banner_bandit_flag-training');
       expect(assignmentEvent.variation).toBe('banner_bandit');
       expect(assignmentEvent.subject).toBe(subjectKey);
       expect(assignmentEvent.subjectAttributes).toStrictEqual(subjectAttributes);
       expect(assignmentEvent.metaData?.obfuscated).toBe(false);
-       */
 
       expect(mockLogBanditAction).toHaveBeenCalledTimes(1);
       const banditEvent: IBanditEvent = mockLogBanditAction.mock.calls[0][0];
@@ -214,17 +212,30 @@ describe('EppoClient Bandits E2E test', () => {
       client.setAssignmentLogger({ logAssignment: mockLogAssignment });
       client.setBanditLogger({ logBanditAction: mockLogBanditAction });
 
-      // TODO: update shared bandit test UFC to have doLog: true for bandit
-      /*
       expect(mockLogAssignment).toHaveBeenCalledTimes(1);
       const assignmentEvent: IAssignmentEvent = mockLogAssignment.mock.calls[0][0];
       expect(assignmentEvent.variation).toBe('banner_bandit');
-      */
 
       expect(mockLogBanditAction).toHaveBeenCalledTimes(1);
       const banditEvent: IBanditEvent = mockLogBanditAction.mock.calls[0][0];
       expect(new Date(banditEvent.timestamp).getTime()).toBeGreaterThanOrEqual(testStart);
       expect(banditEvent.action).toBe('adidas');
+    });
+
+    it('Does not log if no actions provided', () => {
+      const banditAssignment = client.getBanditAction(
+        'banner_bandit_flag',
+        'eve',
+        {},
+        {},
+        'control',
+      );
+
+      expect(banditAssignment.variation).toBe('control');
+      expect(banditAssignment.action).toBeNull();
+
+      expect(mockLogAssignment).not.toHaveBeenCalled();
+      expect(mockLogBanditAction).not.toHaveBeenCalled();
     });
 
     describe('Bandit evaluation errors', () => {

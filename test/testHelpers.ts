@@ -32,7 +32,7 @@ export interface BanditTestCase {
 
 interface BanditTestCaseSubject {
   subjectKey: string;
-  subjectAttributes: { numeric_attributes: Attributes; categorical_attributes: Attributes };
+  subjectAttributes: { numericAttributes: Attributes; categoricalAttributes: Attributes };
   actions: BanditTestCaseAction[];
   assignment: { variation: string; action: string | null };
 }

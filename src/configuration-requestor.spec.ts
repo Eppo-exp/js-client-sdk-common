@@ -10,11 +10,12 @@ import ConfigurationRequestor from './configuration-requestor';
 import { IConfigurationStore } from './configuration-store/configuration-store';
 import { MemoryOnlyConfigurationStore } from './configuration-store/memory.store';
 import FetchHttpClient, { IHttpClient } from './http-client';
-import { BanditParameters, Flag } from './interfaces';
+import { BanditVariation, BanditParameters, Flag } from './interfaces';
 
 describe('ConfigurationRequestor', () => {
   let flagStore: IConfigurationStore<Flag>;
-  let banditStore: IConfigurationStore<BanditParameters>;
+  let banditVariationStore: IConfigurationStore<BanditVariation[]>;
+  let banditModelStore: IConfigurationStore<BanditParameters>;
   let httpClient: IHttpClient;
   let configurationRequestor: ConfigurationRequestor;
 
@@ -29,8 +30,14 @@ describe('ConfigurationRequestor', () => {
     });
     httpClient = new FetchHttpClient(apiEndpoints, 1000);
     flagStore = new MemoryOnlyConfigurationStore<Flag>();
-    banditStore = new MemoryOnlyConfigurationStore<BanditParameters>();
-    configurationRequestor = new ConfigurationRequestor(httpClient, flagStore, banditStore);
+    banditVariationStore = new MemoryOnlyConfigurationStore<BanditVariation[]>();
+    banditModelStore = new MemoryOnlyConfigurationStore<BanditParameters>();
+    configurationRequestor = new ConfigurationRequestor(
+      httpClient,
+      flagStore,
+      banditVariationStore,
+      banditModelStore,
+    );
   });
 
   afterEach(() => {
@@ -97,7 +104,7 @@ describe('ConfigurationRequestor', () => {
         end: 10000,
       });
 
-      expect(banditStore.getKeys().length).toBe(0);
+      expect(banditModelStore.getKeys().length).toBe(0);
     });
   });
 
@@ -129,9 +136,9 @@ describe('ConfigurationRequestor', () => {
       expect(flagStore.get('banner_bandit_flag')).toBeDefined();
       expect(flagStore.get('cold_start_bandit')).toBeDefined();
 
-      expect(banditStore.getKeys().length).toBeGreaterThanOrEqual(2);
+      expect(banditModelStore.getKeys().length).toBeGreaterThanOrEqual(2);
 
-      const bannerBandit = banditStore.get('banner_bandit');
+      const bannerBandit = banditModelStore.get('banner_bandit');
       expect(bannerBandit?.banditKey).toBe('banner_bandit');
       expect(bannerBandit?.modelName).toBe('falcon');
       expect(bannerBandit?.modelVersion).toBe('v123');
@@ -151,7 +158,7 @@ describe('ConfigurationRequestor', () => {
       expect(nikeBrandAffinityCoefficient.attributeKey).toBe('brand_affinity');
       expect(nikeBrandAffinityCoefficient.coefficient).toBe(1);
       expect(nikeBrandAffinityCoefficient.missingValueCoefficient).toBe(-0.1);
-      expect(nikeCoefficients.actionCategoricalCoefficients).toHaveLength(1);
+      expect(nikeCoefficients.actionCategoricalCoefficients).toHaveLength(2);
       const nikeLoyaltyTierCoefficient = nikeCoefficients.actionCategoricalCoefficients[0];
       expect(nikeLoyaltyTierCoefficient.attributeKey).toBe('loyalty_tier');
       expect(nikeLoyaltyTierCoefficient.missingValueCoefficient).toBe(0);
@@ -180,7 +187,7 @@ describe('ConfigurationRequestor', () => {
         bannerCoefficients['adidas'].subjectCategoricalCoefficients[0].valueCoefficients['female'],
       ).toBe(0);
 
-      const coldStartBandit = banditStore.get('cold_start_bandit');
+      const coldStartBandit = banditModelStore.get('cold_start_bandit');
       expect(coldStartBandit?.banditKey).toBe('cold_start_bandit');
       expect(coldStartBandit?.modelName).toBe('falcon');
       expect(coldStartBandit?.modelVersion).toBe('cold start');
@@ -192,7 +199,7 @@ describe('ConfigurationRequestor', () => {
     });
 
     it('Will not fetch bandit parameters if there is no store', async () => {
-      configurationRequestor = new ConfigurationRequestor(httpClient, flagStore, null);
+      configurationRequestor = new ConfigurationRequestor(httpClient, flagStore, null, null);
       await configurationRequestor.fetchAndStoreConfigurations();
       expect(fetchSpy).toHaveBeenCalledTimes(1);
     });
