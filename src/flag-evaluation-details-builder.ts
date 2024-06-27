@@ -85,7 +85,7 @@ export class FlagEvaluationDetailsBuilder {
   };
 
   setMatch = (
-    orderPosition: number,
+    indexPosition: number,
     variation: Variation,
     allocation: Allocation,
     matchedRule: Rule | null,
@@ -103,16 +103,17 @@ export class FlagEvaluationDetailsBuilder {
     this.matchedAllocation = {
       key: allocation.key,
       allocationEvaluationCode: AllocationEvaluationCode.MATCH,
-      orderPosition,
+      orderPosition: indexPosition + 1, // orderPosition is 1-indexed to match UI
     };
     this.unmatchedAllocations = unmatchedAllocations;
-    const unevaluatedStartIndex = orderPosition + 1;
+    const unevaluatedStartIndex = indexPosition + 1;
+    const unevaluatedStartOrderPosition = unevaluatedStartIndex + 1; // orderPosition is 1-indexed to match UI
     this.unevaluatedAllocations = this.allocations.slice(unevaluatedStartIndex).map(
       (allocation, i) =>
         ({
           key: allocation.key,
           allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
-          orderPosition: unevaluatedStartIndex + i,
+          orderPosition: unevaluatedStartOrderPosition + i,
         } as AllocationEvaluation),
     );
     return this;

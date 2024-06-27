@@ -18,7 +18,10 @@ import { decodeFlag } from '../decoding';
 import { EppoValue } from '../eppo_value';
 import { Evaluator, FlagEvaluation, noneResult } from '../evaluator';
 import FlagConfigurationRequestor from '../flag-configuration-requestor';
-import { FlagEvaluationDetails, FlagEvaluationDetailsBuilder } from '../flag-evaluation-details';
+import {
+  FlagEvaluationDetails,
+  FlagEvaluationDetailsBuilder,
+} from '../flag-evaluation-details-builder';
 import FetchHttpClient from '../http-client';
 import { Flag, ObfuscatedFlag, Variation, VariationType } from '../interfaces';
 import { getMD5Hash } from '../obfuscation';
@@ -27,7 +30,7 @@ import { AttributeType, ValueType } from '../types';
 import { validateNotBlank } from '../validation';
 import { LIB_VERSION } from '../version';
 
-export interface AssignmentDetails<T extends Variation['value'] | object>
+export interface IAssignmentDetails<T extends Variation['value'] | object>
   extends FlagEvaluationDetails {
   value: T;
 }
@@ -177,7 +180,7 @@ export default class EppoClient {
     subjectKey: string,
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: string,
-  ): AssignmentDetails<string> {
+  ): IAssignmentDetails<string> {
     const { eppoValue, flagEvaluationDetails } = this.getAssignmentVariation(
       flagKey,
       subjectKey,
@@ -239,7 +242,7 @@ export default class EppoClient {
     subjectKey: string,
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: boolean,
-  ): AssignmentDetails<boolean> {
+  ): IAssignmentDetails<boolean> {
     const { eppoValue, flagEvaluationDetails } = this.getAssignmentVariation(
       flagKey,
       subjectKey,
@@ -289,7 +292,7 @@ export default class EppoClient {
     subjectKey: string,
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: number,
-  ): AssignmentDetails<number> {
+  ): IAssignmentDetails<number> {
     const { eppoValue, flagEvaluationDetails } = this.getAssignmentVariation(
       flagKey,
       subjectKey,
@@ -339,7 +342,7 @@ export default class EppoClient {
     subjectKey: string,
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: number,
-  ): AssignmentDetails<number> {
+  ): IAssignmentDetails<number> {
     const { eppoValue, flagEvaluationDetails } = this.getAssignmentVariation(
       flagKey,
       subjectKey,
@@ -377,7 +380,7 @@ export default class EppoClient {
     subjectKey: string,
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: object,
-  ): AssignmentDetails<object> {
+  ): IAssignmentDetails<object> {
     const { eppoValue, flagEvaluationDetails } = this.getAssignmentVariation(
       flagKey,
       subjectKey,
