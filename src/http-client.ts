@@ -1,5 +1,5 @@
 import ApiEndpoints from './api-endpoints';
-import { BanditFlagAssociation, BanditParameters, Flag } from './interfaces';
+import { BanditVariation, BanditParameters, Flag } from './interfaces';
 
 export interface IQueryParams {
   apiKey: string;
@@ -18,7 +18,7 @@ export class HttpRequestError extends Error {
 
 export interface IUniversalFlagConfigResponse {
   flags: Record<string, Flag>;
-  bandits: Record<string, BanditFlagAssociation[]>;
+  bandits: Record<string, BanditVariation[]>;
 }
 
 export interface IBanditParametersResponse {

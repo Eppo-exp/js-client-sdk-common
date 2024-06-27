@@ -10,11 +10,11 @@ import ConfigurationRequestor from './configuration-requestor';
 import { IConfigurationStore } from './configuration-store/configuration-store';
 import { MemoryOnlyConfigurationStore } from './configuration-store/memory.store';
 import FetchHttpClient, { IHttpClient } from './http-client';
-import { BanditFlagAssociation, BanditParameters, Flag } from './interfaces';
+import { BanditVariation, BanditParameters, Flag } from './interfaces';
 
 describe('ConfigurationRequestor', () => {
   let flagStore: IConfigurationStore<Flag>;
-  let banditFlagStore: IConfigurationStore<BanditFlagAssociation[]>;
+  let banditVariationStore: IConfigurationStore<BanditVariation[]>;
   let banditModelStore: IConfigurationStore<BanditParameters>;
   let httpClient: IHttpClient;
   let configurationRequestor: ConfigurationRequestor;
@@ -30,12 +30,12 @@ describe('ConfigurationRequestor', () => {
     });
     httpClient = new FetchHttpClient(apiEndpoints, 1000);
     flagStore = new MemoryOnlyConfigurationStore<Flag>();
-    banditFlagStore = new MemoryOnlyConfigurationStore<BanditFlagAssociation[]>();
+    banditVariationStore = new MemoryOnlyConfigurationStore<BanditVariation[]>();
     banditModelStore = new MemoryOnlyConfigurationStore<BanditParameters>();
     configurationRequestor = new ConfigurationRequestor(
       httpClient,
       flagStore,
-      banditFlagStore,
+      banditVariationStore,
       banditModelStore,
     );
   });

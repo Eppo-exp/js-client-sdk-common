@@ -22,7 +22,7 @@ import { EppoValue } from '../eppo_value';
 import { Evaluator, FlagEvaluation, noneResult } from '../evaluator';
 import FetchHttpClient from '../http-client';
 import {
-  BanditFlagAssociation,
+  BanditVariation,
   BanditParameters,
   Flag,
   ObfuscatedFlag,
@@ -205,7 +205,7 @@ export default class EppoClient implements IEppoClient {
 
   constructor(
     private flagConfigurationStore: IConfigurationStore<Flag | ObfuscatedFlag>,
-    private banditFlagConfigurationStore?: IConfigurationStore<BanditFlagAssociation[]>,
+    private banditVariationConfigurationStore?: IConfigurationStore<BanditVariation[]>,
     private banditModelConfigurationStore?: IConfigurationStore<BanditParameters>,
     private configurationRequestParameters?: FlagConfigurationRequestParameters,
     private isObfuscated = false,
@@ -223,10 +223,10 @@ export default class EppoClient implements IEppoClient {
     this.flagConfigurationStore = flagConfigurationStore;
   }
 
-  public setBanditFlagConfigurationStore(
-    banditFlagConfigurationStore: IConfigurationStore<BanditFlagAssociation[]>,
+  public setBanditVariationConfigurationStore(
+    banditVariationConfigurationStore: IConfigurationStore<BanditVariation[]>,
   ) {
-    this.banditFlagConfigurationStore = banditFlagConfigurationStore;
+    this.banditVariationConfigurationStore = banditVariationConfigurationStore;
   }
 
   public setBanditModelConfigurationStore(
@@ -280,7 +280,7 @@ export default class EppoClient implements IEppoClient {
     const configurationRequestor = new ConfigurationRequestor(
       httpClient,
       this.flagConfigurationStore,
-      this.banditFlagConfigurationStore ?? null,
+      this.banditVariationConfigurationStore ?? null,
       this.banditModelConfigurationStore ?? null,
     );
 
@@ -407,14 +407,15 @@ export default class EppoClient implements IEppoClient {
     actions: Record<string, Attributes>, // TODO: ability to provide a set of actions with no context, or context broken out by numeric/categorical
     defaultValue: string,
   ): { variation: string; action: string | null } {
+    const defaultResult = { variation: defaultValue, action: null };
     let variation = defaultValue;
     let action: string | null = null;
     try {
-      const banditFlagAssociations = this.banditFlagConfigurationStore?.get(flagKey);
-      if (banditFlagAssociations && !Object.keys(actions).length) {
+      const banditVariations = this.banditVariationConfigurationStore?.get(flagKey);
+      if (banditVariations && !Object.keys(actions).length) {
         // No actions passed for a flag known to have an active bandit, so we just return the default values so that
         // we don't log a variation or bandit assignment
-        return { variation, action };
+        return defaultResult;
       }
 
       // Get the assigned variation for the flag with a possible bandit
@@ -423,8 +424,8 @@ export default class EppoClient implements IEppoClient {
       // Check if the assigned variation is an active bandit
       // Note: the reason for non-bandit assignments include the subject being bucketed into a non-bandit variation or
       // a rollout having been done.
-      const banditKey = banditFlagAssociations?.find(
-        (banditFlagAssociation) => banditFlagAssociation.variationValue === variation,
+      const banditKey = banditVariations?.find(
+        (banditVariation) => banditVariation.variationValue === variation,
       )?.key;
 
       if (banditKey) {
@@ -464,13 +465,13 @@ export default class EppoClient implements IEppoClient {
         this.logBanditAction(banditEvent);
       }
     } catch (err) {
-      if (this.isGracefulFailureMode) {
-        logger.error('Error evaluating bandit action', err);
-        variation = defaultValue;
-      } else {
+      logger.error('Error evaluating bandit action', err);
+      if (!this.isGracefulFailureMode) {
         throw err;
       }
+      return defaultResult;
     }
+
     return { variation, action };
   }
 
@@ -629,7 +630,8 @@ export default class EppoClient implements IEppoClient {
   public isInitialized() {
     return (
       this.flagConfigurationStore.isInitialized() &&
-      (!this.banditFlagConfigurationStore || this.banditFlagConfigurationStore.isInitialized()) &&
+      (!this.banditVariationConfigurationStore ||
+        this.banditVariationConfigurationStore.isInitialized()) &&
       (!this.banditModelConfigurationStore || this.banditModelConfigurationStore.isInitialized())
     );
   }

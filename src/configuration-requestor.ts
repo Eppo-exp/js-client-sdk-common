@@ -1,14 +1,14 @@
 import { IConfigurationStore } from './configuration-store/configuration-store';
 import { IHttpClient } from './http-client';
-import { BanditFlagAssociation, BanditParameters, Flag } from './interfaces';
+import { BanditVariation, BanditParameters, Flag } from './interfaces';
 
 // Requests AND stores flag configurations
 export default class ConfigurationRequestor {
   constructor(
     private readonly httpClient: IHttpClient,
     private readonly flagConfigurationStore: IConfigurationStore<Flag>,
-    private readonly flagBanditConfigurationStore: IConfigurationStore<
-      BanditFlagAssociation[]
+    private readonly banditVariationConfigurationStore: IConfigurationStore<
+      BanditVariation[]
     > | null,
     private readonly banditModelConfigurationStore: IConfigurationStore<BanditParameters> | null,
   ) {}
@@ -22,14 +22,12 @@ export default class ConfigurationRequestor {
     await this.flagConfigurationStore.setEntries(configResponse.flags);
     const flagsHaveBandits = Object.keys(configResponse.bandits ?? {}).length > 0;
     const banditStoresProvided = Boolean(
-      this.flagBanditConfigurationStore && this.banditModelConfigurationStore,
+      this.banditVariationConfigurationStore && this.banditModelConfigurationStore,
     );
     if (flagsHaveBandits && banditStoresProvided) {
       // Map bandit flag associations by flag key for quick lookup (instead of bandit key as provided by the UFC)
-      const banditFlagAssociations = this.indexBanditFlagAssociationsByFlagKey(
-        configResponse.bandits,
-      );
-      this.flagBanditConfigurationStore?.setEntries(banditFlagAssociations);
+      const banditVariations = this.indexBanditVariationsByFlagKey(configResponse.bandits);
+      this.banditVariationConfigurationStore?.setEntries(banditVariations);
       // TODO: different polling intervals for bandit parameters
       const banditResponse = await this.httpClient.getBanditParameters();
       if (banditResponse?.bandits) {
@@ -41,20 +39,20 @@ export default class ConfigurationRequestor {
     }
   }
 
-  private indexBanditFlagAssociationsByFlagKey(
-    banditFlagAssociationsByBanditKey: Record<string, BanditFlagAssociation[]>,
-  ): Record<string, BanditFlagAssociation[]> {
-    const banditFlagAssociationsByFlagKey: Record<string, BanditFlagAssociation[]> = {};
-    Object.values(banditFlagAssociationsByBanditKey).forEach((banditFlags) => {
-      banditFlags.forEach((banditFlag) => {
-        let flagAssociations = banditFlagAssociationsByFlagKey[banditFlag.flagKey];
-        if (!flagAssociations) {
-          flagAssociations = [];
-          banditFlagAssociationsByFlagKey[banditFlag.flagKey] = flagAssociations;
+  private indexBanditVariationsByFlagKey(
+    banditVariationsByBanditKey: Record<string, BanditVariation[]>,
+  ): Record<string, BanditVariation[]> {
+    const banditVariationsByFlagKey: Record<string, BanditVariation[]> = {};
+    Object.values(banditVariationsByBanditKey).forEach((banditVariations) => {
+      banditVariations.forEach((banditVariation) => {
+        let banditVariations = banditVariationsByFlagKey[banditVariation.flagKey];
+        if (!banditVariations) {
+          banditVariations = [];
+          banditVariationsByFlagKey[banditVariation.flagKey] = banditVariations;
         }
-        flagAssociations.push(banditFlag);
+        banditVariations.push(banditVariation);
       });
     });
-    return banditFlagAssociationsByFlagKey;
+    return banditVariationsByFlagKey;
   }
 }
