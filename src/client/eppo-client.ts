@@ -422,10 +422,12 @@ export default class EppoClient {
       };
     } catch (error) {
       const eppoValue = this.rethrowIfNotGraceful(error, defaultValue);
-      const flagEvaluationDetails = new FlagEvaluationDetailsBuilder([], '', '').buildForNoneResult(
-        'ASSIGNMENT_ERROR',
-        `Assignment Error: ${error.message}`,
-      );
+      const flagEvaluationDetails = new FlagEvaluationDetailsBuilder(
+        '',
+        [],
+        '',
+        '',
+      ).buildForNoneResult('ASSIGNMENT_ERROR', `Assignment Error: ${error.message}`);
       return {
         eppoValue,
         flagEvaluationDetails,
@@ -464,6 +466,7 @@ export default class EppoClient {
 
     const { flag, configFetchedAt, configPublishedAt } = this.getFlagDetails(flagKey);
     const flagEvaluationDetailsBuilder = new FlagEvaluationDetailsBuilder(
+      flag?.environment ?? '',
       flag?.allocations ?? [],
       configFetchedAt,
       configPublishedAt,

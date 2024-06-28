@@ -37,6 +37,7 @@ export class Evaluator {
     expectedVariationType?: VariationType,
   ): FlagEvaluation {
     const flagEvaluationDetailsBuilder = new FlagEvaluationDetailsBuilder(
+      flag.environment,
       flag.allocations,
       configFetchedAt,
       configPublishedAt,
@@ -61,6 +62,7 @@ export class Evaluator {
       const addUnmatchedAllocation = (code: AllocationEvaluationCode) => {
         unmatchedAllocations.push({
           key: allocation.key,
+          name: allocation.name,
           allocationEvaluationCode: code,
           orderPosition: i + 1,
         });

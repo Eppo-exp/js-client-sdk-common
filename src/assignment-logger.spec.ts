@@ -13,6 +13,7 @@ describe('IAssignmentEvent', () => {
       subjectAttributes: { age: 25, country: 'USA' },
       holdoutKey: 'holdout_key_123',
       details: {
+        environment: 'Test',
         variationKey: 'variationKey',
         variationValue: 'variation_123',
         flagEvaluationCode: 'MATCH',
@@ -22,6 +23,7 @@ describe('IAssignmentEvent', () => {
         matchedRule: null,
         matchedAllocation: {
           key: 'allocation_123',
+          name: 'Allocation for allocation_123',
           allocationEvaluationCode: AllocationEvaluationCode.MATCH,
           orderPosition: 1,
         },

@@ -22,11 +22,13 @@ export enum AllocationEvaluationCode {
 
 export interface AllocationEvaluation {
   key: string;
+  name: string;
   allocationEvaluationCode: AllocationEvaluationCode;
   orderPosition: number;
 }
 
 export interface IFlagEvaluationDetails {
+  environment: string;
   variationKey: string | null;
   variationValue: Variation['value'] | null;
   flagEvaluationCode: FlagEvaluationCode;
@@ -48,6 +50,7 @@ export class FlagEvaluationDetailsBuilder {
   private unevaluatedAllocations: IFlagEvaluationDetails['unevaluatedAllocations'];
 
   constructor(
+    private readonly environment: string,
     private readonly allocations: Allocation[],
     private readonly configFetchedAt: string,
     private readonly configPublishedAt: string,
@@ -62,12 +65,12 @@ export class FlagEvaluationDetailsBuilder {
     this.matchedRule = null;
     this.unmatchedAllocations = [];
     this.unevaluatedAllocations = this.allocations.map(
-      (allocation, i) =>
-        ({
-          key: allocation.key,
-          allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
-          orderPosition: i,
-        } as AllocationEvaluation),
+      (allocation, i): AllocationEvaluation => ({
+        key: allocation.key,
+        name: allocation.name,
+        allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
+        orderPosition: i,
+      }),
     );
     return this;
   };
@@ -102,6 +105,7 @@ export class FlagEvaluationDetailsBuilder {
     this.matchedRule = matchedRule;
     this.matchedAllocation = {
       key: allocation.key,
+      name: allocation.name,
       allocationEvaluationCode: AllocationEvaluationCode.MATCH,
       orderPosition: indexPosition + 1, // orderPosition is 1-indexed to match UI
     };
@@ -128,6 +132,7 @@ export class FlagEvaluationDetailsBuilder {
     flagEvaluationCode: FlagEvaluationCode,
     flagEvaluationDescription: string,
   ): IFlagEvaluationDetails => ({
+    environment: this.environment,
     flagEvaluationCode,
     flagEvaluationDescription,
     variationKey: this.variationKey,

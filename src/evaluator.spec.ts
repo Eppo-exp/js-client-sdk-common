@@ -14,12 +14,14 @@ describe('Evaluator', () => {
   it('should return none result for disabled flag', () => {
     const flag: Flag = {
       key: 'disabled_flag',
+      environment: 'Test',
       enabled: false,
       variationType: VariationType.STRING,
       variations: { a: VARIATION_A },
       allocations: [
         {
           key: 'default',
+          name: 'Allocation for default',
           rules: [],
           splits: [
             {
@@ -78,6 +80,7 @@ describe('Evaluator', () => {
   it('should evaluate empty flag to none result', () => {
     const emptyFlag: Flag = {
       key: 'empty',
+      environment: 'Test',
       enabled: true,
       variationType: VariationType.STRING,
       variations: { a: VARIATION_A, b: VARIATION_B },
@@ -95,12 +98,14 @@ describe('Evaluator', () => {
   it('should evaluate simple flag and return control variation', () => {
     const flag: Flag = {
       key: 'flag-key',
+      environment: 'Test',
       enabled: true,
       variationType: VariationType.STRING,
       variations: { control: { key: 'control', value: 'control-value' } },
       allocations: [
         {
           key: 'allocation',
+          name: 'Allocation for allocation',
           rules: [],
           splits: [
             {
@@ -122,12 +127,14 @@ describe('Evaluator', () => {
   it('should evaluate flag based on a targeting condition based on id', () => {
     const flag: Flag = {
       key: 'flag-key',
+      environment: 'Test',
       enabled: true,
       variationType: VariationType.STRING,
       variations: { control: { key: 'control', value: 'control' } },
       allocations: [
         {
           key: 'allocation',
+          name: 'Allocation for allocation',
           rules: [
             {
               conditions: [
@@ -161,12 +168,14 @@ describe('Evaluator', () => {
   it('should evaluate flag based on a targeting condition with overwritten id', () => {
     const flag: Flag = {
       key: 'flag-key',
+      environment: 'Test',
       enabled: true,
       variationType: VariationType.STRING,
       variations: { control: { key: 'control', value: 'control' } },
       allocations: [
         {
           key: 'allocation',
+          name: 'Allocation for allocation',
           rules: [
             {
               conditions: [
@@ -194,12 +203,14 @@ describe('Evaluator', () => {
   it('should catch all allocation and return variation A', () => {
     const flag: Flag = {
       key: 'flag',
+      environment: 'Test',
       enabled: true,
       variationType: VariationType.STRING,
       variations: { a: VARIATION_A, b: VARIATION_B },
       allocations: [
         {
           key: 'default',
+          name: 'Allocation for default',
           rules: [],
           splits: [
             {
@@ -224,12 +235,14 @@ describe('Evaluator', () => {
   it('should match first allocation rule and return variation B', () => {
     const flag: Flag = {
       key: 'flag',
+      environment: 'Test',
       enabled: true,
       variationType: VariationType.STRING,
       variations: { a: VARIATION_A, b: VARIATION_B },
       allocations: [
         {
           key: 'first',
+          name: 'Allocation for first',
           rules: [
             {
               conditions: [
@@ -248,6 +261,7 @@ describe('Evaluator', () => {
         },
         {
           key: 'default',
+          name: 'Allocation for default',
           rules: [],
           splits: [
             {
@@ -278,12 +292,14 @@ describe('Evaluator', () => {
   it('should not match first allocation rule and return variation A', () => {
     const flag: Flag = {
       key: 'flag',
+      environment: 'Test',
       enabled: true,
       variationType: VariationType.STRING,
       variations: { a: VARIATION_A, b: VARIATION_B },
       allocations: [
         {
           key: 'first',
+          name: 'Allocation for first',
           rules: [
             {
               conditions: [
@@ -302,6 +318,7 @@ describe('Evaluator', () => {
         },
         {
           key: 'default',
+          name: 'Allocation for default',
           rules: [],
           splits: [
             {
@@ -332,12 +349,14 @@ describe('Evaluator', () => {
   it('should not match first allocation rule and return variation A (obfuscated)', () => {
     const flag: Flag = {
       key: 'obfuscated_flag_key',
+      environment: 'Test',
       enabled: true,
       variationType: VariationType.STRING,
       variations: { a: VARIATION_A, b: VARIATION_B },
       allocations: [
         {
           key: 'first',
+          name: 'Allocation for first',
           rules: [
             {
               conditions: [
@@ -360,6 +379,7 @@ describe('Evaluator', () => {
         },
         {
           key: 'default',
+          name: 'Allocation for default',
           rules: [],
           splits: [
             {
@@ -390,12 +410,14 @@ describe('Evaluator', () => {
   it('should evaluate sharding and return correct variations', () => {
     const flag: Flag = {
       key: 'flag',
+      environment: 'Test',
       enabled: true,
       variationType: VariationType.STRING,
       variations: { a: VARIATION_A, b: VARIATION_B, c: VARIATION_C },
       allocations: [
         {
           key: 'first',
+          name: 'Allocation for first',
           splits: [
             {
               variationKey: 'a',
@@ -418,6 +440,7 @@ describe('Evaluator', () => {
         },
         {
           key: 'default',
+          name: 'Allocation for default',
           splits: [
             {
               variationKey: 'c',
@@ -462,12 +485,14 @@ describe('Evaluator', () => {
     const now = new Date();
     const flag: Flag = {
       key: 'flag',
+      environment: 'Test',
       enabled: true,
       variationType: VariationType.STRING,
       variations: { a: VARIATION_A },
       allocations: [
         {
           key: 'default',
+          name: 'Allocation for default',
           startAt: new Date(now.getFullYear() + 1, 0, 1).toISOString(),
           endAt: new Date(now.getFullYear() + 1, 1, 1).toISOString(),
           rules: [],
@@ -494,12 +519,14 @@ describe('Evaluator', () => {
     const now = new Date();
     const flag: Flag = {
       key: 'flag',
+      environment: 'Test',
       enabled: true,
       variationType: VariationType.STRING,
       variations: { a: VARIATION_A },
       allocations: [
         {
           key: 'default',
+          name: 'Allocation for default',
           startAt: new Date(now.getFullYear() - 1, 0, 1).toISOString(),
           endAt: new Date(now.getFullYear() + 1, 0, 1).toISOString(),
           rules: [],
@@ -526,12 +553,14 @@ describe('Evaluator', () => {
     const now = new Date();
     const flag: Flag = {
       key: 'flag',
+      environment: 'Test',
       enabled: true,
       variationType: VariationType.STRING,
       variations: { a: VARIATION_A },
       allocations: [
         {
           key: 'default',
+          name: 'Allocation for default',
           startAt: new Date(now.getFullYear() - 2, 0, 1).toISOString(),
           endAt: new Date(now.getFullYear() - 1, 0, 1).toISOString(),
           rules: [],

@@ -59,6 +59,7 @@ describe('EppoClient get*AssignmentDetails', () => {
     );
     const expected: IAssignmentDetails<number> = {
       value: 3,
+      environment: 'Test',
       variationKey: 'three',
       variationValue: 3,
       flagEvaluationCode: 'MATCH',
@@ -77,6 +78,7 @@ describe('EppoClient get*AssignmentDetails', () => {
       },
       matchedAllocation: {
         key: 'targeted allocation',
+        name: 'Allocation for targeted allocation',
         allocationEvaluationCode: AllocationEvaluationCode.MATCH,
         orderPosition: 0,
       },
@@ -84,6 +86,7 @@ describe('EppoClient get*AssignmentDetails', () => {
       unevaluatedAllocations: [
         {
           key: '50/50 split',
+          name: 'Allocation for 50/50 split',
           allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
           orderPosition: 1,
         },
@@ -92,7 +95,7 @@ describe('EppoClient get*AssignmentDetails', () => {
     expect(result).toMatchObject(expected);
   });
 
-  it.only('should set the details for a matched split', () => {
+  it('should set the details for a matched split', () => {
     const client = new EppoClient(storage);
     client.setIsGracefulFailureMode(false);
     const subjectAttributes = { email: 'alice@mycompany.com', country: 'Brazil' };
@@ -104,6 +107,7 @@ describe('EppoClient get*AssignmentDetails', () => {
     );
     const expected: IAssignmentDetails<number> = {
       value: 2,
+      environment: 'Test',
       variationKey: 'two',
       variationValue: 2,
       flagEvaluationCode: 'MATCH',
@@ -114,12 +118,14 @@ describe('EppoClient get*AssignmentDetails', () => {
       matchedRule: null,
       matchedAllocation: {
         key: '50/50 split',
+        name: 'Allocation for 50/50 split',
         allocationEvaluationCode: AllocationEvaluationCode.MATCH,
         orderPosition: 2,
       },
       unmatchedAllocations: [
         {
           key: 'targeted allocation',
+          name: 'Allocation for targeted allocation',
           allocationEvaluationCode: AllocationEvaluationCode.FAILING_RULE,
           orderPosition: 1,
         },
@@ -141,6 +147,7 @@ describe('EppoClient get*AssignmentDetails', () => {
     );
     const expected: IAssignmentDetails<string> = {
       value: 'control',
+      environment: 'Test',
       flagEvaluationCode: 'MATCH',
       flagEvaluationDescription:
         'Supplied attributes match rules defined in allocation "experiment" and alice belongs to the range of traffic assigned to "control".',
@@ -159,17 +166,20 @@ describe('EppoClient get*AssignmentDetails', () => {
       },
       matchedAllocation: {
         key: 'experiment',
+        name: 'Allocation for experiment',
         allocationEvaluationCode: AllocationEvaluationCode.MATCH,
         orderPosition: 2,
       },
       unmatchedAllocations: [
         {
           key: 'id rule',
+          name: 'Allocation for id rule',
           allocationEvaluationCode: AllocationEvaluationCode.FAILING_RULE,
           orderPosition: 0,
         },
         {
           key: 'internal users',
+          name: 'Allocation for internal users',
           allocationEvaluationCode: AllocationEvaluationCode.FAILING_RULE,
           orderPosition: 1,
         },
@@ -177,6 +187,7 @@ describe('EppoClient get*AssignmentDetails', () => {
       unevaluatedAllocations: [
         {
           key: 'rollout',
+          name: 'Allocation for rollout',
           allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
           orderPosition: 3,
         },
@@ -191,6 +202,7 @@ describe('EppoClient get*AssignmentDetails', () => {
     const result = client.getIntegerAssignmentDetails('asdf', 'alice', {}, 0);
     expect(result).toMatchObject({
       value: 0,
+      environment: 'Test',
       flagEvaluationCode: 'FLAG_UNRECOGNIZED_OR_DISABLED',
       flagEvaluationDescription: 'Unrecognized or disabled flag: asdf',
       variationKey: null,
