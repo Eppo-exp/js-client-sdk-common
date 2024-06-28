@@ -26,7 +26,7 @@ export interface AllocationEvaluation {
   orderPosition: number;
 }
 
-export interface FlagEvaluationDetails {
+export interface IFlagEvaluationDetails {
   variationKey: string | null;
   variationValue: Variation['value'] | null;
   flagEvaluationCode: FlagEvaluationCode;
@@ -40,12 +40,12 @@ export interface FlagEvaluationDetails {
 }
 
 export class FlagEvaluationDetailsBuilder {
-  private variationKey: FlagEvaluationDetails['variationKey'];
-  private variationValue: FlagEvaluationDetails['variationValue'];
-  private matchedRule: FlagEvaluationDetails['matchedRule'];
-  private matchedAllocation: FlagEvaluationDetails['matchedAllocation'];
-  private unmatchedAllocations: FlagEvaluationDetails['unmatchedAllocations'];
-  private unevaluatedAllocations: FlagEvaluationDetails['unevaluatedAllocations'];
+  private variationKey: IFlagEvaluationDetails['variationKey'];
+  private variationValue: IFlagEvaluationDetails['variationValue'];
+  private matchedRule: IFlagEvaluationDetails['matchedRule'];
+  private matchedAllocation: IFlagEvaluationDetails['matchedAllocation'];
+  private unmatchedAllocations: IFlagEvaluationDetails['unmatchedAllocations'];
+  private unevaluatedAllocations: IFlagEvaluationDetails['unevaluatedAllocations'];
 
   constructor(
     private readonly allocations: Allocation[],
@@ -122,12 +122,12 @@ export class FlagEvaluationDetailsBuilder {
   buildForNoneResult = (
     flagEvaluationCode: FlagEvaluationCode,
     flagEvaluationDescription: string,
-  ): FlagEvaluationDetails => this.setNone().build(flagEvaluationCode, flagEvaluationDescription);
+  ): IFlagEvaluationDetails => this.setNone().build(flagEvaluationCode, flagEvaluationDescription);
 
   build = (
     flagEvaluationCode: FlagEvaluationCode,
     flagEvaluationDescription: string,
-  ): FlagEvaluationDetails => ({
+  ): IFlagEvaluationDetails => ({
     flagEvaluationCode,
     flagEvaluationDescription,
     variationKey: this.variationKey,

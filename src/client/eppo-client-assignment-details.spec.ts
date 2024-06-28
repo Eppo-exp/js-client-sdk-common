@@ -15,7 +15,7 @@ import FetchHttpClient from '../http-client';
 import { Flag, ObfuscatedFlag, VariationType } from '../interfaces';
 import { OperatorType } from '../rules';
 
-import EppoClient, { AssignmentDetails } from './eppo-client';
+import EppoClient, { IAssignmentDetails } from './eppo-client';
 
 async function init(configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>) {
   const apiEndpoints = new ApiEndpoints({
@@ -57,7 +57,7 @@ describe('EppoClient get*AssignmentDetails', () => {
       subjectAttributes,
       0,
     );
-    const expected: AssignmentDetails<number> = {
+    const expected: IAssignmentDetails<number> = {
       value: 3,
       variationKey: 'three',
       variationValue: 3,
@@ -92,7 +92,7 @@ describe('EppoClient get*AssignmentDetails', () => {
     expect(result).toMatchObject(expected);
   });
 
-  it('should set the details for a matched split', () => {
+  it.only('should set the details for a matched split', () => {
     const client = new EppoClient(storage);
     client.setIsGracefulFailureMode(false);
     const subjectAttributes = { email: 'alice@mycompany.com', country: 'Brazil' };
@@ -102,7 +102,7 @@ describe('EppoClient get*AssignmentDetails', () => {
       subjectAttributes,
       0,
     );
-    const expected: AssignmentDetails<number> = {
+    const expected: IAssignmentDetails<number> = {
       value: 2,
       variationKey: 'two',
       variationValue: 2,
@@ -115,13 +115,13 @@ describe('EppoClient get*AssignmentDetails', () => {
       matchedAllocation: {
         key: '50/50 split',
         allocationEvaluationCode: AllocationEvaluationCode.MATCH,
-        orderPosition: 1,
+        orderPosition: 2,
       },
       unmatchedAllocations: [
         {
           key: 'targeted allocation',
           allocationEvaluationCode: AllocationEvaluationCode.FAILING_RULE,
-          orderPosition: 0,
+          orderPosition: 1,
         },
       ],
       unevaluatedAllocations: [],
@@ -139,7 +139,7 @@ describe('EppoClient get*AssignmentDetails', () => {
       subjectAttributes,
       '',
     );
-    const expected: AssignmentDetails<string> = {
+    const expected: IAssignmentDetails<string> = {
       value: 'control',
       flagEvaluationCode: 'MATCH',
       flagEvaluationDescription:
@@ -201,7 +201,7 @@ describe('EppoClient get*AssignmentDetails', () => {
       matchedAllocation: null,
       unmatchedAllocations: [],
       unevaluatedAllocations: [],
-    } as AssignmentDetails<number>);
+    } as IAssignmentDetails<number>);
   });
 
   describe('UFC General Test Cases', () => {

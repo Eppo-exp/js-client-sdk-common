@@ -6,11 +6,9 @@ import {
   MOCK_UFC_RESPONSE_FILE,
   OBFUSCATED_MOCK_UFC_RESPONSE_FILE,
   SubjectTestCase,
-  getTestAssignmentDetails,
   getTestAssignments,
   readAssignmentTestData,
   readMockUFCResponse,
-  validateTestAssignmentDetails,
   validateTestAssignments,
 } from '../../test/testHelpers';
 import ApiEndpoints from '../api-endpoints';
@@ -19,16 +17,10 @@ import { IConfigurationStore } from '../configuration-store/configuration-store'
 import { MemoryOnlyConfigurationStore } from '../configuration-store/memory.store';
 import { MAX_EVENT_QUEUE_SIZE, POLL_INTERVAL_MS, POLL_JITTER_PCT } from '../constants';
 import FlagConfigurationRequestor from '../flag-configuration-requestor';
-import { AllocationEvaluationCode } from '../flag-evaluation-details-builder';
 import FetchHttpClient from '../http-client';
 import { Flag, ObfuscatedFlag, VariationType } from '../interfaces';
-import { OperatorType } from '../rules';
 
-import EppoClient, {
-  AssignmentDetails,
-  FlagConfigurationRequestParameters,
-  checkTypeMatch,
-} from './eppo-client';
+import EppoClient, { FlagConfigurationRequestParameters, checkTypeMatch } from './eppo-client';
 
 export async function init(configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>) {
   const apiEndpoints = new ApiEndpoints({
