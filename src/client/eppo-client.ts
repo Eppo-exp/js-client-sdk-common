@@ -19,7 +19,7 @@ import { EppoValue } from '../eppo_value';
 import { Evaluator, FlagEvaluation, noneResult } from '../evaluator';
 import FlagConfigurationRequestor from '../flag-configuration-requestor';
 import {
-  FlagEvaluationDetails,
+  IFlagEvaluationDetails,
   FlagEvaluationDetailsBuilder,
 } from '../flag-evaluation-details-builder';
 import FetchHttpClient from '../http-client';
@@ -31,7 +31,7 @@ import { validateNotBlank } from '../validation';
 import { LIB_VERSION } from '../version';
 
 export interface IAssignmentDetails<T extends Variation['value'] | object>
-  extends FlagEvaluationDetails {
+  extends IFlagEvaluationDetails {
   value: T;
 }
 
@@ -400,7 +400,7 @@ export default class EppoClient {
     subjectAttributes: Record<string, AttributeType>,
     defaultValue: EppoValue,
     expectedVariationType: VariationType,
-  ): { eppoValue: EppoValue; flagEvaluationDetails: FlagEvaluationDetails } {
+  ): { eppoValue: EppoValue; flagEvaluationDetails: IFlagEvaluationDetails } {
     try {
       const result = this.getAssignmentDetail(
         flagKey,
@@ -622,6 +622,7 @@ export default class EppoClient {
         sdkLanguage: 'javascript',
         sdkLibVersion: LIB_VERSION,
       },
+      details: result.flagEvaluationDetails,
     };
 
     if (variation && allocationKey) {

@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 
-import { AssignmentDetails } from '../src/client/eppo-client';
+import { IAssignmentDetails } from '../src/client/eppo-client';
 import { Flag, VariationType } from '../src/interfaces';
 import { AttributeType } from '../src/types';
 
@@ -13,7 +13,7 @@ export interface SubjectTestCase {
   subjectKey: string;
   subjectAttributes: Record<string, AttributeType>;
   assignment: string | number | boolean | object;
-  assignmentDetails: AssignmentDetails<string | number | boolean | object>;
+  assignmentDetails: IAssignmentDetails<string | number | boolean | object>;
 }
 
 export interface IAssignmentTestCase {
@@ -70,7 +70,7 @@ export function getTestAssignmentDetails(
   ) => never,
 ): {
   subject: SubjectTestCase;
-  assignmentDetails: AssignmentDetails<string | boolean | number | object>;
+  assignmentDetails: IAssignmentDetails<string | boolean | number | object>;
 }[] {
   return testCase.subjects.map((subject) => ({
     subject,
@@ -108,7 +108,7 @@ export function validateTestAssignments(
 export function validateTestAssignmentDetails(
   assignments: {
     subject: SubjectTestCase;
-    assignmentDetails: AssignmentDetails<string | boolean | number | object>;
+    assignmentDetails: IAssignmentDetails<string | boolean | number | object>;
   }[],
   flag: string,
 ) {
