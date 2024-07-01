@@ -247,5 +247,56 @@ describe('EppoClient Bandits E2E test', () => {
         ).toThrow();
       });
     });
+
+    describe('Flexible arguments for attributes', () => {
+      it('Can take non-contextual subject attributes', async () => {
+        // mirror test case in test-case-banner-bandit.dynamic-typing.json
+        const actions: Record<string, ContextAttributes> = {
+          nike: {
+            numericAttributes: { brand_affinity: -5 },
+            categoricalAttributes: { loyalty_tier: 'silver' },
+          },
+          adidas: {
+            numericAttributes: { brand_affinity: 1.0 },
+            categoricalAttributes: { loyalty_tier: 'bronze' },
+          },
+          reebok: {
+            numericAttributes: { brand_affinity: 20 },
+            categoricalAttributes: { loyalty_tier: 'gold' },
+          },
+        };
+
+        const subjectAttributesWithAreaCode: Attributes = {
+          age: 25,
+          mistake: 'oops',
+          country: 'USA',
+          gender_identity: 'female',
+          area_code: '303', // categorical area code
+        };
+
+        let banditAssignment = client.getBanditAction(
+          flagKey,
+          'henry',
+          subjectAttributesWithAreaCode,
+          actions,
+          'default',
+        );
+        expect(banditAssignment.action).toBe('adidas');
+        expect(banditAssignment.variation).toBe('banner_bandit');
+
+        // changing area code to a number should result in a different evaluation
+        subjectAttributesWithAreaCode.area_code = 303;
+
+        banditAssignment = client.getBanditAction(
+          flagKey,
+          'henry',
+          subjectAttributesWithAreaCode,
+          actions,
+          'default',
+        );
+        expect(banditAssignment.action).toBe('reebok');
+        expect(banditAssignment.variation).toBe('banner_bandit');
+      });
+    });
   });
 });
