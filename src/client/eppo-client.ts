@@ -506,7 +506,7 @@ export default class EppoClient implements IEppoClient {
   }
 
   public getConfiguration(): IUniversalFlagConfig {
-    const flags = this.configurationStore.getAll();
+    const flags = this.configurationStore.entries();
     const ufc: IUniversalFlagConfig = {
       flags,
     };

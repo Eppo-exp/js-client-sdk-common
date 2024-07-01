@@ -9,14 +9,14 @@ describe('HybridConfigurationStore', () => {
   beforeEach(() => {
     syncStoreMock = {
       get: jest.fn(),
-      getAll: jest.fn(),
+      entries: jest.fn(),
       getKeys: jest.fn(),
       isInitialized: jest.fn(),
       setEntries: jest.fn(),
     };
 
     asyncStoreMock = {
-      getEntries: jest.fn(),
+      entries: jest.fn(),
       isInitialized: jest.fn(),
       isExpired: jest.fn(),
       setEntries: jest.fn(),
@@ -29,7 +29,7 @@ describe('HybridConfigurationStore', () => {
     it('should initialize the serving store with entries from the persistent store if the persistent store is initialized', async () => {
       const entries = { key1: 'value1', key2: 'value2' };
       (asyncStoreMock.isInitialized as jest.Mock).mockReturnValue(true);
-      (asyncStoreMock.getEntries as jest.Mock).mockResolvedValue(entries);
+      (asyncStoreMock.entries as jest.Mock).mockResolvedValue(entries);
 
       await store.init();
 
@@ -68,11 +68,11 @@ describe('HybridConfigurationStore', () => {
     });
   });
 
-  describe('getAll', () => {
+  describe('entries', () => {
     it('should return all entries from the serving store', () => {
       const entries = { key1: 'value1', key2: 'value2' };
-      (syncStoreMock.getAll as jest.Mock).mockReturnValue(entries);
-      expect(store.getAll()).toEqual(entries);
+      (syncStoreMock.entries as jest.Mock).mockReturnValue(entries);
+      expect(store.entries()).toEqual(entries);
     });
   });
 

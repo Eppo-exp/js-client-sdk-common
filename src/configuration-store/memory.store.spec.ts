@@ -39,7 +39,7 @@ describe('MemoryOnlyConfigurationStore', () => {
   it('should return all entries', async () => {
     const entries = { key1: 'value1', key2: 'value2', key3: 'value3' };
     await memoryStore.setEntries(entries);
-    expect(memoryStore.getAll()).toEqual(entries);
+    expect(memoryStore.entries()).toEqual(entries);
   });
 
   it('should overwrite existing entries', async () => {
