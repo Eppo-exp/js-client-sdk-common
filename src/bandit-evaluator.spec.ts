@@ -4,7 +4,7 @@ import {
   BanditModelData,
   BanditNumericAttributeCoefficients,
 } from './interfaces';
-import { Attributes } from './types';
+import { Attributes, ContextAttributes } from './types';
 
 describe('BanditEvaluator', () => {
   const banditEvaluator = new BanditEvaluator();
@@ -20,8 +20,8 @@ describe('BanditEvaluator', () => {
       attributes: Attributes,
     ) => number;
     scoreActions: (
-      subjectAttributes: Attributes,
-      actions: Record<string, Attributes>,
+      subjectAttributes: ContextAttributes,
+      actions: Record<string, ContextAttributes>,
       banditModel: Pick<BanditModelData, 'coefficients' | 'defaultActionScore'>,
     ) => Record<string, number>;
     weighActions: (
@@ -207,11 +207,14 @@ describe('BanditEvaluator', () => {
     };
 
     it('scores each action', () => {
-      const subjectAttributes: Attributes = { age: 30, location: 'US' };
-      const actions: Record<string, Attributes> = {
-        action1: { price: 25, category: 'A' },
-        action2: { price: 50, category: 'B' },
-        action99: { price: 100, category: 'C' },
+      const subjectAttributes: ContextAttributes = {
+        numericAttributes: { age: 30 },
+        categoricalAttributes: { location: 'US' },
+      };
+      const actions: Record<string, ContextAttributes> = {
+        action1: { numericAttributes: { price: 25 }, categoricalAttributes: { category: 'A' } },
+        action2: { numericAttributes: { price: 50 }, categoricalAttributes: { category: 'B' } },
+        action99: { numericAttributes: { price: 100 }, categoricalAttributes: { category: 'C' } },
       };
       const actionScores = exposedEvaluator.scoreActions(subjectAttributes, actions, modelData);
       expect(Object.keys(actionScores)).toHaveLength(3);
@@ -317,10 +320,13 @@ describe('BanditEvaluator', () => {
   describe('evaluateBandit', () => {
     it('evaluates the bandit with action contexts', () => {
       const flagKey = 'test_flag';
-      const subjectAttributes = { age: 25, location: 'US' };
-      const actions: Record<string, Attributes> = {
-        action1: { price: 10, category: 'A' },
-        action2: { price: 20, category: 'B' },
+      const subjectAttributes: ContextAttributes = {
+        numericAttributes: { age: 25 },
+        categoricalAttributes: { location: 'US' },
+      };
+      const actions: Record<string, ContextAttributes> = {
+        action1: { numericAttributes: { price: 10 }, categoricalAttributes: { category: 'A' } },
+        action2: { numericAttributes: { price: 20 }, categoricalAttributes: { category: 'B' } },
       };
       const banditModel: BanditModelData = {
         gamma: 0.1,

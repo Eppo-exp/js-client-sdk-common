@@ -2,7 +2,7 @@ import {
   readMockUFCResponse,
   MOCK_BANDIT_MODELS_RESPONSE_FILE,
   MOCK_FLAGS_WITH_BANDITS_RESPONSE_FILE,
-  readTestData,
+  testCasesByFileName,
   BanditTestCase,
   BANDIT_TEST_DATA_DIR,
 } from '../../test/testHelpers';
@@ -14,7 +14,7 @@ import ConfigurationRequestor from '../configuration-requestor';
 import { MemoryOnlyConfigurationStore } from '../configuration-store/memory.store';
 import FetchHttpClient from '../http-client';
 import { BanditVariation, BanditParameters, Flag } from '../interfaces';
-import { Attributes } from '../types';
+import { Attributes, ContextAttributes } from '../types';
 
 import EppoClient from './eppo-client';
 
@@ -73,69 +73,46 @@ describe('EppoClient Bandits E2E test', () => {
   });
 
   describe('Shared test cases', () => {
-    const testData = readTestData<BanditTestCase>(BANDIT_TEST_DATA_DIR);
-    // Build a map for more useful test names
-    const testsByFlagKey: Record<string, BanditTestCase> = {};
-    testData.forEach((testCase) => (testsByFlagKey[testCase.flag] = testCase));
+    const testCases = testCasesByFileName<BanditTestCase>(BANDIT_TEST_DATA_DIR);
 
-    it.each(Object.keys(testsByFlagKey))(
-      'Shared bandit test case - %s',
-      async (flagKey: string) => {
-        const { defaultValue, subjects } = testsByFlagKey[flagKey];
-        let numAssignmentsChecked = 0;
-        subjects.forEach((subject) => {
-          const actions: Record<string, Attributes> = {};
-          subject.actions.forEach((action) => {
-            actions[action.actionKey] = {
-              ...action.numericAttributes,
-              ...action.categoricalAttributes,
-            };
-          });
-
-          // TODO: handle already-bucketed attributes
-          const subjectAttributes: Attributes = {};
-          Object.entries(subject.subjectAttributes.numericAttributes).forEach(
-            ([attribute, value]) => {
-              if (typeof attribute === 'number') {
-                subjectAttributes[attribute] = value;
-              }
-            },
-          );
-          Object.entries(subject.subjectAttributes.categoricalAttributes).forEach(
-            ([attribute, value]) => {
-              if (value) {
-                subjectAttributes[attribute] = value.toString();
-              }
-            },
-          );
-
-          const banditAssignment = client.getBanditAction(
-            flagKey,
-            subject.subjectKey,
-            subjectAttributes,
-            actions,
-            defaultValue,
-          );
-
-          // Do this check in addition to assertions to provide helpful information on exactly which
-          // evaluation failed to produce an expected result
-          if (
-            banditAssignment.variation !== subject.assignment.variation ||
-            banditAssignment.action !== subject.assignment.action
-          ) {
-            console.error(
-              `Unexpected result for flag ${flagKey} and subject ${subject.subjectKey}`,
-            );
-          }
-
-          expect(banditAssignment.variation).toBe(subject.assignment.variation);
-          expect(banditAssignment.action).toBe(subject.assignment.action);
-          numAssignmentsChecked += 1;
+    it.each(Object.keys(testCases))('Shared bandit test case - %s', async (fileName: string) => {
+      const { flag: flagKey, defaultValue, subjects } = testCases[fileName];
+      let numAssignmentsChecked = 0;
+      subjects.forEach((subject) => {
+        // test files have actions as an array, so we convert them to a map as expected by the client
+        const actions: Record<string, ContextAttributes> = {};
+        subject.actions.forEach((action) => {
+          actions[action.actionKey] = {
+            numericAttributes: action.numericAttributes,
+            categoricalAttributes: action.categoricalAttributes,
+          };
         });
-        // Ensure that this test case correctly checked some test assignments
-        expect(numAssignmentsChecked).toBeGreaterThan(0);
-      },
-    );
+
+        // get the bandit assignment for the test case
+        const banditAssignment = client.getBanditAction(
+          flagKey,
+          subject.subjectKey,
+          subject.subjectAttributes,
+          actions,
+          defaultValue,
+        );
+
+        // Do this check in addition to assertions to provide helpful information on exactly which
+        // evaluation failed to produce an expected result
+        if (
+          banditAssignment.variation !== subject.assignment.variation ||
+          banditAssignment.action !== subject.assignment.action
+        ) {
+          console.error(`Unexpected result for flag ${flagKey} and subject ${subject.subjectKey}`);
+        }
+
+        expect(banditAssignment.variation).toBe(subject.assignment.variation);
+        expect(banditAssignment.action).toBe(subject.assignment.action);
+        numAssignmentsChecked += 1;
+      });
+      // Ensure that this test case correctly checked some test assignments
+      expect(numAssignmentsChecked).toBeGreaterThan(0);
+    });
   });
 
   describe('Client-specific tests', () => {
@@ -268,6 +245,122 @@ describe('EppoClient Bandits E2E test', () => {
         expect(() =>
           client.getBanditAction(flagKey, subjectKey, subjectAttributes, actions, 'control'),
         ).toThrow();
+      });
+    });
+
+    describe('Flexible arguments for attributes', () => {
+      // Note these mirror the test cases in test-case-banner-bandit.dynamic-typing.json
+      it('Can take non-contextual subject attributes', async () => {
+        // mirror test case in test-case-banner-bandit.dynamic-typing.json
+        const actions: Record<string, ContextAttributes> = {
+          nike: {
+            numericAttributes: { brand_affinity: -5 },
+            categoricalAttributes: { loyalty_tier: 'silver' },
+          },
+          adidas: {
+            numericAttributes: { brand_affinity: 1.0 },
+            categoricalAttributes: { loyalty_tier: 'bronze' },
+          },
+          reebok: {
+            numericAttributes: { brand_affinity: 20 },
+            categoricalAttributes: { loyalty_tier: 'gold' },
+          },
+        };
+
+        const subjectAttributesWithAreaCode: Attributes = {
+          age: 25,
+          mistake: 'oops',
+          country: 'USA',
+          gender_identity: 'female',
+          area_code: '303', // categorical area code
+        };
+
+        let banditAssignment = client.getBanditAction(
+          flagKey,
+          'henry',
+          subjectAttributesWithAreaCode,
+          actions,
+          'default',
+        );
+        expect(banditAssignment.action).toBe('adidas');
+        expect(banditAssignment.variation).toBe('banner_bandit');
+
+        // changing area code to a number should result in a different evaluation
+        subjectAttributesWithAreaCode.area_code = 303;
+
+        banditAssignment = client.getBanditAction(
+          flagKey,
+          'henry',
+          subjectAttributesWithAreaCode,
+          actions,
+          'default',
+        );
+        expect(banditAssignment.action).toBe('reebok');
+        expect(banditAssignment.variation).toBe('banner_bandit');
+      });
+
+      it('Can take non-contextual action attributes', async () => {
+        const actionsWithNonContextualAttributes: Record<string, Attributes> = {
+          nike: { brand_affinity: -15, loyalty_tier: 'silver', zip: '81427' },
+          adidas: { brand_affinity: 0.0, loyalty_tier: 'bronze' },
+          reebok: { brand_affinity: 15, loyalty_tier: 'gold' },
+        };
+
+        let banditAssignment = client.getBanditAction(
+          flagKey,
+          'imogene',
+          subjectAttributes,
+          actionsWithNonContextualAttributes,
+          'default',
+        );
+        expect(banditAssignment.action).toBe('nike');
+        expect(banditAssignment.variation).toBe('banner_bandit');
+
+        // changing zip code to a number should result in a different evaluation
+        actionsWithNonContextualAttributes.nike.zip = 81427;
+
+        banditAssignment = client.getBanditAction(
+          flagKey,
+          'imogene',
+          subjectAttributes,
+          actionsWithNonContextualAttributes,
+          'default',
+        );
+        expect(banditAssignment.action).toBe('adidas');
+        expect(banditAssignment.variation).toBe('banner_bandit');
+      });
+
+      it('Can take actions without any context', async () => {
+        const actionNamesOnly = ['nike', 'adidas', 'reebok'];
+
+        let banditAssignment = client.getBanditAction(
+          flagKey,
+          'imogene',
+          subjectAttributes,
+          actionNamesOnly,
+          'default',
+        );
+        expect(banditAssignment.action).toBe('nike');
+        expect(banditAssignment.variation).toBe('banner_bandit');
+
+        expect(mockLogBanditAction).toHaveBeenCalledTimes(1);
+        expect(mockLogBanditAction.mock.calls[0][0].actionProbability).toBeCloseTo(0.256);
+
+        // Duplicates should be ignored and not change anything
+        actionNamesOnly.push('nike');
+
+        banditAssignment = client.getBanditAction(
+          flagKey,
+          'imogene',
+          subjectAttributes,
+          actionNamesOnly,
+          'default',
+        );
+        expect(banditAssignment.action).toBe('nike');
+        expect(banditAssignment.variation).toBe('banner_bandit');
+
+        expect(mockLogBanditAction).toHaveBeenCalledTimes(2);
+        expect(mockLogBanditAction.mock.calls[1][0].actionProbability).toBeCloseTo(0.256);
       });
     });
   });

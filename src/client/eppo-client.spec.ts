@@ -9,7 +9,7 @@ import {
   getTestAssignments,
   readMockUFCResponse,
   validateTestAssignments,
-  readTestData,
+  testCasesByFileName,
   ASSIGNMENT_TEST_DATA_DIR,
 } from '../../test/testHelpers';
 import ApiEndpoints from '../api-endpoints';
@@ -198,26 +198,28 @@ describe('EppoClient E2E test', () => {
     });
   });
 
-  describe('UFC General Test Cases', () => {
-    beforeAll(async () => {
-      global.fetch = jest.fn(() => {
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve(readMockUFCResponse(MOCK_UFC_RESPONSE_FILE)),
-        });
-      }) as jest.Mock;
+  describe('UFC Shared Test Cases', () => {
+    const testCases = testCasesByFileName<IAssignmentTestCase>(ASSIGNMENT_TEST_DATA_DIR);
 
-      await init(storage);
-    });
+    describe('Not obfuscated', () => {
+      beforeAll(async () => {
+        global.fetch = jest.fn(() => {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve(readMockUFCResponse(MOCK_UFC_RESPONSE_FILE)),
+          });
+        }) as jest.Mock;
 
-    afterAll(() => {
-      jest.restoreAllMocks();
-    });
+        await init(storage);
+      });
 
-    it.each(readTestData<IAssignmentTestCase>(ASSIGNMENT_TEST_DATA_DIR))(
-      'test variation assignment splits',
-      async ({ flag, variationType, defaultValue, subjects }: IAssignmentTestCase) => {
+      afterAll(() => {
+        jest.restoreAllMocks();
+      });
+
+      it.each(Object.keys(testCases))('test variation assignment splits - %s', async (fileName) => {
+        const { flag, variationType, defaultValue, subjects } = testCases[fileName];
         const client = new EppoClient(storage);
         client.setIsGracefulFailureMode(false);
 
@@ -245,30 +247,28 @@ describe('EppoClient E2E test', () => {
         );
 
         validateTestAssignments(assignments, flag);
-      },
-    );
-  });
-
-  describe('UFC Obfuscated Test Cases', () => {
-    beforeAll(async () => {
-      global.fetch = jest.fn(() => {
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve(readMockUFCResponse(OBFUSCATED_MOCK_UFC_RESPONSE_FILE)),
-        });
-      }) as jest.Mock;
-
-      await init(storage);
+      });
     });
 
-    afterAll(() => {
-      jest.restoreAllMocks();
-    });
+    describe('Obfuscated', () => {
+      beforeAll(async () => {
+        global.fetch = jest.fn(() => {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve(readMockUFCResponse(OBFUSCATED_MOCK_UFC_RESPONSE_FILE)),
+          });
+        }) as jest.Mock;
 
-    it.each(readTestData<IAssignmentTestCase>(ASSIGNMENT_TEST_DATA_DIR))(
-      'test variation assignment splits',
-      async ({ flag, variationType, defaultValue, subjects }: IAssignmentTestCase) => {
+        await init(storage);
+      });
+
+      afterAll(() => {
+        jest.restoreAllMocks();
+      });
+
+      it.each(Object.keys(testCases))('test variation assignment splits - %s', async (fileName) => {
+        const { flag, variationType, defaultValue, subjects } = testCases[fileName];
         const client = new EppoClient(storage, undefined, undefined, undefined, true);
         client.setIsGracefulFailureMode(false);
 
@@ -291,8 +291,8 @@ describe('EppoClient E2E test', () => {
         );
 
         validateTestAssignments(assignments, flag);
-      },
-    );
+      });
+    });
   });
 
   it('returns null if getStringAssignment was called for the subject before any UFC was loaded', () => {
