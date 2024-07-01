@@ -249,6 +249,7 @@ describe('EppoClient Bandits E2E test', () => {
     });
 
     describe('Flexible arguments for attributes', () => {
+      // Note these mirror the test cases in test-case-banner-bandit.dynamic-typing.json
       it('Can take non-contextual subject attributes', async () => {
         // mirror test case in test-case-banner-bandit.dynamic-typing.json
         const actions: Record<string, ContextAttributes> = {
@@ -298,5 +299,40 @@ describe('EppoClient Bandits E2E test', () => {
         expect(banditAssignment.variation).toBe('banner_bandit');
       });
     });
+
+    it('Can take non-contextual action attributes', async () => {
+      const actionsWithNonContextualAttributes: Record<string, Attributes> = {
+        nike: { brand_affinity: -1.7, loyalty_tier: 'silver', zip: '81427' },
+        adidas: { brand_affinity: 0.0, loyalty_tier: 'bronze' },
+        reebok: { brand_affinity: 15, loyalty_tier: 'gold' }, // TODO: tweak
+      };
+
+      let banditAssignment = client.getBanditAction(
+        flagKey,
+        'imogene',
+        subjectAttributes,
+        actionsWithNonContextualAttributes,
+        'default',
+      );
+      expect(banditAssignment.action).toBe('nike');
+      expect(banditAssignment.variation).toBe('banner_bandit');
+
+      // changing zip code to a number should result in a different evaluation
+      actionsWithNonContextualAttributes.nike.zip = 81427;
+
+      banditAssignment = client.getBanditAction(
+        flagKey,
+        'imogene',
+        subjectAttributes,
+        actionsWithNonContextualAttributes,
+        'default',
+      );
+      expect(banditAssignment.action).toBe('nike');
+      expect(banditAssignment.variation).toBe('banner_bandit');
+    });
+  });
+
+  it('Can take actions without any context', async () => {
+    // TODO
   });
 });
