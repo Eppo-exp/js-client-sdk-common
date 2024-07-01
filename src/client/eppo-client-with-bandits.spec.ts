@@ -79,7 +79,7 @@ describe('EppoClient Bandits E2E test', () => {
       const { flag: flagKey, defaultValue, subjects } = testCases[fileName];
       let numAssignmentsChecked = 0;
       subjects.forEach((subject) => {
-        // test files have actions as an array, convert to map
+        // test files have actions as an array, so we convert them to a map as expected by the client
         const actions: Record<string, ContextAttributes> = {};
         subject.actions.forEach((action) => {
           actions[action.actionKey] = {
