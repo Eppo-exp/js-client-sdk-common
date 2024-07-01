@@ -5,10 +5,9 @@ import {
   AssignmentCache,
   LRUInMemoryAssignmentCache,
   NonExpiringInMemoryAssignmentCache,
-} from '../cache/assignment-cache';
+} from '../cache/abstract-assignment-cache';
 import { IConfigurationStore } from '../configuration-store/configuration-store';
 import {
-  BASE_URL as DEFAULT_BASE_URL,
   DEFAULT_INITIAL_CONFIG_REQUEST_RETRIES,
   DEFAULT_POLL_CONFIG_REQUEST_RETRIES,
   DEFAULT_REQUEST_TIMEOUT_MS as DEFAULT_REQUEST_TIMEOUT_MS,
@@ -174,7 +173,7 @@ export default class EppoClient implements IEppoClient {
   constructor(
     private configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>,
     private configurationRequestParameters?: FlagConfigurationRequestParameters,
-    private readonly isObfuscated = false,
+    private isObfuscated = false,
   ) {}
 
   public setConfigurationRequestParameters(
@@ -185,6 +184,10 @@ export default class EppoClient implements IEppoClient {
 
   public setConfigurationStore(configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>) {
     this.configurationStore = configurationStore;
+  }
+
+  public setIsObfuscated(isObfuscated: boolean) {
+    this.isObfuscated = isObfuscated;
   }
 
   public async fetchFlagConfigurations() {
@@ -210,7 +213,7 @@ export default class EppoClient implements IEppoClient {
       apiKey,
       sdkName,
       sdkVersion,
-      baseUrl = DEFAULT_BASE_URL,
+      baseUrl, // Default is set in ApiEndpoints constructor if undefined
       requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
       numInitialRequestRetries = DEFAULT_INITIAL_CONFIG_REQUEST_RETRIES,
       numPollRequestRetries = DEFAULT_POLL_CONFIG_REQUEST_RETRIES,
@@ -220,7 +223,10 @@ export default class EppoClient implements IEppoClient {
       skipInitialPoll = false,
     } = this.configurationRequestParameters;
     // todo: Inject the chain of dependencies below
-    const apiEndpoints = new ApiEndpoints(baseUrl, { apiKey, sdkName, sdkVersion });
+    const apiEndpoints = new ApiEndpoints({
+      baseUrl,
+      queryParams: { apiKey, sdkName, sdkVersion },
+    });
     const httpClient = new FetchHttpClient(apiEndpoints, requestTimeoutMs);
     const configurationRequestor = new FlagConfigurationRequestor(
       this.configurationStore,
@@ -550,17 +556,17 @@ export default class EppoClient implements IEppoClient {
     }
 
     // assignment logger may be null while waiting for initialization
-    if (this.assignmentLogger == null) {
+    if (!this.assignmentLogger) {
       this.queuedEvents.length < MAX_EVENT_QUEUE_SIZE && this.queuedEvents.push(event);
       return;
     }
     try {
       this.assignmentLogger.logAssignment(event);
       this.assignmentCache?.set({
-        flagKey: flagKey,
-        subjectKey: result.subjectKey,
-        allocationKey: result.allocationKey ?? '__eppo_no_allocation',
-        variationKey: result.variation?.key ?? '__eppo_no_variation',
+        flagKey,
+        subjectKey,
+        allocationKey: allocationKey ?? '__eppo_no_allocation',
+        variationKey: variation?.key ?? '__eppo_no_variation',
       });
     } catch (error) {
       logger.error(`[Eppo SDK] Error logging assignment event: ${error.message}`);

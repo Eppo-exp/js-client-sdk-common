@@ -1,3 +1,4 @@
+import ApiEndpoints from './api-endpoints';
 import { logger } from './application-logger';
 import { IAssignmentHooks } from './assignment-hooks';
 import { IAssignmentLogger, IAssignmentEvent } from './assignment-logger';
@@ -7,7 +8,12 @@ import {
   NonExpiringInMemoryAssignmentCache,
   LRUInMemoryAssignmentCache,
   AsyncMap,
-} from './cache/assignment-cache';
+  AssignmentCacheKey,
+  AssignmentCacheValue,
+  AssignmentCacheEntry,
+  assignmentCacheKeyToString,
+  assignmentCacheValueToString,
+} from './cache/abstract-assignment-cache';
 import EppoClient, { FlagConfigurationRequestParameters, IEppoClient } from './client/eppo-client';
 import {
   IConfigurationStore,
@@ -19,7 +25,7 @@ import { MemoryStore, MemoryOnlyConfigurationStore } from './configuration-store
 import * as constants from './constants';
 import FlagConfigRequestor from './flag-configuration-requestor';
 import HttpClient from './http-client';
-import { Flag, VariationType } from './interfaces';
+import { Flag, ObfuscatedFlag, VariationType } from './interfaces';
 import { AttributeType, SubjectAttributes } from './types';
 import * as validation from './validation';
 
@@ -32,6 +38,7 @@ export {
   EppoClient,
   IEppoClient,
   constants,
+  ApiEndpoints,
   FlagConfigRequestor,
   HttpClient,
   validation,
@@ -45,14 +52,20 @@ export {
   MemoryOnlyConfigurationStore,
 
   // Assignment cache
+  AssignmentCacheKey,
+  AssignmentCacheValue,
+  AssignmentCacheEntry,
   AssignmentCache,
   AsyncMap,
   NonExpiringInMemoryAssignmentCache,
   LRUInMemoryAssignmentCache,
+  assignmentCacheKeyToString,
+  assignmentCacheValueToString,
 
   // Interfaces
   FlagConfigurationRequestParameters,
   Flag,
+  ObfuscatedFlag,
   VariationType,
   AttributeType,
   SubjectAttributes,
