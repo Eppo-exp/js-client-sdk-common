@@ -28,7 +28,7 @@ export interface AllocationEvaluation {
 }
 
 export interface IFlagEvaluationDetails {
-  environment: string;
+  environmentName: string;
   variationKey: string | null;
   variationValue: Variation['value'] | null;
   flagEvaluationCode: FlagEvaluationCode;
@@ -50,7 +50,7 @@ export class FlagEvaluationDetailsBuilder {
   private unevaluatedAllocations: IFlagEvaluationDetails['unevaluatedAllocations'];
 
   constructor(
-    private readonly environment: string,
+    private readonly environmentName: string,
     private readonly allocations: Allocation[],
     private readonly configFetchedAt: string,
     private readonly configPublishedAt: string,
@@ -132,7 +132,7 @@ export class FlagEvaluationDetailsBuilder {
     flagEvaluationCode: FlagEvaluationCode,
     flagEvaluationDescription: string,
   ): IFlagEvaluationDetails => ({
-    environment: this.environment,
+    environmentName: this.environmentName,
     flagEvaluationCode,
     flagEvaluationDescription,
     variationKey: this.variationKey,

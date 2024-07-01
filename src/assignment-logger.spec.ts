@@ -13,7 +13,7 @@ describe('IAssignmentEvent', () => {
       subjectAttributes: { age: 25, country: 'USA' },
       holdoutKey: 'holdout_key_123',
       details: {
-        environment: 'Test',
+        environmentName: 'Test',
         variationKey: 'variationKey',
         variationValue: 'variation_123',
         flagEvaluationCode: 'MATCH',

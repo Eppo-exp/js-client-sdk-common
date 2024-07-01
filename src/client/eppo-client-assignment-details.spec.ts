@@ -59,7 +59,7 @@ describe('EppoClient get*AssignmentDetails', () => {
     );
     const expected: IAssignmentDetails<number> = {
       value: 3,
-      environment: 'Test',
+      environmentName: 'Test',
       variationKey: 'three',
       variationValue: 3,
       flagEvaluationCode: 'MATCH',
@@ -107,7 +107,7 @@ describe('EppoClient get*AssignmentDetails', () => {
     );
     const expected: IAssignmentDetails<number> = {
       value: 2,
-      environment: 'Test',
+      environmentName: 'Test',
       variationKey: 'two',
       variationValue: 2,
       flagEvaluationCode: 'MATCH',
@@ -147,7 +147,7 @@ describe('EppoClient get*AssignmentDetails', () => {
     );
     const expected: IAssignmentDetails<string> = {
       value: 'control',
-      environment: 'Test',
+      environmentName: 'Test',
       flagEvaluationCode: 'MATCH',
       flagEvaluationDescription:
         'Supplied attributes match rules defined in allocation "experiment" and alice belongs to the range of traffic assigned to "control".',
@@ -202,7 +202,7 @@ describe('EppoClient get*AssignmentDetails', () => {
     const result = client.getIntegerAssignmentDetails('asdf', 'alice', {}, 0);
     expect(result).toMatchObject({
       value: 0,
-      environment: 'Test',
+      environmentName: 'Test',
       flagEvaluationCode: 'FLAG_UNRECOGNIZED_OR_DISABLED',
       flagEvaluationDescription: 'Unrecognized or disabled flag: asdf',
       variationKey: null,

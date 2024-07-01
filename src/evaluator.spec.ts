@@ -14,7 +14,9 @@ describe('Evaluator', () => {
   it('should return none result for disabled flag', () => {
     const flag: Flag = {
       key: 'disabled_flag',
-      environment: 'Test',
+      environment: {
+        name: 'Test',
+      },
       enabled: false,
       variationType: VariationType.STRING,
       variations: { a: VARIATION_A },
@@ -80,7 +82,9 @@ describe('Evaluator', () => {
   it('should evaluate empty flag to none result', () => {
     const emptyFlag: Flag = {
       key: 'empty',
-      environment: 'Test',
+      environment: {
+        name: 'Test',
+      },
       enabled: true,
       variationType: VariationType.STRING,
       variations: { a: VARIATION_A, b: VARIATION_B },
@@ -98,7 +102,9 @@ describe('Evaluator', () => {
   it('should evaluate simple flag and return control variation', () => {
     const flag: Flag = {
       key: 'flag-key',
-      environment: 'Test',
+      environment: {
+        name: 'Test',
+      },
       enabled: true,
       variationType: VariationType.STRING,
       variations: { control: { key: 'control', value: 'control-value' } },
@@ -127,7 +133,9 @@ describe('Evaluator', () => {
   it('should evaluate flag based on a targeting condition based on id', () => {
     const flag: Flag = {
       key: 'flag-key',
-      environment: 'Test',
+      environment: {
+        name: 'Test',
+      },
       enabled: true,
       variationType: VariationType.STRING,
       variations: { control: { key: 'control', value: 'control' } },
@@ -168,7 +176,9 @@ describe('Evaluator', () => {
   it('should evaluate flag based on a targeting condition with overwritten id', () => {
     const flag: Flag = {
       key: 'flag-key',
-      environment: 'Test',
+      environment: {
+        name: 'Test',
+      },
       enabled: true,
       variationType: VariationType.STRING,
       variations: { control: { key: 'control', value: 'control' } },
@@ -203,7 +213,9 @@ describe('Evaluator', () => {
   it('should catch all allocation and return variation A', () => {
     const flag: Flag = {
       key: 'flag',
-      environment: 'Test',
+      environment: {
+        name: 'Test',
+      },
       enabled: true,
       variationType: VariationType.STRING,
       variations: { a: VARIATION_A, b: VARIATION_B },
@@ -235,7 +247,9 @@ describe('Evaluator', () => {
   it('should match first allocation rule and return variation B', () => {
     const flag: Flag = {
       key: 'flag',
-      environment: 'Test',
+      environment: {
+        name: 'Test',
+      },
       enabled: true,
       variationType: VariationType.STRING,
       variations: { a: VARIATION_A, b: VARIATION_B },
@@ -292,7 +306,9 @@ describe('Evaluator', () => {
   it('should not match first allocation rule and return variation A', () => {
     const flag: Flag = {
       key: 'flag',
-      environment: 'Test',
+      environment: {
+        name: 'Test',
+      },
       enabled: true,
       variationType: VariationType.STRING,
       variations: { a: VARIATION_A, b: VARIATION_B },
@@ -349,7 +365,9 @@ describe('Evaluator', () => {
   it('should not match first allocation rule and return variation A (obfuscated)', () => {
     const flag: Flag = {
       key: 'obfuscated_flag_key',
-      environment: 'Test',
+      environment: {
+        name: 'Test',
+      },
       enabled: true,
       variationType: VariationType.STRING,
       variations: { a: VARIATION_A, b: VARIATION_B },
@@ -410,7 +428,9 @@ describe('Evaluator', () => {
   it('should evaluate sharding and return correct variations', () => {
     const flag: Flag = {
       key: 'flag',
-      environment: 'Test',
+      environment: {
+        name: 'Test',
+      },
       enabled: true,
       variationType: VariationType.STRING,
       variations: { a: VARIATION_A, b: VARIATION_B, c: VARIATION_C },
@@ -485,7 +505,9 @@ describe('Evaluator', () => {
     const now = new Date();
     const flag: Flag = {
       key: 'flag',
-      environment: 'Test',
+      environment: {
+        name: 'Test',
+      },
       enabled: true,
       variationType: VariationType.STRING,
       variations: { a: VARIATION_A },
@@ -519,7 +541,9 @@ describe('Evaluator', () => {
     const now = new Date();
     const flag: Flag = {
       key: 'flag',
-      environment: 'Test',
+      environment: {
+        name: 'Test',
+      },
       enabled: true,
       variationType: VariationType.STRING,
       variations: { a: VARIATION_A },
@@ -553,7 +577,9 @@ describe('Evaluator', () => {
     const now = new Date();
     const flag: Flag = {
       key: 'flag',
-      environment: 'Test',
+      environment: {
+        name: 'Test',
+      },
       enabled: true,
       variationType: VariationType.STRING,
       variations: { a: VARIATION_A },

@@ -37,7 +37,7 @@ export class Evaluator {
     expectedVariationType?: VariationType,
   ): FlagEvaluation {
     const flagEvaluationDetailsBuilder = new FlagEvaluationDetailsBuilder(
-      flag.environment,
+      flag.environment.name,
       flag.allocations,
       configFetchedAt,
       configPublishedAt,

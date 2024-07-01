@@ -466,7 +466,7 @@ export default class EppoClient {
 
     const { flag, configFetchedAt, configPublishedAt } = this.getFlagDetails(flagKey);
     const flagEvaluationDetailsBuilder = new FlagEvaluationDetailsBuilder(
-      flag?.environment ?? '',
+      flag?.environment.name ?? '',
       flag?.allocations ?? [],
       configFetchedAt,
       configPublishedAt,
