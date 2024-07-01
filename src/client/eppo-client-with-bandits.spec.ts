@@ -298,41 +298,70 @@ describe('EppoClient Bandits E2E test', () => {
         expect(banditAssignment.action).toBe('reebok');
         expect(banditAssignment.variation).toBe('banner_bandit');
       });
+
+      it('Can take non-contextual action attributes', async () => {
+        const actionsWithNonContextualAttributes: Record<string, Attributes> = {
+          nike: { brand_affinity: -15, loyalty_tier: 'silver', zip: '81427' },
+          adidas: { brand_affinity: 0.0, loyalty_tier: 'bronze' },
+          reebok: { brand_affinity: 15, loyalty_tier: 'gold' },
+        };
+
+        let banditAssignment = client.getBanditAction(
+          flagKey,
+          'imogene',
+          subjectAttributes,
+          actionsWithNonContextualAttributes,
+          'default',
+        );
+        expect(banditAssignment.action).toBe('nike');
+        expect(banditAssignment.variation).toBe('banner_bandit');
+
+        // changing zip code to a number should result in a different evaluation
+        actionsWithNonContextualAttributes.nike.zip = 81427;
+
+        banditAssignment = client.getBanditAction(
+          flagKey,
+          'imogene',
+          subjectAttributes,
+          actionsWithNonContextualAttributes,
+          'default',
+        );
+        expect(banditAssignment.action).toBe('adidas');
+        expect(banditAssignment.variation).toBe('banner_bandit');
+      });
+
+      it('Can take actions without any context', async () => {
+        const actionNamesOnly = ['nike', 'adidas', 'reebok'];
+
+        let banditAssignment = client.getBanditAction(
+          flagKey,
+          'imogene',
+          subjectAttributes,
+          actionNamesOnly,
+          'default',
+        );
+        expect(banditAssignment.action).toBe('nike');
+        expect(banditAssignment.variation).toBe('banner_bandit');
+
+        expect(mockLogBanditAction).toHaveBeenCalledTimes(1);
+        expect(mockLogBanditAction.mock.calls[0][0].actionProbability).toBeCloseTo(0.256);
+
+        // Duplicates should be ignored and not change anything
+        actionNamesOnly.push('nike');
+
+        banditAssignment = client.getBanditAction(
+          flagKey,
+          'imogene',
+          subjectAttributes,
+          actionNamesOnly,
+          'default',
+        );
+        expect(banditAssignment.action).toBe('nike');
+        expect(banditAssignment.variation).toBe('banner_bandit');
+
+        expect(mockLogBanditAction).toHaveBeenCalledTimes(2);
+        expect(mockLogBanditAction.mock.calls[1][0].actionProbability).toBeCloseTo(0.256);
+      });
     });
-
-    it('Can take non-contextual action attributes', async () => {
-      const actionsWithNonContextualAttributes: Record<string, Attributes> = {
-        nike: { brand_affinity: -1.7, loyalty_tier: 'silver', zip: '81427' },
-        adidas: { brand_affinity: 0.0, loyalty_tier: 'bronze' },
-        reebok: { brand_affinity: 15, loyalty_tier: 'gold' }, // TODO: tweak
-      };
-
-      let banditAssignment = client.getBanditAction(
-        flagKey,
-        'imogene',
-        subjectAttributes,
-        actionsWithNonContextualAttributes,
-        'default',
-      );
-      expect(banditAssignment.action).toBe('nike');
-      expect(banditAssignment.variation).toBe('banner_bandit');
-
-      // changing zip code to a number should result in a different evaluation
-      actionsWithNonContextualAttributes.nike.zip = 81427;
-
-      banditAssignment = client.getBanditAction(
-        flagKey,
-        'imogene',
-        subjectAttributes,
-        actionsWithNonContextualAttributes,
-        'default',
-      );
-      expect(banditAssignment.action).toBe('nike');
-      expect(banditAssignment.variation).toBe('banner_bandit');
-    });
-  });
-
-  it('Can take actions without any context', async () => {
-    // TODO
   });
 });
