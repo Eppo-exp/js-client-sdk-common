@@ -2,7 +2,7 @@ import {
   readMockUFCResponse,
   MOCK_BANDIT_MODELS_RESPONSE_FILE,
   MOCK_FLAGS_WITH_BANDITS_RESPONSE_FILE,
-  readTestData,
+  testCasesByFileName,
   BanditTestCase,
   BANDIT_TEST_DATA_DIR,
 } from '../../test/testHelpers';
@@ -73,69 +73,61 @@ describe('EppoClient Bandits E2E test', () => {
   });
 
   describe('Shared test cases', () => {
-    const testData = readTestData<BanditTestCase>(BANDIT_TEST_DATA_DIR);
-    // Build a map for more useful test names
-    const testsByFlagKey: Record<string, BanditTestCase> = {};
-    testData.forEach((testCase) => (testsByFlagKey[testCase.flag] = testCase));
+    const testCases = testCasesByFileName<BanditTestCase>(BANDIT_TEST_DATA_DIR);
 
-    it.each(Object.keys(testsByFlagKey))(
-      'Shared bandit test case - %s',
-      async (flagKey: string) => {
-        const { defaultValue, subjects } = testsByFlagKey[flagKey];
-        let numAssignmentsChecked = 0;
-        subjects.forEach((subject) => {
-          const actions: Record<string, Attributes> = {};
-          subject.actions.forEach((action) => {
-            actions[action.actionKey] = {
-              ...action.numericAttributes,
-              ...action.categoricalAttributes,
-            };
-          });
-
-          // TODO: handle already-bucketed attributes
-          const subjectAttributes: Attributes = {};
-          Object.entries(subject.subjectAttributes.numericAttributes).forEach(
-            ([attribute, value]) => {
-              if (typeof attribute === 'number') {
-                subjectAttributes[attribute] = value;
-              }
-            },
-          );
-          Object.entries(subject.subjectAttributes.categoricalAttributes).forEach(
-            ([attribute, value]) => {
-              if (value) {
-                subjectAttributes[attribute] = value.toString();
-              }
-            },
-          );
-
-          const banditAssignment = client.getBanditAction(
-            flagKey,
-            subject.subjectKey,
-            subjectAttributes,
-            actions,
-            defaultValue,
-          );
-
-          // Do this check in addition to assertions to provide helpful information on exactly which
-          // evaluation failed to produce an expected result
-          if (
-            banditAssignment.variation !== subject.assignment.variation ||
-            banditAssignment.action !== subject.assignment.action
-          ) {
-            console.error(
-              `Unexpected result for flag ${flagKey} and subject ${subject.subjectKey}`,
-            );
-          }
-
-          expect(banditAssignment.variation).toBe(subject.assignment.variation);
-          expect(banditAssignment.action).toBe(subject.assignment.action);
-          numAssignmentsChecked += 1;
+    it.each(Object.keys(testCases))('Shared bandit test case - %s', async (fileName: string) => {
+      const { flag: flagKey, defaultValue, subjects } = testCases[fileName];
+      let numAssignmentsChecked = 0;
+      subjects.forEach((subject) => {
+        const actions: Record<string, Attributes> = {};
+        subject.actions.forEach((action) => {
+          actions[action.actionKey] = {
+            ...action.numericAttributes,
+            ...action.categoricalAttributes,
+          };
         });
-        // Ensure that this test case correctly checked some test assignments
-        expect(numAssignmentsChecked).toBeGreaterThan(0);
-      },
-    );
+
+        // TODO: handle already-bucketed attributes
+        const subjectAttributes: Attributes = {};
+        Object.entries(subject.subjectAttributes.numericAttributes).forEach(
+          ([attribute, value]) => {
+            if (typeof attribute === 'number') {
+              subjectAttributes[attribute] = value;
+            }
+          },
+        );
+        Object.entries(subject.subjectAttributes.categoricalAttributes).forEach(
+          ([attribute, value]) => {
+            if (value) {
+              subjectAttributes[attribute] = value.toString();
+            }
+          },
+        );
+
+        const banditAssignment = client.getBanditAction(
+          flagKey,
+          subject.subjectKey,
+          subjectAttributes,
+          actions,
+          defaultValue,
+        );
+
+        // Do this check in addition to assertions to provide helpful information on exactly which
+        // evaluation failed to produce an expected result
+        if (
+          banditAssignment.variation !== subject.assignment.variation ||
+          banditAssignment.action !== subject.assignment.action
+        ) {
+          console.error(`Unexpected result for flag ${flagKey} and subject ${subject.subjectKey}`);
+        }
+
+        expect(banditAssignment.variation).toBe(subject.assignment.variation);
+        expect(banditAssignment.action).toBe(subject.assignment.action);
+        numAssignmentsChecked += 1;
+      });
+      // Ensure that this test case correctly checked some test assignments
+      expect(numAssignmentsChecked).toBeGreaterThan(0);
+    });
   });
 
   describe('Client-specific tests', () => {
