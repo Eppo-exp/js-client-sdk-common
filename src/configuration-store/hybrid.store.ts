@@ -1,4 +1,5 @@
 import { logger, loggerPrefix } from '../application-logger';
+import { Environment } from '../interfaces';
 
 import { IAsyncStore, IConfigurationStore, ISyncStore } from './configuration-store';
 
@@ -7,7 +8,7 @@ export class HybridConfigurationStore<T> implements IConfigurationStore<T> {
     protected readonly servingStore: ISyncStore<T>,
     protected readonly persistentStore: IAsyncStore<T> | null,
   ) {}
-
+  private environment: Environment;
   private configFetchedAt: string;
   private configPublishedAt: string;
 
@@ -67,6 +68,14 @@ export class HybridConfigurationStore<T> implements IConfigurationStore<T> {
     }
     this.servingStore.setEntries(entries);
     return true;
+  }
+
+  setEnvironment(environment: Environment): void {
+    this.environment = environment;
+  }
+
+  getEnvironment(): Environment {
+    return this.environment;
   }
 
   public getConfigFetchedAt(): string {
