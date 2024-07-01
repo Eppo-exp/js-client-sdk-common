@@ -14,7 +14,7 @@ import ConfigurationRequestor from '../configuration-requestor';
 import { MemoryOnlyConfigurationStore } from '../configuration-store/memory.store';
 import FetchHttpClient from '../http-client';
 import { BanditVariation, BanditParameters, Flag } from '../interfaces';
-import { Attributes } from '../types';
+import { Attributes, ContextAttributes } from '../types';
 
 import EppoClient from './eppo-client';
 
@@ -79,35 +79,20 @@ describe('EppoClient Bandits E2E test', () => {
       const { flag: flagKey, defaultValue, subjects } = testCases[fileName];
       let numAssignmentsChecked = 0;
       subjects.forEach((subject) => {
-        const actions: Record<string, Attributes> = {};
+        // test files have actions as an array, convert to map
+        const actions: Record<string, ContextAttributes> = {};
         subject.actions.forEach((action) => {
           actions[action.actionKey] = {
-            ...action.numericAttributes,
-            ...action.categoricalAttributes,
+            numericAttributes: action.numericAttributes,
+            categoricalAttributes: action.categoricalAttributes,
           };
         });
 
-        // TODO: handle already-bucketed attributes
-        const subjectAttributes: Attributes = {};
-        Object.entries(subject.subjectAttributes.numericAttributes).forEach(
-          ([attribute, value]) => {
-            if (typeof attribute === 'number') {
-              subjectAttributes[attribute] = value;
-            }
-          },
-        );
-        Object.entries(subject.subjectAttributes.categoricalAttributes).forEach(
-          ([attribute, value]) => {
-            if (value) {
-              subjectAttributes[attribute] = value.toString();
-            }
-          },
-        );
-
+        // get the bandit assignment for the test case
         const banditAssignment = client.getBanditAction(
           flagKey,
           subject.subjectKey,
-          subjectAttributes,
+          subject.subjectAttributes,
           actions,
           defaultValue,
         );

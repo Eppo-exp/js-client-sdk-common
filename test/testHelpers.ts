@@ -1,7 +1,8 @@
 import * as fs from 'fs';
 
-import { VariationType, AttributeType, Attributes } from '../src';
+import { VariationType, AttributeType } from '../src';
 import { IBanditParametersResponse, IUniversalFlagConfigResponse } from '../src/http-client';
+import { ContextAttributes } from '../src/types';
 
 export const TEST_DATA_DIR = './test/data/ufc/';
 export const ASSIGNMENT_TEST_DATA_DIR = TEST_DATA_DIR + 'tests/';
@@ -32,15 +33,13 @@ export interface BanditTestCase {
 
 interface BanditTestCaseSubject {
   subjectKey: string;
-  subjectAttributes: { numericAttributes: Attributes; categoricalAttributes: Attributes };
+  subjectAttributes: ContextAttributes;
   actions: BanditTestCaseAction[];
   assignment: { variation: string; action: string | null };
 }
 
-interface BanditTestCaseAction {
+interface BanditTestCaseAction extends ContextAttributes {
   actionKey: string;
-  numericAttributes: Attributes;
-  categoricalAttributes: Attributes;
 }
 
 export function readMockUFCResponse(
