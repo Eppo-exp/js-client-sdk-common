@@ -1,3 +1,5 @@
+import { Environment } from '../interfaces';
+
 import { IConfigurationStore, ISyncStore } from './configuration-store';
 
 export class MemoryStore<T> implements ISyncStore<T> {
@@ -29,6 +31,7 @@ export class MemoryOnlyConfigurationStore<T> implements IConfigurationStore<T> {
   private initialized = false;
   private configFetchedAt: string;
   private configPublishedAt: string;
+  private environment: Environment;
 
   init(): Promise<void> {
     this.initialized = true;
@@ -55,6 +58,14 @@ export class MemoryOnlyConfigurationStore<T> implements IConfigurationStore<T> {
     this.servingStore.setEntries(entries);
     this.initialized = true;
     return true;
+  }
+
+  public getEnvironment(): Environment {
+    return this.environment;
+  }
+
+  public setEnvironment(environment: Environment): void {
+    this.environment = environment;
   }
 
   public getConfigFetchedAt(): string {

@@ -69,7 +69,7 @@ export class FlagEvaluationDetailsBuilder {
         key: allocation.key,
         name: allocation.name,
         allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
-        orderPosition: i,
+        orderPosition: i + 1,
       }),
     );
     return this;
@@ -116,6 +116,7 @@ export class FlagEvaluationDetailsBuilder {
       (allocation, i) =>
         ({
           key: allocation.key,
+          name: allocation.name,
           allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
           orderPosition: unevaluatedStartOrderPosition + i,
         } as AllocationEvaluation),

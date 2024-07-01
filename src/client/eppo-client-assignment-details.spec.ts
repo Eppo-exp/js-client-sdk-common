@@ -1,8 +1,7 @@
+import * as fs from 'fs';
+
 import {
-  readAssignmentTestData,
   IAssignmentTestCase,
-  getTestAssignmentDetails,
-  validateTestAssignmentDetails,
   MOCK_UFC_RESPONSE_FILE,
   readMockUFCResponse,
 } from '../../test/testHelpers';
@@ -80,7 +79,7 @@ describe('EppoClient get*AssignmentDetails', () => {
         key: 'targeted allocation',
         name: 'Allocation for targeted allocation',
         allocationEvaluationCode: AllocationEvaluationCode.MATCH,
-        orderPosition: 0,
+        orderPosition: 1,
       },
       unmatchedAllocations: [],
       unevaluatedAllocations: [
@@ -88,7 +87,7 @@ describe('EppoClient get*AssignmentDetails', () => {
           key: '50/50 split',
           name: 'Allocation for 50/50 split',
           allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
-          orderPosition: 1,
+          orderPosition: 2,
         },
       ],
     };
@@ -168,20 +167,20 @@ describe('EppoClient get*AssignmentDetails', () => {
         key: 'experiment',
         name: 'Allocation for experiment',
         allocationEvaluationCode: AllocationEvaluationCode.MATCH,
-        orderPosition: 2,
+        orderPosition: 3,
       },
       unmatchedAllocations: [
         {
           key: 'id rule',
           name: 'Allocation for id rule',
           allocationEvaluationCode: AllocationEvaluationCode.FAILING_RULE,
-          orderPosition: 0,
+          orderPosition: 1,
         },
         {
           key: 'internal users',
           name: 'Allocation for internal users',
           allocationEvaluationCode: AllocationEvaluationCode.FAILING_RULE,
-          orderPosition: 1,
+          orderPosition: 2,
         },
       ],
       unevaluatedAllocations: [
@@ -189,7 +188,7 @@ describe('EppoClient get*AssignmentDetails', () => {
           key: 'rollout',
           name: 'Allocation for rollout',
           allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
-          orderPosition: 3,
+          orderPosition: 4,
         },
       ],
     };
@@ -217,6 +216,23 @@ describe('EppoClient get*AssignmentDetails', () => {
   });
 
   describe('UFC General Test Cases', () => {
+    const getTestFilePaths = () => {
+      const testDir = 'test/data/ufc/tests';
+      return fs.readdirSync(testDir).map((testFilename) => `${testDir}/${testFilename}`);
+    };
+
+    const parseJSON = (testFilePath: string) => {
+      try {
+        const fileContents = fs.readFileSync(testFilePath, 'utf-8');
+        const parsedJSON = JSON.parse(fileContents);
+        return parsedJSON as IAssignmentTestCase;
+      } catch (err) {
+        console.error(`failed to parse JSON in ${testFilePath}`);
+        console.error(err);
+        process.exit(1);
+      }
+    };
+
     beforeAll(async () => {
       global.fetch = jest.fn(() => {
         return Promise.resolve({
@@ -232,32 +248,57 @@ describe('EppoClient get*AssignmentDetails', () => {
     afterAll(() => {
       jest.restoreAllMocks();
     });
-    it.each(readAssignmentTestData())(
-      'test variation assignment details',
-      async ({ flag, variationType, defaultValue, subjects }: IAssignmentTestCase) => {
-        const client = new EppoClient(storage);
-        client.setIsGracefulFailureMode(false);
 
-        const typeAssignmentDetailsFunctions = {
-          [VariationType.BOOLEAN]: client.getBooleanAssignmentDetails.bind(client),
-          [VariationType.NUMERIC]: client.getNumericAssignmentDetails.bind(client),
-          [VariationType.INTEGER]: client.getIntegerAssignmentDetails.bind(client),
-          [VariationType.STRING]: client.getStringAssignmentDetails.bind(client),
-          [VariationType.JSON]: client.getJSONAssignmentDetails.bind(client),
-        };
+    describe.each(getTestFilePaths())('for file: %s', (testFilePath: string) => {
+      const testCase = parseJSON(testFilePath);
+      describe.each(testCase.subjects.map(({ subjectKey }) => subjectKey))(
+        'with subjectKey %s',
+        (subjectKey) => {
+          const { flag, variationType, defaultValue, subjects } = testCase;
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          const subject = subjects.find((subject) => subject.subjectKey === subjectKey)!;
 
-        const assignmentFn = typeAssignmentDetailsFunctions[variationType];
-        if (!assignmentFn) {
-          throw new Error(`Unknown variation type: ${variationType}`);
-        }
+          const client = new EppoClient(storage);
+          client.setIsGracefulFailureMode(false);
 
-        const assignments = getTestAssignmentDetails(
-          { flag, variationType, defaultValue, subjects },
-          assignmentFn,
-        );
+          const focusOn = {
+            testFilePath: '', // focus on test file paths (don't forget to set back to empty string!)
+            subjectKey: '', // focus on subject (don't forget to set back to empty string!)
+          };
 
-        validateTestAssignmentDetails(assignments, flag);
-      },
-    );
+          const shouldRunTestForFilePath =
+            !focusOn.testFilePath || focusOn.testFilePath === testFilePath;
+
+          const shouldRunTestForSubject = !focusOn.subjectKey || focusOn.subjectKey === subjectKey;
+
+          if (shouldRunTestForFilePath && shouldRunTestForSubject) {
+            it('handles variation assignment details', async () => {
+              const typeAssignmentDetailsFunctions = {
+                [VariationType.BOOLEAN]: client.getBooleanAssignmentDetails.bind(client),
+                [VariationType.NUMERIC]: client.getNumericAssignmentDetails.bind(client),
+                [VariationType.INTEGER]: client.getIntegerAssignmentDetails.bind(client),
+                [VariationType.STRING]: client.getStringAssignmentDetails.bind(client),
+                [VariationType.JSON]: client.getJSONAssignmentDetails.bind(client),
+              };
+              const assignmentFn = typeAssignmentDetailsFunctions[variationType];
+              if (!assignmentFn) {
+                throw new Error(`Unknown variation type: ${variationType}`);
+              }
+              const assignmentDetails = assignmentFn(
+                flag,
+                subject.subjectKey,
+                subject.subjectAttributes,
+                defaultValue,
+              );
+              expect(assignmentDetails).toMatchObject({
+                ...subject.assignmentDetails,
+                configFetchedAt: expect.any(String),
+                configPublishedAt: expect.any(String),
+              });
+            });
+          }
+        },
+      );
+    });
   });
 });

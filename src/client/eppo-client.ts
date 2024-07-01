@@ -23,7 +23,7 @@ import {
   FlagEvaluationDetailsBuilder,
 } from '../flag-evaluation-details-builder';
 import FetchHttpClient from '../http-client';
-import { Flag, ObfuscatedFlag, Variation, VariationType } from '../interfaces';
+import { ConfigDetails, Flag, ObfuscatedFlag, Variation, VariationType } from '../interfaces';
 import { getMD5Hash } from '../obfuscation';
 import initPoller, { IPoller } from '../poller';
 import { AttributeType, ValueType } from '../types';
@@ -464,12 +464,13 @@ export default class EppoClient {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
     validateNotBlank(flagKey, 'Invalid argument: flagKey cannot be blank');
 
-    const { flag, configFetchedAt, configPublishedAt } = this.getFlagDetails(flagKey);
+    const flag = this.getFlag(flagKey);
+    const configDetails = this.getConfigDetails();
     const flagEvaluationDetailsBuilder = new FlagEvaluationDetailsBuilder(
-      flag?.environment.name ?? '',
+      configDetails.configEnvironment.name,
       flag?.allocations ?? [],
-      configFetchedAt,
-      configPublishedAt,
+      configDetails.configFetchedAt,
+      configDetails.configPublishedAt,
     );
 
     if (flag === null) {
@@ -500,11 +501,10 @@ export default class EppoClient {
 
     const result = this.evaluator.evaluateFlag(
       flag,
+      configDetails,
       subjectKey,
       subjectAttributes,
       this.isObfuscated,
-      configFetchedAt,
-      configPublishedAt,
       expectedVariationType,
     );
     if (this.isObfuscated) {
@@ -533,19 +533,18 @@ export default class EppoClient {
     return result;
   }
 
-  private getFlagDetails(flagKey: string): {
-    flag: Flag | null;
-    configFetchedAt: string;
-    configPublishedAt: string;
-  } {
-    const flag = this.isObfuscated
+  private getConfigDetails(): ConfigDetails {
+    return {
+      configFetchedAt: this.configurationStore.getConfigFetchedAt() ?? '',
+      configPublishedAt: this.configurationStore.getConfigPublishedAt() ?? '',
+      configEnvironment: this.configurationStore.getEnvironment() ?? { name: '' },
+    };
+  }
+
+  private getFlag(flagKey: string): Flag | null {
+    return this.isObfuscated
       ? this.getObfuscatedFlag(flagKey)
       : this.configurationStore.get(flagKey);
-    return {
-      flag,
-      configFetchedAt: this.configurationStore.getConfigFetchedAt(),
-      configPublishedAt: this.configurationStore.getConfigPublishedAt(),
-    };
   }
 
   private getObfuscatedFlag(flagKey: string): Flag | null {

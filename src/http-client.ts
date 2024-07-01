@@ -1,5 +1,5 @@
 import ApiEndpoints from './api-endpoints';
-import { Flag } from './interfaces';
+import { Environment, Flag } from './interfaces';
 
 export interface IQueryParams {
   apiKey: string;
@@ -18,6 +18,7 @@ export class HttpRequestError extends Error {
 
 export interface IUniversalFlagConfig {
   createdAt: string; // ISO formatted string
+  environment: Environment;
   flags: Record<string, Flag>;
 }
 

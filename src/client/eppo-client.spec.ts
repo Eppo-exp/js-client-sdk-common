@@ -65,7 +65,6 @@ describe('EppoClient E2E test', () => {
   };
 
   const mockFlag: Flag = {
-    environment: 'Test',
     key: flagKey,
     enabled: true,
     variationType: VariationType.STRING,

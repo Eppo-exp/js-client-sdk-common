@@ -4,7 +4,16 @@ import {
   IFlagEvaluationDetails,
   FlagEvaluationDetailsBuilder,
 } from './flag-evaluation-details-builder';
-import { Flag, Shard, Range, Variation, Allocation, Split, VariationType } from './interfaces';
+import {
+  Flag,
+  Shard,
+  Range,
+  Variation,
+  Allocation,
+  Split,
+  VariationType,
+  ConfigDetails,
+} from './interfaces';
 import { Rule, matchesRule } from './rules';
 import { MD5Sharder, Sharder } from './sharders';
 import { SubjectAttributes } from './types';
@@ -29,18 +38,17 @@ export class Evaluator {
 
   evaluateFlag(
     flag: Flag,
+    configDetails: ConfigDetails,
     subjectKey: string,
     subjectAttributes: SubjectAttributes,
     obfuscated: boolean,
-    configFetchedAt: string,
-    configPublishedAt: string,
     expectedVariationType?: VariationType,
   ): FlagEvaluation {
     const flagEvaluationDetailsBuilder = new FlagEvaluationDetailsBuilder(
-      flag.environment.name,
+      configDetails.configEnvironment.name,
       flag.allocations,
-      configFetchedAt,
-      configPublishedAt,
+      configDetails.configFetchedAt,
+      configDetails.configPublishedAt,
     );
 
     if (!flag.enabled) {
