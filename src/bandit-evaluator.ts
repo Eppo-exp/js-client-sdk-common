@@ -5,14 +5,14 @@ import {
   BanditNumericAttributeCoefficients,
 } from './interfaces';
 import { MD5Sharder, Sharder } from './sharders';
-import { Attributes } from './types';
+import { Attributes, ContextAttributes } from './types';
 
 export interface BanditEvaluation {
   flagKey: string;
   subjectKey: string;
-  subjectAttributes: Attributes;
+  subjectAttributes: ContextAttributes;
   actionKey: string;
-  actionAttributes: Attributes;
+  actionAttributes: ContextAttributes;
   actionScore: number;
   actionWeight: number;
   gamma: number;
@@ -26,8 +26,8 @@ export class BanditEvaluator {
   public evaluateBandit(
     flagKey: string,
     subjectKey: string,
-    subjectAttributes: Attributes,
-    actions: Record<string, Attributes>, // TODO: option to specify if action attributes are numeric or categorical
+    subjectAttributes: ContextAttributes,
+    actions: Record<string, ContextAttributes>,
     banditModel: BanditModelData,
   ): BanditEvaluation {
     const actionScores: Record<string, number> = this.scoreActions(
@@ -63,8 +63,8 @@ export class BanditEvaluator {
   }
 
   private scoreActions(
-    subjectAttributes: Attributes,
-    actions: Record<string, Attributes>,
+    subjectAttributes: ContextAttributes,
+    actions: Record<string, ContextAttributes>,
     banditModel: Pick<BanditModelData, 'coefficients' | 'defaultActionScore'>,
   ): Record<string, number> {
     const actionScores: Record<string, number> = {};
@@ -75,19 +75,19 @@ export class BanditEvaluator {
         score = coefficients.intercept;
         score += this.scoreNumericAttributes(
           coefficients.subjectNumericCoefficients,
-          subjectAttributes,
+          subjectAttributes.numericAttributes,
         );
         score += this.scoreCategoricalAttributes(
           coefficients.subjectCategoricalCoefficients,
-          subjectAttributes,
+          subjectAttributes.categoricalAttributes,
         );
         score += this.scoreNumericAttributes(
           coefficients.actionNumericCoefficients,
-          actionAttributes,
+          actionAttributes.numericAttributes,
         );
         score += this.scoreCategoricalAttributes(
           coefficients.actionCategoricalCoefficients,
-          actionAttributes,
+          actionAttributes.categoricalAttributes,
         );
       }
       actionScores[actionKey] = score;

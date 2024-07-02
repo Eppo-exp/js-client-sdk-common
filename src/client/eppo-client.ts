@@ -30,7 +30,14 @@ import {
 } from '../interfaces';
 import { getMD5Hash } from '../obfuscation';
 import initPoller, { IPoller } from '../poller';
-import { Attributes, AttributeType, ValueType } from '../types';
+import {
+  Attributes,
+  AttributeType,
+  BanditActions,
+  BanditSubjectAttributes,
+  ContextAttributes,
+  ValueType,
+} from '../types';
 import { validateNotBlank } from '../validation';
 import { LIB_VERSION } from '../version';
 
@@ -145,8 +152,8 @@ export interface IEppoClient {
   getBanditAction(
     flagKey: string,
     subjectKey: string,
-    subjectAttributes: Attributes,
-    actions: Record<string, Attributes>,
+    subjectAttributes: BanditSubjectAttributes,
+    actions: BanditActions,
     defaultValue: string,
   ): { variation: string; action: string | null };
 
@@ -403,8 +410,8 @@ export default class EppoClient implements IEppoClient {
   public getBanditAction(
     flagKey: string,
     subjectKey: string,
-    subjectAttributes: Attributes,
-    actions: Record<string, Attributes>, // TODO: ability to provide a set of actions with no context, or context broken out by numeric/categorical
+    subjectAttributes: BanditSubjectAttributes,
+    actions: BanditActions,
     defaultValue: string,
   ): { variation: string; action: string | null } {
     const defaultResult = { variation: defaultValue, action: null };
@@ -419,7 +426,15 @@ export default class EppoClient implements IEppoClient {
       }
 
       // Get the assigned variation for the flag with a possible bandit
-      variation = this.getStringAssignment(flagKey, subjectKey, subjectAttributes, defaultValue);
+      // Note for getting assignments, we don't care about context
+      const nonContextualSubjectAttributes =
+        this.ensureNonContextualSubjectAttributes(subjectAttributes);
+      variation = this.getStringAssignment(
+        flagKey,
+        subjectKey,
+        nonContextualSubjectAttributes,
+        defaultValue,
+      );
 
       // Check if the assigned variation is an active bandit
       // Note: the reason for non-bandit assignments include the subject being bucketed into a non-bandit variation or
@@ -437,11 +452,14 @@ export default class EppoClient implements IEppoClient {
         }
 
         const banditModelData = banditParameters.modelData;
+        const contextualSubjectAttributes =
+          this.ensureContextualSubjectAttributes(subjectAttributes);
+        const actionsWithContextualAttributes = this.ensureActionsWithContextualAttributes(actions);
         const banditEvaluation = this.banditEvaluator.evaluateBandit(
           flagKey,
           subjectKey,
-          subjectAttributes,
-          actions,
+          contextualSubjectAttributes,
+          actionsWithContextualAttributes,
           banditModelData,
         );
         action = banditEvaluation.actionKey;
@@ -455,11 +473,11 @@ export default class EppoClient implements IEppoClient {
           actionProbability: banditEvaluation.actionWeight,
           optimalityGap: banditEvaluation.optimalityGap,
           modelVersion: banditParameters.modelVersion,
-          // TODO: bucket these out ahead of time
-          subjectNumericAttributes: this.pruneValuesByType(subjectAttributes, true),
-          subjectCategoricalAttributes: this.pruneValuesByType(subjectAttributes, false),
-          actionNumericAttributes: this.pruneValuesByType(actions[action], true),
-          actionCategoricalAttributes: this.pruneValuesByType(actions[action], false),
+          subjectNumericAttributes: contextualSubjectAttributes.numericAttributes,
+          subjectCategoricalAttributes: contextualSubjectAttributes.categoricalAttributes,
+          actionNumericAttributes: actionsWithContextualAttributes[action].numericAttributes,
+          actionCategoricalAttributes:
+            actionsWithContextualAttributes[action].categoricalAttributes,
           metaData: this.buildLoggerMetadata(),
         };
         this.logBanditAction(banditEvent);
@@ -473,6 +491,81 @@ export default class EppoClient implements IEppoClient {
     }
 
     return { variation, action };
+  }
+
+  private ensureNonContextualSubjectAttributes(
+    subjectAttributes: BanditSubjectAttributes,
+  ): Attributes {
+    let result: Attributes;
+    if (this.isInstanceOfContextualAttributes(subjectAttributes)) {
+      const contextualSubjectAttributes = subjectAttributes as ContextAttributes;
+      result = {
+        ...contextualSubjectAttributes.numericAttributes,
+        ...contextualSubjectAttributes.categoricalAttributes,
+      };
+    } else {
+      // Attributes are non-contextual
+      result = subjectAttributes as Attributes;
+    }
+    return result;
+  }
+
+  private ensureContextualSubjectAttributes(
+    subjectAttributes: BanditSubjectAttributes,
+  ): ContextAttributes {
+    let result: ContextAttributes;
+    if (this.isInstanceOfContextualAttributes(subjectAttributes)) {
+      result = subjectAttributes as ContextAttributes;
+    } else {
+      result = this.deduceAttributeContext(subjectAttributes as Attributes);
+    }
+    return result;
+  }
+
+  private ensureActionsWithContextualAttributes(
+    actions: BanditActions,
+  ): Record<string, ContextAttributes> {
+    let result: Record<string, ContextAttributes> = {};
+    if (Array.isArray(actions)) {
+      // no context
+      actions.forEach((action) => {
+        result[action] = { numericAttributes: {}, categoricalAttributes: {} };
+      });
+    } else if (!Object.values(actions).every(this.isInstanceOfContextualAttributes)) {
+      // Actions have non-contextual attributes; bucket based on number or not
+      Object.entries(actions).forEach(([action, attributes]) => {
+        result[action] = this.deduceAttributeContext(attributes);
+      });
+    } else {
+      // Actions already have contextual attributes
+      result = actions as Record<string, ContextAttributes>;
+    }
+    return result;
+  }
+
+  private isInstanceOfContextualAttributes(attributes: unknown): boolean {
+    return Boolean(
+      typeof attributes === 'object' &&
+        attributes && // exclude null
+        'numericAttributes' in attributes &&
+        'categoricalAttributes' in attributes,
+    );
+  }
+
+  private deduceAttributeContext(attributes: Attributes): ContextAttributes {
+    const contextualAttributes: ContextAttributes = {
+      numericAttributes: {},
+      categoricalAttributes: {},
+    };
+    Object.entries(attributes).forEach(([attribute, value]) => {
+      const isNumeric = typeof value === 'number' && isFinite(value);
+      if (isNumeric) {
+        contextualAttributes.numericAttributes[attribute] = value;
+      } else {
+        contextualAttributes.categoricalAttributes[attribute] = value as AttributeType;
+      }
+    });
+    return contextualAttributes;
   }
 
   private logBanditAction(banditEvent: IBanditEvent): void {
@@ -489,18 +582,6 @@ export default class EppoClient implements IEppoClient {
     } catch (err) {
       logger.warn('Error encountered logging bandit action', err);
     }
-  }
-
-  // TODO: this method can be repurposed to bucket attributes once bandit signatures updated
-  private pruneValuesByType(attributes: Attributes, numeric: boolean): Attributes {
-    const result: Attributes = {};
-    Object.entries(attributes).forEach(([key, value]) => {
-      const isNumeric = typeof value === 'number' && isFinite(value);
-      if (isNumeric === numeric) {
-        result[key] = value;
-      }
-    });
-    return result;
   }
 
   private getAssignmentVariation(

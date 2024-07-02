@@ -2,6 +2,7 @@ import ApiEndpoints from './api-endpoints';
 import { logger } from './application-logger';
 import { IAssignmentHooks } from './assignment-hooks';
 import { IAssignmentLogger, IAssignmentEvent } from './assignment-logger';
+import { IBanditLogger, IBanditEvent } from './bandit-logger';
 import {
   AbstractAssignmentCache,
   AssignmentCache,
@@ -35,6 +36,8 @@ export {
   IAssignmentHooks,
   IAssignmentLogger,
   IAssignmentEvent,
+  IBanditLogger,
+  IBanditEvent,
   EppoClient,
   IEppoClient,
   constants,
