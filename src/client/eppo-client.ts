@@ -174,6 +174,16 @@ export interface IEppoClient {
 
   setFlagConfigurationStore(configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>): void;
 
+  setBanditVariationConfigurationStore(
+    banditVariationConfigurationStore: IConfigurationStore<BanditVariation[]>,
+  ): void;
+
+  setBanditModelConfigurationStore(
+    banditModelConfigurationStore: IConfigurationStore<BanditParameters>,
+  ): void;
+
+  setIsObfuscated(isObfuscated: boolean): void;
+
   fetchFlagConfigurations(): void;
 
   stopPolling(): void;
