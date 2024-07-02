@@ -182,6 +182,8 @@ export interface IEppoClient {
 
   getFlagKeys(): string[];
 
+  getFlagConfigurations(): Record<string, Flag>;
+
   isInitialized(): boolean;
 }
 
@@ -755,6 +757,10 @@ export default class EppoClient implements IEppoClient {
 
   public setIsGracefulFailureMode(gracefulFailureMode: boolean) {
     this.isGracefulFailureMode = gracefulFailureMode;
+  }
+
+  public getFlagConfigurations(): Record<string, Flag> {
+    return this.flagConfigurationStore.entries();
   }
 
   private flushQueuedEvents<T>(eventQueue: T[], logFunction?: (event: T) => void) {

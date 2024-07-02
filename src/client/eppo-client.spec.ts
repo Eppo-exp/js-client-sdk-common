@@ -361,6 +361,12 @@ describe('EppoClient E2E test', () => {
     expect(assignment).toEqual('variation-a');
   });
 
+  it('exports flag configuration', () => {
+    storage.setEntries({ [flagKey]: mockFlag });
+    const client = new EppoClient(storage);
+    expect(client.getFlagConfigurations()).toEqual({ [flagKey]: mockFlag });
+  });
+
   describe('assignment logging deduplication', () => {
     let client: EppoClient;
     let mockLogger: IAssignmentLogger;
