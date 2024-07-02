@@ -23,7 +23,6 @@ describe('IAssignmentEvent', () => {
         matchedRule: null,
         matchedAllocation: {
           key: 'allocation_123',
-          name: 'Allocation for allocation_123',
           allocationEvaluationCode: AllocationEvaluationCode.MATCH,
           orderPosition: 1,
         },

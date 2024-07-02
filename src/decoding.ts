@@ -48,7 +48,6 @@ export function decodeAllocation(allocation: ObfuscatedAllocation): Allocation {
   return {
     ...allocation,
     key: decodeBase64(allocation.key),
-    name: decodeBase64(allocation.name),
     splits: allocation.splits.map(decodeSplit),
     startAt: allocation.startAt
       ? new Date(decodeBase64(allocation.startAt)).toISOString()

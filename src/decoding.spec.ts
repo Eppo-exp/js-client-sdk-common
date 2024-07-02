@@ -138,7 +138,6 @@ describe('decoding', () => {
     it('should correctly decode allocation without startAt and endAt', () => {
       const obfuscatedAllocation = {
         key: 'ZXhwZXJpbWVudA==',
-        name: 'QWxsb2NhdGlvbiBmb3IgZXhwZXJpbWVudA==',
         rules: [],
         splits: [], // tested in decodeSplit
         doLog: true,
@@ -146,7 +145,6 @@ describe('decoding', () => {
 
       const expectedAllocation = {
         key: 'experiment',
-        name: 'Allocation for experiment',
         rules: [],
         splits: [],
         doLog: true,
@@ -158,7 +156,6 @@ describe('decoding', () => {
     it('should correctly decode allocation with startAt and endAt', () => {
       const obfuscatedAllocation = {
         key: 'ZXhwZXJpbWVudA==',
-        name: 'QWxsb2NhdGlvbiBmb3IgZXhwZXJpbWVudA==',
         startAt: 'MjAyMC0wNC0wMVQxODo1ODo1NS44Mjla',
         endAt: 'MjAyNS0wNy0yOVQwOTowMDoxMy4yMDVa',
         rules: [],
@@ -168,7 +165,6 @@ describe('decoding', () => {
 
       const expectedAllocation = {
         key: 'experiment',
-        name: 'Allocation for experiment',
         rules: [],
         splits: [],
         doLog: true,

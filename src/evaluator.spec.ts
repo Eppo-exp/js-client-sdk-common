@@ -32,7 +32,6 @@ describe('Evaluator', () => {
       allocations: [
         {
           key: 'default',
-          name: 'Allocation for default',
           rules: [],
           splits: [
             {
@@ -114,7 +113,6 @@ describe('Evaluator', () => {
       allocations: [
         {
           key: 'allocation',
-          name: 'Allocation for allocation',
           rules: [],
           splits: [
             {
@@ -142,7 +140,6 @@ describe('Evaluator', () => {
       allocations: [
         {
           key: 'allocation',
-          name: 'Allocation for allocation',
           rules: [
             {
               conditions: [
@@ -182,7 +179,6 @@ describe('Evaluator', () => {
       allocations: [
         {
           key: 'allocation',
-          name: 'Allocation for allocation',
           rules: [
             {
               conditions: [
@@ -216,7 +212,6 @@ describe('Evaluator', () => {
       allocations: [
         {
           key: 'default',
-          name: 'Allocation for default',
           rules: [],
           splits: [
             {
@@ -247,7 +242,6 @@ describe('Evaluator', () => {
       allocations: [
         {
           key: 'first',
-          name: 'Allocation for first',
           rules: [
             {
               conditions: [
@@ -266,7 +260,6 @@ describe('Evaluator', () => {
         },
         {
           key: 'default',
-          name: 'Allocation for default',
           rules: [],
           splits: [
             {
@@ -302,7 +295,6 @@ describe('Evaluator', () => {
       allocations: [
         {
           key: 'first',
-          name: 'Allocation for first',
           rules: [
             {
               conditions: [
@@ -321,7 +313,6 @@ describe('Evaluator', () => {
         },
         {
           key: 'default',
-          name: 'Allocation for default',
           rules: [],
           splits: [
             {
@@ -357,7 +348,6 @@ describe('Evaluator', () => {
       allocations: [
         {
           key: 'first',
-          name: 'Allocation for first',
           rules: [
             {
               conditions: [
@@ -380,7 +370,6 @@ describe('Evaluator', () => {
         },
         {
           key: 'default',
-          name: 'Allocation for default',
           rules: [],
           splits: [
             {
@@ -416,7 +405,6 @@ describe('Evaluator', () => {
       allocations: [
         {
           key: 'first',
-          name: 'Allocation for first',
           splits: [
             {
               variationKey: 'a',
@@ -439,7 +427,6 @@ describe('Evaluator', () => {
         },
         {
           key: 'default',
-          name: 'Allocation for default',
           splits: [
             {
               variationKey: 'c',
@@ -490,7 +477,6 @@ describe('Evaluator', () => {
       allocations: [
         {
           key: 'default',
-          name: 'Allocation for default',
           startAt: new Date(now.getFullYear() + 1, 0, 1).toISOString(),
           endAt: new Date(now.getFullYear() + 1, 1, 1).toISOString(),
           rules: [],
@@ -523,7 +509,6 @@ describe('Evaluator', () => {
       allocations: [
         {
           key: 'default',
-          name: 'Allocation for default',
           startAt: new Date(now.getFullYear() - 1, 0, 1).toISOString(),
           endAt: new Date(now.getFullYear() + 1, 0, 1).toISOString(),
           rules: [],
@@ -556,7 +541,6 @@ describe('Evaluator', () => {
       allocations: [
         {
           key: 'default',
-          name: 'Allocation for default',
           startAt: new Date(now.getFullYear() - 2, 0, 1).toISOString(),
           endAt: new Date(now.getFullYear() - 1, 0, 1).toISOString(),
           rules: [],

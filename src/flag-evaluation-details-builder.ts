@@ -22,7 +22,6 @@ export enum AllocationEvaluationCode {
 
 export interface AllocationEvaluation {
   key: string;
-  name: string;
   allocationEvaluationCode: AllocationEvaluationCode;
   orderPosition: number;
 }
@@ -67,7 +66,6 @@ export class FlagEvaluationDetailsBuilder {
     this.unevaluatedAllocations = this.allocations.map(
       (allocation, i): AllocationEvaluation => ({
         key: allocation.key,
-        name: allocation.name,
         allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
         orderPosition: i + 1,
       }),
@@ -105,7 +103,6 @@ export class FlagEvaluationDetailsBuilder {
     this.matchedRule = matchedRule;
     this.matchedAllocation = {
       key: allocation.key,
-      name: allocation.name,
       allocationEvaluationCode: AllocationEvaluationCode.MATCH,
       orderPosition: indexPosition + 1, // orderPosition is 1-indexed to match UI
     };
@@ -116,7 +113,6 @@ export class FlagEvaluationDetailsBuilder {
       (allocation, i) =>
         ({
           key: allocation.key,
-          name: allocation.name,
           allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
           orderPosition: unevaluatedStartOrderPosition + i,
         } as AllocationEvaluation),

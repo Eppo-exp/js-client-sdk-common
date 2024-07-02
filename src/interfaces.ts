@@ -31,7 +31,6 @@ export interface Split {
 
 export interface Allocation {
   key: string;
-  name: string;
   rules?: Rule[];
   startAt?: string; // ISO 8601
   endAt?: string; // ISO 8601
@@ -75,7 +74,6 @@ export interface ObfuscatedVariation {
 
 export interface ObfuscatedAllocation {
   key: string;
-  name: string;
   rules?: Rule[];
   startAt?: string; // ISO 8601
   endAt?: string; // ISO 8601
