@@ -72,6 +72,7 @@ describe('EppoClient E2E test', () => {
     allocations: [
       {
         key: 'allocation-a',
+        name: 'Allocation for allocation-a',
         rules: [],
         splits: [
           {
@@ -459,6 +460,7 @@ describe('EppoClient E2E test', () => {
           allocations: [
             {
               key: 'allocation-a-2',
+              name: 'Allocation for allocation-a-2',
               rules: [],
               splits: [
                 {
@@ -479,6 +481,7 @@ describe('EppoClient E2E test', () => {
           allocations: [
             {
               key: 'allocation-a-3',
+              name: 'Allocation for allocation-a-3',
               rules: [],
               splits: [
                 {
@@ -511,6 +514,7 @@ describe('EppoClient E2E test', () => {
           allocations: [
             {
               key: 'allocation-a', // note: same key
+              name: 'Allocation for allocation-a',
               rules: [],
               splits: [
                 {
@@ -540,6 +544,7 @@ describe('EppoClient E2E test', () => {
           allocations: [
             {
               key: 'allocation-b', // note: different key
+              name: 'Allocation for allocation-b',
               rules: [],
               splits: [
                 {
