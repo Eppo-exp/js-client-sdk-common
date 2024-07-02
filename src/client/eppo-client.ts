@@ -497,8 +497,7 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes: BanditSubjectAttributes,
   ): Attributes {
     let result: Attributes;
-    if ('numericAttributes' in subjectAttributes && 'categoricalAttributes' in subjectAttributes) {
-      // Attributes are contextual
+    if (this.isInstanceOfContextualAttributes(subjectAttributes)) {
       const contextualSubjectAttributes = subjectAttributes as ContextAttributes;
       result = {
         ...contextualSubjectAttributes.numericAttributes,
@@ -506,7 +505,7 @@ export default class EppoClient implements IEppoClient {
       };
     } else {
       // Attributes are non-contextual
-      result = subjectAttributes;
+      result = subjectAttributes as Attributes;
     }
     return result;
   }
@@ -515,12 +514,10 @@ export default class EppoClient implements IEppoClient {
     subjectAttributes: BanditSubjectAttributes,
   ): ContextAttributes {
     let result: ContextAttributes;
-    if ('numericAttributes' in subjectAttributes && 'categoricalAttributes' in subjectAttributes) {
-      // Attributes are contextual
+    if (this.isInstanceOfContextualAttributes(subjectAttributes)) {
       result = subjectAttributes as ContextAttributes;
     } else {
-      // Attributes are non-contextual
-      result = this.deduceAttributeContext(subjectAttributes);
+      result = this.deduceAttributeContext(subjectAttributes as Attributes);
     }
     return result;
   }
@@ -534,15 +531,7 @@ export default class EppoClient implements IEppoClient {
       actions.forEach((action) => {
         result[action] = { numericAttributes: {}, categoricalAttributes: {} };
       });
-    } else if (
-      !Object.values(actions).every(
-        (value) =>
-          typeof value === 'object' &&
-          value && // exclude null
-          'numericAttributes' in value &&
-          'categoricalAttributes' in value,
-      )
-    ) {
+    } else if (!Object.values(actions).every(this.isInstanceOfContextualAttributes)) {
       // Actions have non-contextual attributes; bucket based on number or not
       Object.entries(actions).forEach(([action, attributes]) => {
         result[action] = this.deduceAttributeContext(attributes);
@@ -552,6 +541,15 @@ export default class EppoClient implements IEppoClient {
       result = actions as Record<string, ContextAttributes>;
     }
     return result;
+  }
+
+  private isInstanceOfContextualAttributes(attributes: unknown): boolean {
+    return Boolean(
+      typeof attributes === 'object' &&
+        attributes && // exclude null
+        'numericAttributes' in attributes &&
+        'categoricalAttributes' in attributes,
+    );
   }
 
   private deduceAttributeContext(attributes: Attributes): ContextAttributes {
