@@ -77,7 +77,6 @@ describe('EppoClient get*AssignmentDetails', () => {
       },
       matchedAllocation: {
         key: 'targeted allocation',
-        name: 'Allocation for targeted allocation',
         allocationEvaluationCode: AllocationEvaluationCode.MATCH,
         orderPosition: 1,
       },
@@ -85,7 +84,6 @@ describe('EppoClient get*AssignmentDetails', () => {
       unevaluatedAllocations: [
         {
           key: '50/50 split',
-          name: 'Allocation for 50/50 split',
           allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
           orderPosition: 2,
         },
@@ -117,14 +115,12 @@ describe('EppoClient get*AssignmentDetails', () => {
       matchedRule: null,
       matchedAllocation: {
         key: '50/50 split',
-        name: 'Allocation for 50/50 split',
         allocationEvaluationCode: AllocationEvaluationCode.MATCH,
         orderPosition: 2,
       },
       unmatchedAllocations: [
         {
           key: 'targeted allocation',
-          name: 'Allocation for targeted allocation',
           allocationEvaluationCode: AllocationEvaluationCode.FAILING_RULE,
           orderPosition: 1,
         },
@@ -165,20 +161,17 @@ describe('EppoClient get*AssignmentDetails', () => {
       },
       matchedAllocation: {
         key: 'experiment',
-        name: 'Allocation for experiment',
         allocationEvaluationCode: AllocationEvaluationCode.MATCH,
         orderPosition: 3,
       },
       unmatchedAllocations: [
         {
           key: 'id rule',
-          name: 'Allocation for id rule',
           allocationEvaluationCode: AllocationEvaluationCode.FAILING_RULE,
           orderPosition: 1,
         },
         {
           key: 'internal users',
-          name: 'Allocation for internal users',
           allocationEvaluationCode: AllocationEvaluationCode.FAILING_RULE,
           orderPosition: 2,
         },
@@ -186,7 +179,6 @@ describe('EppoClient get*AssignmentDetails', () => {
       unevaluatedAllocations: [
         {
           key: 'rollout',
-          name: 'Allocation for rollout',
           allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
           orderPosition: 4,
         },
