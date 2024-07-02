@@ -13,5 +13,9 @@ jobs:
         with:
           node-version: '18.x'
       - run: yarn install
-      - run: yarn test
+      - name: 'Set up GCP SDK for downloading js-client-sdk'
+        uses: 'google-github-actions/setup-gcloud@v0'
       - run: "${GITHUB_WORKSPACE}/.github/verify-package.sh"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EPPO_FEATURE_FLAG_API_KEY: ${{ secrets.EPPO_FEATURE_FLAG_API_KEY }}

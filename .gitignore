@@ -13,3 +13,5 @@ test/data
 .idea
 
 .DS_Store
+test/e2e/pkg
+test/e2e/js-client-sdk
