@@ -52,7 +52,7 @@ export class BanditEvaluator {
     return {
       flagKey,
       subjectKey,
-      subjectAttributes: subjectAttributes,
+      subjectAttributes,
       actionKey: selectedActionKey,
       actionAttributes: actions[selectedActionKey],
       actionScore: actionScores[selectedActionKey],
