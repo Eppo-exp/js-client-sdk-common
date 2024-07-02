@@ -29,7 +29,7 @@ export class HybridConfigurationStore<T> implements IConfigurationStore<T> {
       );
     }
 
-    const entries = await this.persistentStore.getEntries();
+    const entries = await this.persistentStore.entries();
     this.servingStore.setEntries(entries);
   }
 
@@ -47,6 +47,10 @@ export class HybridConfigurationStore<T> implements IConfigurationStore<T> {
       logger.warn(`${loggerPrefix} getting a value from a ServingStore that is not initialized.`);
     }
     return this.servingStore.get(key);
+  }
+
+  public entries(): Record<string, T> {
+    return this.servingStore.entries();
   }
 
   public getKeys(): string[] {
