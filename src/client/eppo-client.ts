@@ -1,11 +1,14 @@
 import ApiEndpoints from '../api-endpoints';
 import { logger } from '../application-logger';
 import { IAssignmentEvent, IAssignmentLogger } from '../assignment-logger';
+import { BanditEvaluator } from '../bandit-evaluator';
+import { IBanditEvent, IBanditLogger } from '../bandit-logger';
 import {
   AssignmentCache,
   LRUInMemoryAssignmentCache,
   NonExpiringInMemoryAssignmentCache,
 } from '../cache/abstract-assignment-cache';
+import ConfigurationRequestor from '../configuration-requestor';
 import { IConfigurationStore } from '../configuration-store/configuration-store';
 import {
   DEFAULT_INITIAL_CONFIG_REQUEST_RETRIES,
@@ -17,12 +20,24 @@ import {
 import { decodeFlag } from '../decoding';
 import { EppoValue } from '../eppo_value';
 import { Evaluator, FlagEvaluation, noneResult } from '../evaluator';
-import FlagConfigurationRequestor from '../flag-configuration-requestor';
 import FetchHttpClient from '../http-client';
-import { Flag, ObfuscatedFlag, VariationType } from '../interfaces';
+import {
+  BanditVariation,
+  BanditParameters,
+  Flag,
+  ObfuscatedFlag,
+  VariationType,
+} from '../interfaces';
 import { getMD5Hash } from '../obfuscation';
 import initPoller, { IPoller } from '../poller';
-import { AttributeType, ValueType } from '../types';
+import {
+  Attributes,
+  AttributeType,
+  BanditActions,
+  BanditSubjectAttributes,
+  ContextAttributes,
+  ValueType,
+} from '../types';
 import { validateNotBlank } from '../validation';
 import { LIB_VERSION } from '../version';
 
@@ -123,7 +138,31 @@ export interface IEppoClient {
     defaultValue: object,
   ): object;
 
+  /**
+   * Maps a subject to a string assignment for a given experiment.
+   * This variation may be a bandit-selected action.
+   *
+   * @param flagKey feature flag identifier
+   * @param subjectKey an identifier of the experiment subject, for example a user ID.
+   * @param subjectAttributes optional (can be empty) attributes associated with the subject, for example name and email.
+   * @param actions possible attributes and their optional (can be empty) attributes to be evaluated by a contextual,
+   * multi-armed bandit--if one is assigned to the subject.
+   * @param defaultValue default value to return if the subject is not part of the experiment sample,
+   * there are no bandit actions, or an error is countered evaluating the feature flag or bandit action */
+  getBanditAction(
+    flagKey: string,
+    subjectKey: string,
+    subjectAttributes: BanditSubjectAttributes,
+    actions: BanditActions,
+    defaultValue: string,
+  ): { variation: string; action: string | null };
+
+  /** @Deprecated Renamed to setAssignmentLogger for clarity */
   setLogger(logger: IAssignmentLogger): void;
+
+  setAssignmentLogger(assignmentLogger: IAssignmentLogger): void;
+
+  setBanditLogger(banditLogger: IBanditLogger): void;
 
   useLRUInMemoryAssignmentCache(maxSize: number): void;
 
@@ -133,7 +172,17 @@ export interface IEppoClient {
     configurationRequestParameters: FlagConfigurationRequestParameters,
   ): void;
 
-  setConfigurationStore(configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>): void;
+  setFlagConfigurationStore(configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>): void;
+
+  setBanditVariationConfigurationStore(
+    banditVariationConfigurationStore: IConfigurationStore<BanditVariation[]>,
+  ): void;
+
+  setBanditModelConfigurationStore(
+    banditModelConfigurationStore: IConfigurationStore<BanditParameters>,
+  ): void;
+
+  setIsObfuscated(isObfuscated: boolean): void;
 
   fetchFlagConfigurations(): void;
 
@@ -163,15 +212,20 @@ export type FlagConfigurationRequestParameters = {
 };
 
 export default class EppoClient implements IEppoClient {
-  private queuedEvents: IAssignmentEvent[] = [];
+  private readonly queuedAssignmentEvents: IAssignmentEvent[] = [];
   private assignmentLogger?: IAssignmentLogger;
+  private readonly queuedBanditEvents: IBanditEvent[] = [];
+  private banditLogger?: IBanditLogger;
   private isGracefulFailureMode = true;
   private assignmentCache?: AssignmentCache;
   private requestPoller?: IPoller;
-  private evaluator = new Evaluator();
+  private readonly evaluator = new Evaluator();
+  private readonly banditEvaluator = new BanditEvaluator();
 
   constructor(
-    private configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>,
+    private flagConfigurationStore: IConfigurationStore<Flag | ObfuscatedFlag>,
+    private banditVariationConfigurationStore?: IConfigurationStore<BanditVariation[]>,
+    private banditModelConfigurationStore?: IConfigurationStore<BanditParameters>,
     private configurationRequestParameters?: FlagConfigurationRequestParameters,
     private isObfuscated = false,
   ) {}
@@ -182,8 +236,22 @@ export default class EppoClient implements IEppoClient {
     this.configurationRequestParameters = configurationRequestParameters;
   }
 
-  public setConfigurationStore(configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>) {
-    this.configurationStore = configurationStore;
+  public setFlagConfigurationStore(
+    flagConfigurationStore: IConfigurationStore<Flag | ObfuscatedFlag>,
+  ) {
+    this.flagConfigurationStore = flagConfigurationStore;
+  }
+
+  public setBanditVariationConfigurationStore(
+    banditVariationConfigurationStore: IConfigurationStore<BanditVariation[]>,
+  ) {
+    this.banditVariationConfigurationStore = banditVariationConfigurationStore;
+  }
+
+  public setBanditModelConfigurationStore(
+    banditModelConfigurationStore: IConfigurationStore<BanditParameters>,
+  ) {
+    this.banditModelConfigurationStore = banditModelConfigurationStore;
   }
 
   public setIsObfuscated(isObfuscated: boolean) {
@@ -202,7 +270,7 @@ export default class EppoClient implements IEppoClient {
       this.requestPoller.stop();
     }
 
-    const isExpired = await this.configurationStore.isExpired();
+    const isExpired = await this.flagConfigurationStore.isExpired();
     if (!isExpired) {
       logger.info(
         '[Eppo SDK] Configuration store is not expired. Skipping fetching flag configurations',
@@ -228,9 +296,11 @@ export default class EppoClient implements IEppoClient {
       queryParams: { apiKey, sdkName, sdkVersion },
     });
     const httpClient = new FetchHttpClient(apiEndpoints, requestTimeoutMs);
-    const configurationRequestor = new FlagConfigurationRequestor(
-      this.configurationStore,
+    const configurationRequestor = new ConfigurationRequestor(
       httpClient,
+      this.flagConfigurationStore,
+      this.banditVariationConfigurationStore ?? null,
+      this.banditModelConfigurationStore ?? null,
     );
 
     this.requestPoller = initPoller(
@@ -349,6 +419,183 @@ export default class EppoClient implements IEppoClient {
     );
   }
 
+  public getBanditAction(
+    flagKey: string,
+    subjectKey: string,
+    subjectAttributes: BanditSubjectAttributes,
+    actions: BanditActions,
+    defaultValue: string,
+  ): { variation: string; action: string | null } {
+    const defaultResult = { variation: defaultValue, action: null };
+    let variation = defaultValue;
+    let action: string | null = null;
+    try {
+      const banditVariations = this.banditVariationConfigurationStore?.get(flagKey);
+      if (banditVariations && !Object.keys(actions).length) {
+        // No actions passed for a flag known to have an active bandit, so we just return the default values so that
+        // we don't log a variation or bandit assignment
+        return defaultResult;
+      }
+
+      // Get the assigned variation for the flag with a possible bandit
+      // Note for getting assignments, we don't care about context
+      const nonContextualSubjectAttributes =
+        this.ensureNonContextualSubjectAttributes(subjectAttributes);
+      variation = this.getStringAssignment(
+        flagKey,
+        subjectKey,
+        nonContextualSubjectAttributes,
+        defaultValue,
+      );
+
+      // Check if the assigned variation is an active bandit
+      // Note: the reason for non-bandit assignments include the subject being bucketed into a non-bandit variation or
+      // a rollout having been done.
+      const banditKey = banditVariations?.find(
+        (banditVariation) => banditVariation.variationValue === variation,
+      )?.key;
+
+      if (banditKey) {
+        // Retrieve the model parameters for the bandit
+        const banditParameters = this.banditModelConfigurationStore?.get(banditKey);
+
+        if (!banditParameters) {
+          throw new Error('No model parameters for bandit ' + banditKey);
+        }
+
+        const banditModelData = banditParameters.modelData;
+        const contextualSubjectAttributes =
+          this.ensureContextualSubjectAttributes(subjectAttributes);
+        const actionsWithContextualAttributes = this.ensureActionsWithContextualAttributes(actions);
+        const banditEvaluation = this.banditEvaluator.evaluateBandit(
+          flagKey,
+          subjectKey,
+          contextualSubjectAttributes,
+          actionsWithContextualAttributes,
+          banditModelData,
+        );
+        action = banditEvaluation.actionKey;
+
+        const banditEvent: IBanditEvent = {
+          timestamp: new Date().toISOString(),
+          featureFlag: flagKey,
+          bandit: banditKey,
+          subject: subjectKey,
+          action,
+          actionProbability: banditEvaluation.actionWeight,
+          optimalityGap: banditEvaluation.optimalityGap,
+          modelVersion: banditParameters.modelVersion,
+          subjectNumericAttributes: contextualSubjectAttributes.numericAttributes,
+          subjectCategoricalAttributes: contextualSubjectAttributes.categoricalAttributes,
+          actionNumericAttributes: actionsWithContextualAttributes[action].numericAttributes,
+          actionCategoricalAttributes:
+            actionsWithContextualAttributes[action].categoricalAttributes,
+          metaData: this.buildLoggerMetadata(),
+        };
+        this.logBanditAction(banditEvent);
+      }
+    } catch (err) {
+      logger.error('Error evaluating bandit action', err);
+      if (!this.isGracefulFailureMode) {
+        throw err;
+      }
+      return defaultResult;
+    }
+
+    return { variation, action };
+  }
+
+  private ensureNonContextualSubjectAttributes(
+    subjectAttributes: BanditSubjectAttributes,
+  ): Attributes {
+    let result: Attributes;
+    if (this.isInstanceOfContextualAttributes(subjectAttributes)) {
+      const contextualSubjectAttributes = subjectAttributes as ContextAttributes;
+      result = {
+        ...contextualSubjectAttributes.numericAttributes,
+        ...contextualSubjectAttributes.categoricalAttributes,
+      };
+    } else {
+      // Attributes are non-contextual
+      result = subjectAttributes as Attributes;
+    }
+    return result;
+  }
+
+  private ensureContextualSubjectAttributes(
+    subjectAttributes: BanditSubjectAttributes,
+  ): ContextAttributes {
+    let result: ContextAttributes;
+    if (this.isInstanceOfContextualAttributes(subjectAttributes)) {
+      result = subjectAttributes as ContextAttributes;
+    } else {
+      result = this.deduceAttributeContext(subjectAttributes as Attributes);
+    }
+    return result;
+  }
+
+  private ensureActionsWithContextualAttributes(
+    actions: BanditActions,
+  ): Record<string, ContextAttributes> {
+    let result: Record<string, ContextAttributes> = {};
+    if (Array.isArray(actions)) {
+      // no context
+      actions.forEach((action) => {
+        result[action] = { numericAttributes: {}, categoricalAttributes: {} };
+      });
+    } else if (!Object.values(actions).every(this.isInstanceOfContextualAttributes)) {
+      // Actions have non-contextual attributes; bucket based on number or not
+      Object.entries(actions).forEach(([action, attributes]) => {
+        result[action] = this.deduceAttributeContext(attributes);
+      });
+    } else {
+      // Actions already have contextual attributes
+      result = actions as Record<string, ContextAttributes>;
+    }
+    return result;
+  }
+
+  private isInstanceOfContextualAttributes(attributes: unknown): boolean {
+    return Boolean(
+      typeof attributes === 'object' &&
+        attributes && // exclude null
+        'numericAttributes' in attributes &&
+        'categoricalAttributes' in attributes,
+    );
+  }
+
+  private deduceAttributeContext(attributes: Attributes): ContextAttributes {
+    const contextualAttributes: ContextAttributes = {
+      numericAttributes: {},
+      categoricalAttributes: {},
+    };
+    Object.entries(attributes).forEach(([attribute, value]) => {
+      const isNumeric = typeof value === 'number' && isFinite(value);
+      if (isNumeric) {
+        contextualAttributes.numericAttributes[attribute] = value;
+      } else {
+        contextualAttributes.categoricalAttributes[attribute] = value as AttributeType;
+      }
+    });
+    return contextualAttributes;
+  }
+
+  private logBanditAction(banditEvent: IBanditEvent): void {
+    if (!this.banditLogger) {
+      // No bandit logger set; enqueue the event in case a logger is later set
+      if (this.queuedBanditEvents.length < MAX_EVENT_QUEUE_SIZE) {
+        this.queuedBanditEvents.push(banditEvent);
+      }
+      return;
+    }
+    // If here, we have a logger
+    try {
+      this.banditLogger.logBanditAction(banditEvent);
+    } catch (err) {
+      logger.warn('Error encountered logging bandit action', err);
+    }
+  }
+
   private getAssignmentVariation(
     flagKey: string,
     subjectKey: string,
@@ -453,11 +700,11 @@ export default class EppoClient implements IEppoClient {
     if (this.isObfuscated) {
       return this.getObfuscatedFlag(flagKey);
     }
-    return this.configurationStore.get(flagKey);
+    return this.flagConfigurationStore.get(flagKey);
   }
 
   private getObfuscatedFlag(flagKey: string): Flag | null {
-    const flag: ObfuscatedFlag | null = this.configurationStore.get(
+    const flag: ObfuscatedFlag | null = this.flagConfigurationStore.get(
       getMD5Hash(flagKey),
     ) as ObfuscatedFlag;
     return flag ? decodeFlag(flag) : null;
@@ -468,18 +715,35 @@ export default class EppoClient implements IEppoClient {
      * Returns a list of all flag keys that have been initialized.
      * This can be useful to debug the initialization process.
      *
-     * Note that it is generally not a good idea to pre-load all flag configurations.
+     * Note that it is generally not a good idea to preload all flag configurations.
      */
-    return this.configurationStore.getKeys();
+    return this.flagConfigurationStore.getKeys();
   }
 
   public isInitialized() {
-    return this.configurationStore.isInitialized();
+    return (
+      this.flagConfigurationStore.isInitialized() &&
+      (!this.banditVariationConfigurationStore ||
+        this.banditVariationConfigurationStore.isInitialized()) &&
+      (!this.banditModelConfigurationStore || this.banditModelConfigurationStore.isInitialized())
+    );
   }
 
+  /** @deprecated Renamed to setAssignmentLogger */
   public setLogger(logger: IAssignmentLogger) {
+    this.setAssignmentLogger(logger);
+  }
+
+  public setAssignmentLogger(logger: IAssignmentLogger) {
     this.assignmentLogger = logger;
-    this.flushQueuedEvents(); // log any events that may have been queued while initializing
+    // log any assignment events that may have been queued while initializing
+    this.flushQueuedEvents(this.queuedAssignmentEvents, this.assignmentLogger?.logAssignment);
+  }
+
+  public setBanditLogger(logger: IBanditLogger) {
+    this.banditLogger = logger;
+    // log any bandit events that may have been queued while initializing
+    this.flushQueuedEvents(this.queuedBanditEvents, this.banditLogger?.logBanditAction);
   }
 
   /**
@@ -506,19 +770,24 @@ export default class EppoClient implements IEppoClient {
   }
 
   public getFlagConfigurations(): Record<string, Flag> {
-    return this.configurationStore.entries();
+    return this.flagConfigurationStore.entries();
   }
 
-  private flushQueuedEvents() {
-    const eventsToFlush = this.queuedEvents;
-    this.queuedEvents = [];
-    try {
-      for (const event of eventsToFlush) {
-        this.assignmentLogger?.logAssignment(event);
-      }
-    } catch (error) {
-      logger.error(`[Eppo SDK] Error flushing assignment events: ${error.message}`);
+  private flushQueuedEvents<T>(eventQueue: T[], logFunction?: (event: T) => void) {
+    const eventsToFlush = [...eventQueue]; // defensive copy
+    eventQueue.length = 0; // Truncate the array
+
+    if (!logFunction) {
+      return;
     }
+
+    eventsToFlush.forEach((event) => {
+      try {
+        logFunction(event);
+      } catch (error) {
+        logger.error(`[Eppo SDK] Error flushing event to logger: ${error.message}`);
+      }
+    });
   }
 
   private logAssignment(result: FlagEvaluation) {
@@ -532,11 +801,7 @@ export default class EppoClient implements IEppoClient {
       subject: subjectKey,
       timestamp: new Date().toISOString(),
       subjectAttributes,
-      metaData: {
-        obfuscated: this.isObfuscated,
-        sdkLanguage: 'javascript',
-        sdkLibVersion: LIB_VERSION,
-      },
+      metaData: this.buildLoggerMetadata(),
     };
 
     if (variation && allocationKey) {
@@ -553,7 +818,8 @@ export default class EppoClient implements IEppoClient {
 
     // assignment logger may be null while waiting for initialization
     if (!this.assignmentLogger) {
-      this.queuedEvents.length < MAX_EVENT_QUEUE_SIZE && this.queuedEvents.push(event);
+      this.queuedAssignmentEvents.length < MAX_EVENT_QUEUE_SIZE &&
+        this.queuedAssignmentEvents.push(event);
       return;
     }
     try {
@@ -567,6 +833,14 @@ export default class EppoClient implements IEppoClient {
     } catch (error) {
       logger.error(`[Eppo SDK] Error logging assignment event: ${error.message}`);
     }
+  }
+
+  private buildLoggerMetadata(): Record<string, unknown> {
+    return {
+      obfuscated: this.isObfuscated,
+      sdkLanguage: 'javascript',
+      sdkLibVersion: LIB_VERSION,
+    };
   }
 }
 

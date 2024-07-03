@@ -1,4 +1,4 @@
-import { BASE_URL as DEFAULT_BASE_URL, UFC_ENDPOINT } from './constants';
+import { BASE_URL as DEFAULT_BASE_URL, UFC_ENDPOINT, BANDIT_ENDPOINT } from './constants';
 import { IQueryParams } from './http-client';
 
 interface IApiEndpointsParams {
@@ -22,5 +22,9 @@ export default class ApiEndpoints {
 
   ufcEndpoint(): URL {
     return this.endpoint(UFC_ENDPOINT);
+  }
+
+  banditParametersEndpoint(): URL {
+    return this.endpoint(BANDIT_ENDPOINT);
   }
 }

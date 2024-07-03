@@ -1,12 +1,16 @@
 import * as fs from 'fs';
 
-import { Flag, VariationType } from '../src/interfaces';
-import { AttributeType } from '../src/types';
+import { VariationType, AttributeType } from '../src';
+import { IBanditParametersResponse, IUniversalFlagConfigResponse } from '../src/http-client';
+import { ContextAttributes } from '../src/types';
 
 export const TEST_DATA_DIR = './test/data/ufc/';
 export const ASSIGNMENT_TEST_DATA_DIR = TEST_DATA_DIR + 'tests/';
+export const BANDIT_TEST_DATA_DIR = TEST_DATA_DIR + 'bandit-tests/';
 const MOCK_UFC_FILENAME = 'flags-v1';
 export const MOCK_UFC_RESPONSE_FILE = `${MOCK_UFC_FILENAME}.json`;
+export const MOCK_FLAGS_WITH_BANDITS_RESPONSE_FILE = `bandit-flags-v1.json`;
+export const MOCK_BANDIT_MODELS_RESPONSE_FILE = `bandit-models-v1.json`;
 export const OBFUSCATED_MOCK_UFC_RESPONSE_FILE = `${MOCK_UFC_FILENAME}-obfuscated.json`;
 export interface SubjectTestCase {
   subjectKey: string;
@@ -21,16 +25,45 @@ export interface IAssignmentTestCase {
   subjects: SubjectTestCase[];
 }
 
-export function readMockUFCResponse(filename: string): {
-  flags: Record<string, Flag>;
-} {
+export interface BanditTestCase {
+  flag: string;
+  defaultValue: string;
+  subjects: BanditTestCaseSubject[];
+}
+
+interface BanditTestCaseSubject {
+  subjectKey: string;
+  subjectAttributes: ContextAttributes;
+  actions: BanditTestCaseAction[];
+  assignment: { variation: string; action: string | null };
+}
+
+interface BanditTestCaseAction extends ContextAttributes {
+  actionKey: string;
+}
+
+export function readMockUFCResponse(
+  filename: string,
+): IUniversalFlagConfigResponse | IBanditParametersResponse {
   return JSON.parse(fs.readFileSync(TEST_DATA_DIR + filename, 'utf-8'));
 }
 
-export function readAssignmentTestData(): IAssignmentTestCase[] {
-  return fs
-    .readdirSync(ASSIGNMENT_TEST_DATA_DIR)
-    .map((file) => JSON.parse(fs.readFileSync(ASSIGNMENT_TEST_DATA_DIR + file, 'utf8')));
+export function testCasesByFileName<T>(testDirectory: string): Record<string, T> {
+  const testCasesWithFileName: Array<T & { fileName: string }> = fs
+    .readdirSync(testDirectory)
+    .map((fileName) => ({
+      ...JSON.parse(fs.readFileSync(testDirectory + fileName, 'utf8')),
+      fileName,
+    }));
+  if (!testCasesWithFileName.length) {
+    throw new Error('No test cases at ' + testDirectory);
+  }
+  const mappedTestCase: Record<string, T> = {};
+  testCasesWithFileName.forEach((testCaseWithFileName) => {
+    mappedTestCase[testCaseWithFileName.fileName] = testCaseWithFileName;
+  });
+
+  return mappedTestCase;
 }
 
 export function getTestAssignments(

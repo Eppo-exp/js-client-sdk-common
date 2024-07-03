@@ -80,3 +80,45 @@ export interface ObfuscatedShard {
   salt: string;
   ranges: Range[];
 }
+
+export interface BanditVariation {
+  key: string;
+  flagKey: string;
+  variationKey: string;
+  variationValue: string;
+}
+
+export interface BanditParameters {
+  banditKey: string;
+  modelName: string;
+  modelVersion: string;
+  modelData: BanditModelData;
+}
+
+export interface BanditModelData {
+  gamma: number;
+  defaultActionScore: number;
+  actionProbabilityFloor: number;
+  coefficients: Record<string, BanditCoefficients>;
+}
+
+export interface BanditCoefficients {
+  actionKey: string;
+  intercept: number;
+  subjectNumericCoefficients: BanditNumericAttributeCoefficients[];
+  subjectCategoricalCoefficients: BanditCategoricalAttributeCoefficients[];
+  actionNumericCoefficients: BanditNumericAttributeCoefficients[];
+  actionCategoricalCoefficients: BanditCategoricalAttributeCoefficients[];
+}
+
+export interface BanditNumericAttributeCoefficients {
+  attributeKey: string;
+  coefficient: number;
+  missingValueCoefficient: number;
+}
+
+export interface BanditCategoricalAttributeCoefficients {
+  attributeKey: string;
+  valueCoefficients: Record<string, number>;
+  missingValueCoefficient: number;
+}

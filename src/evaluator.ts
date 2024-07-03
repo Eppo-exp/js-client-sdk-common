@@ -1,12 +1,12 @@
 import { Flag, Shard, Range, Variation } from './interfaces';
 import { Rule, matchesRule } from './rules';
 import { MD5Sharder, Sharder } from './sharders';
-import { SubjectAttributes } from './types';
+import { Attributes } from './types';
 
 export interface FlagEvaluation {
   flagKey: string;
   subjectKey: string;
-  subjectAttributes: SubjectAttributes;
+  subjectAttributes: Attributes;
   allocationKey: string | null;
   variation: Variation | null;
   extraLogging: Record<string, string>;
@@ -23,7 +23,7 @@ export class Evaluator {
   evaluateFlag(
     flag: Flag,
     subjectKey: string,
-    subjectAttributes: SubjectAttributes,
+    subjectAttributes: Attributes,
     obfuscated: boolean,
   ): FlagEvaluation {
     if (!flag.enabled) {
@@ -76,7 +76,7 @@ export function hashKey(salt: string, subjectKey: string): string {
 export function noneResult(
   flagKey: string,
   subjectKey: string,
-  subjectAttributes: SubjectAttributes,
+  subjectAttributes: Attributes,
 ): FlagEvaluation {
   return {
     flagKey,
@@ -91,7 +91,7 @@ export function noneResult(
 
 export function matchesRules(
   rules: Rule[],
-  subjectAttributes: SubjectAttributes,
+  subjectAttributes: Attributes,
   obfuscated: boolean,
 ): boolean {
   return !rules.length || rules.some((rule) => matchesRule(rule, subjectAttributes, obfuscated));
