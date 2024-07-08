@@ -6,9 +6,9 @@ import {
   readMockUFCResponse,
 } from '../../test/testHelpers';
 import ApiEndpoints from '../api-endpoints';
+import ConfigurationRequestor from '../configuration-requestor';
 import { IConfigurationStore } from '../configuration-store/configuration-store';
 import { MemoryOnlyConfigurationStore } from '../configuration-store/memory.store';
-import FlagConfigurationRequestor from '../flag-configuration-requestor';
 import { AllocationEvaluationCode } from '../flag-evaluation-details-builder';
 import FetchHttpClient from '../http-client';
 import { Flag, ObfuscatedFlag, VariationType } from '../interfaces';
@@ -26,7 +26,12 @@ async function init(configurationStore: IConfigurationStore<Flag | ObfuscatedFla
     },
   });
   const httpClient = new FetchHttpClient(apiEndpoints, 1000);
-  const configurationRequestor = new FlagConfigurationRequestor(configurationStore, httpClient);
+  const configurationRequestor = new ConfigurationRequestor(
+    httpClient,
+    configurationStore,
+    null,
+    null,
+  );
   await configurationRequestor.fetchAndStoreConfigurations();
 }
 

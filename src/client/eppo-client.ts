@@ -438,7 +438,8 @@ export default class EppoClient {
     subjectAttributes: BanditSubjectAttributes,
     actions: BanditActions,
     defaultValue: string,
-  ): { variation: string; action: string | null } {
+  ): { variation: string; action: string | null; evaluationDetails: IFlagEvaluationDetails } {
+    const flagEvaluationDetailsBuilder = this.getFlagEvaluationDetailsBuilder(flagKey);
     const defaultResult = { variation: defaultValue, action: null };
     let variation = defaultValue;
     let action: string | null = null;
@@ -447,19 +448,26 @@ export default class EppoClient {
       if (banditVariations && !Object.keys(actions).length) {
         // No actions passed for a flag known to have an active bandit, so we just return the default values so that
         // we don't log a variation or bandit assignment
-        return defaultResult;
+        return {
+          ...defaultResult,
+          evaluationDetails: flagEvaluationDetailsBuilder.buildForNoneResult(
+            'NO_BANDIT_ACTIONS_SUPPLIED',
+            'No bandit actions passed for a flag known to have an active bandit',
+          ),
+        };
       }
 
       // Get the assigned variation for the flag with a possible bandit
       // Note for getting assignments, we don't care about context
       const nonContextualSubjectAttributes =
         this.ensureNonContextualSubjectAttributes(subjectAttributes);
-      variation = this.getStringAssignment(
+      const { value, ...evaluationDetails } = this.getStringAssignmentDetails(
         flagKey,
         subjectKey,
         nonContextualSubjectAttributes,
         defaultValue,
       );
+      variation = value;
 
       // Check if the assigned variation is an active bandit
       // Note: the reason for non-bandit assignments include the subject being bucketed into a non-bandit variation or
@@ -504,18 +512,24 @@ export default class EppoClient {
           actionCategoricalAttributes:
             actionsWithContextualAttributes[action].categoricalAttributes,
           metaData: this.buildLoggerMetadata(),
+          evaluationDetails,
         };
         this.logBanditAction(banditEvent);
       }
+      return { variation, action, evaluationDetails };
     } catch (err) {
       logger.error('Error evaluating bandit action', err);
       if (!this.isGracefulFailureMode) {
         throw err;
       }
-      return defaultResult;
+      return {
+        ...defaultResult,
+        evaluationDetails: flagEvaluationDetailsBuilder.buildForNoneResult(
+          'ASSIGNMENT_ERROR',
+          `Error evaluating bandit action: ${err.message}`,
+        ),
+      };
     }
-
-    return { variation, action };
   }
 
   private ensureNonContextualSubjectAttributes(
@@ -679,14 +693,9 @@ export default class EppoClient {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
     validateNotBlank(flagKey, 'Invalid argument: flagKey cannot be blank');
 
-    const flag = this.getFlag(flagKey);
+    const flagEvaluationDetailsBuilder = this.getFlagEvaluationDetailsBuilder(flagKey);
     const configDetails = this.getConfigDetails();
-    const flagEvaluationDetailsBuilder = new FlagEvaluationDetailsBuilder(
-      configDetails.configEnvironment.name,
-      flag?.allocations ?? [],
-      configDetails.configFetchedAt,
-      configDetails.configPublishedAt,
-    );
+    const flag = this.getFlag(flagKey);
 
     if (flag === null) {
       logger.warn(`[Eppo SDK] No assigned variation. Flag not found: ${flagKey}`);
@@ -746,6 +755,17 @@ export default class EppoClient {
     }
 
     return result;
+  }
+
+  private getFlagEvaluationDetailsBuilder(flagKey: string): FlagEvaluationDetailsBuilder {
+    const flag = this.getFlag(flagKey);
+    const configDetails = this.getConfigDetails();
+    return new FlagEvaluationDetailsBuilder(
+      configDetails.configEnvironment.name,
+      flag?.allocations ?? [],
+      configDetails.configFetchedAt,
+      configDetails.configPublishedAt,
+    );
   }
 
   private getConfigDetails(): ConfigDetails {

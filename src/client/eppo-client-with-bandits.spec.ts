@@ -12,6 +12,10 @@ import { BanditEvaluator } from '../bandit-evaluator';
 import { IBanditEvent, IBanditLogger } from '../bandit-logger';
 import ConfigurationRequestor from '../configuration-requestor';
 import { MemoryOnlyConfigurationStore } from '../configuration-store/memory.store';
+import {
+  AllocationEvaluationCode,
+  IFlagEvaluationDetails,
+} from '../flag-evaluation-details-builder';
 import FetchHttpClient from '../http-client';
 import { BanditVariation, BanditParameters, Flag } from '../interfaces';
 import { Attributes, ContextAttributes } from '../types';
@@ -167,6 +171,22 @@ describe('EppoClient Bandits E2E test', () => {
       expect(banditEvent.actionNumericAttributes).toStrictEqual({ brand_affinity: -1 });
       expect(banditEvent.actionCategoricalAttributes).toStrictEqual({ loyalty_tier: 'bronze' });
       expect(banditEvent.metaData?.obfuscated).toBe(false);
+      expect(banditEvent.evaluationDetails).toMatchObject({
+        configFetchedAt: expect.any(String),
+        configPublishedAt: expect.any(String),
+        environmentName: 'Test',
+        flagEvaluationCode: 'MATCH',
+        flagEvaluationDescription:
+          'bob belongs to the range of traffic assigned to "banner_bandit" defined in allocation "training".',
+        matchedAllocation: { allocationEvaluationCode: 'MATCH', key: 'training', orderPosition: 2 },
+        matchedRule: null,
+        unevaluatedAllocations: [],
+        unmatchedAllocations: [
+          { allocationEvaluationCode: 'TRAFFIC_EXPOSURE_MISS', key: 'analysis', orderPosition: 1 },
+        ],
+        variationKey: 'banner_bandit',
+        variationValue: 'banner_bandit',
+      });
     });
 
     it('Flushed queued logging events when a logger is set', () => {
@@ -238,6 +258,32 @@ describe('EppoClient Bandits E2E test', () => {
         );
         expect(banditAssignment.variation).toBe('control');
         expect(banditAssignment.action).toBeNull();
+
+        const expectedEvaluationDetails: IFlagEvaluationDetails = {
+          configFetchedAt: expect.any(String),
+          configPublishedAt: expect.any(String),
+          environmentName: 'Test',
+          flagEvaluationCode: 'ASSIGNMENT_ERROR',
+          flagEvaluationDescription: 'Error evaluating bandit action: Intentional Error For Test',
+          matchedAllocation: null,
+          matchedRule: null,
+          unevaluatedAllocations: [
+            {
+              allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
+              key: 'analysis',
+              orderPosition: 1,
+            },
+            {
+              allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
+              key: 'training',
+              orderPosition: 2,
+            },
+          ],
+          unmatchedAllocations: [],
+          variationKey: null,
+          variationValue: null,
+        };
+        expect(banditAssignment.evaluationDetails).toMatchObject(expectedEvaluationDetails);
       });
 
       it('Throws the error when graceful mode is off', () => {
