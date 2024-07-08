@@ -17,5 +17,5 @@ export interface IBanditEvent {
 }
 
 export interface IBanditLogger {
-  logBanditAction(assignment: IBanditEvent): void;
+  logBanditAction(banditEvent: IBanditEvent): void;
 }

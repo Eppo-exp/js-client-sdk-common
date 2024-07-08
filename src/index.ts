@@ -1,5 +1,5 @@
 import ApiEndpoints from './api-endpoints';
-import { logger } from './application-logger';
+import { logger as applicationLogger } from './application-logger';
 import { IAssignmentHooks } from './assignment-hooks';
 import { IAssignmentLogger, IAssignmentEvent } from './assignment-logger';
 import { IBanditLogger, IBanditEvent } from './bandit-logger';
@@ -27,11 +27,17 @@ import { MemoryStore, MemoryOnlyConfigurationStore } from './configuration-store
 import * as constants from './constants';
 import HttpClient from './http-client';
 import { Flag, ObfuscatedFlag, VariationType } from './interfaces';
-import { AttributeType, Attributes } from './types';
+import {
+  AttributeType,
+  Attributes,
+  BanditActions,
+  BanditSubjectAttributes,
+  ContextAttributes,
+} from './types';
 import * as validation from './validation';
 
 export {
-  logger as applicationLogger,
+  applicationLogger,
   AbstractAssignmentCache,
   IAssignmentHooks,
   IAssignmentLogger,
@@ -72,4 +78,7 @@ export {
   VariationType,
   AttributeType,
   Attributes,
+  ContextAttributes,
+  BanditSubjectAttributes,
+  BanditActions,
 };

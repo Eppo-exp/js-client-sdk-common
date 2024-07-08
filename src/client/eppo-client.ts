@@ -60,7 +60,7 @@ export interface IEppoClient {
   getStringAssignment(
     flagKey: string,
     subjectKey: string,
-    subjectAttributes: Record<string, AttributeType>,
+    subjectAttributes: Attributes,
     defaultValue: string,
   ): string;
 
@@ -70,7 +70,7 @@ export interface IEppoClient {
   getBoolAssignment(
     flagKey: string,
     subjectKey: string,
-    subjectAttributes: Record<string, AttributeType>,
+    subjectAttributes: Attributes,
     defaultValue: boolean,
   ): boolean;
 
@@ -86,7 +86,7 @@ export interface IEppoClient {
   getBooleanAssignment(
     flagKey: string,
     subjectKey: string,
-    subjectAttributes: Record<string, AttributeType>,
+    subjectAttributes: Attributes,
     defaultValue: boolean,
   ): boolean;
 
@@ -102,7 +102,7 @@ export interface IEppoClient {
   getIntegerAssignment(
     flagKey: string,
     subjectKey: string,
-    subjectAttributes: Record<string, AttributeType>,
+    subjectAttributes: Attributes,
     defaultValue: number,
   ): number;
 
@@ -118,7 +118,7 @@ export interface IEppoClient {
   getNumericAssignment(
     flagKey: string,
     subjectKey: string,
-    subjectAttributes: Record<string, AttributeType>,
+    subjectAttributes: Attributes,
     defaultValue: number,
   ): number;
 
@@ -134,7 +134,7 @@ export interface IEppoClient {
   getJSONAssignment(
     flagKey: string,
     subjectKey: string,
-    subjectAttributes: Record<string, AttributeType>,
+    subjectAttributes: Attributes,
     defaultValue: object,
   ): object;
 
@@ -328,7 +328,7 @@ export default class EppoClient implements IEppoClient {
   public getStringAssignment(
     flagKey: string,
     subjectKey: string,
-    subjectAttributes: Record<string, AttributeType>,
+    subjectAttributes: Attributes,
     defaultValue: string,
   ): string {
     return (
@@ -345,7 +345,7 @@ export default class EppoClient implements IEppoClient {
   public getBoolAssignment(
     flagKey: string,
     subjectKey: string,
-    subjectAttributes: Record<string, AttributeType>,
+    subjectAttributes: Attributes,
     defaultValue: boolean,
   ): boolean {
     return this.getBooleanAssignment(flagKey, subjectKey, subjectAttributes, defaultValue);
@@ -354,7 +354,7 @@ export default class EppoClient implements IEppoClient {
   public getBooleanAssignment(
     flagKey: string,
     subjectKey: string,
-    subjectAttributes: Record<string, AttributeType>,
+    subjectAttributes: Attributes,
     defaultValue: boolean,
   ): boolean {
     return (
@@ -371,7 +371,7 @@ export default class EppoClient implements IEppoClient {
   public getIntegerAssignment(
     flagKey: string,
     subjectKey: string,
-    subjectAttributes: Record<string, AttributeType>,
+    subjectAttributes: Attributes,
     defaultValue: number,
   ): number {
     return (
@@ -388,7 +388,7 @@ export default class EppoClient implements IEppoClient {
   public getNumericAssignment(
     flagKey: string,
     subjectKey: string,
-    subjectAttributes: Record<string, AttributeType>,
+    subjectAttributes: Attributes,
     defaultValue: number,
   ): number {
     return (
@@ -405,7 +405,7 @@ export default class EppoClient implements IEppoClient {
   public getJSONAssignment(
     flagKey: string,
     subjectKey: string,
-    subjectAttributes: Record<string, AttributeType>,
+    subjectAttributes: Attributes,
     defaultValue: object,
   ): object {
     return (
@@ -599,7 +599,7 @@ export default class EppoClient implements IEppoClient {
   private getAssignmentVariation(
     flagKey: string,
     subjectKey: string,
-    subjectAttributes: Record<string, AttributeType>,
+    subjectAttributes: Attributes,
     defaultValue: EppoValue,
     expectedVariationType: VariationType,
   ): EppoValue {
@@ -644,7 +644,7 @@ export default class EppoClient implements IEppoClient {
   public getAssignmentDetail(
     flagKey: string,
     subjectKey: string,
-    subjectAttributes: Record<string, AttributeType> = {},
+    subjectAttributes: Attributes = {},
     expectedVariationType?: VariationType,
   ): FlagEvaluation {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
