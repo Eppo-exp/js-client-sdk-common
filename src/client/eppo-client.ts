@@ -439,7 +439,7 @@ export default class EppoClient {
     actions: BanditActions,
     defaultValue: string,
   ): { variation: string; action: string | null; evaluationDetails: IFlagEvaluationDetails } {
-    const flagEvaluationDetailsBuilder = this.getFlagEvaluationDetailsBuilder(flagKey);
+    const flagEvaluationDetailsBuilder = this.flagEvaluationDetailsBuilder(flagKey);
     const defaultResult = { variation: defaultValue, action: null };
     let variation = defaultValue;
     let action: string | null = null;
@@ -451,7 +451,7 @@ export default class EppoClient {
         return {
           ...defaultResult,
           evaluationDetails: flagEvaluationDetailsBuilder.buildForNoneResult(
-            'NO_BANDIT_ACTIONS_SUPPLIED',
+            'NO_ACTIONS_SUPPLIED_FOR_BANDIT',
             'No bandit actions passed for a flag known to have an active bandit',
           ),
         };
@@ -693,7 +693,7 @@ export default class EppoClient {
     validateNotBlank(subjectKey, 'Invalid argument: subjectKey cannot be blank');
     validateNotBlank(flagKey, 'Invalid argument: flagKey cannot be blank');
 
-    const flagEvaluationDetailsBuilder = this.getFlagEvaluationDetailsBuilder(flagKey);
+    const flagEvaluationDetailsBuilder = this.flagEvaluationDetailsBuilder(flagKey);
     const configDetails = this.getConfigDetails();
     const flag = this.getFlag(flagKey);
 
@@ -757,7 +757,7 @@ export default class EppoClient {
     return result;
   }
 
-  private getFlagEvaluationDetailsBuilder(flagKey: string): FlagEvaluationDetailsBuilder {
+  private flagEvaluationDetailsBuilder(flagKey: string): FlagEvaluationDetailsBuilder {
     const flag = this.getFlag(flagKey);
     const configDetails = this.getConfigDetails();
     return new FlagEvaluationDetailsBuilder(

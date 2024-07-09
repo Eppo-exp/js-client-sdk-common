@@ -7,7 +7,7 @@ export const flagEvaluationCodes = [
   'TYPE_MISMATCH',
   'ASSIGNMENT_ERROR',
   'DEFAULT_ALLOCATION_NULL',
-  'NO_BANDIT_ACTIONS_SUPPLIED',
+  'NO_ACTIONS_SUPPLIED_FOR_BANDIT',
 ] as const;
 
 export type FlagEvaluationCode = typeof flagEvaluationCodes[number];
