@@ -96,7 +96,7 @@ describe('EppoClient get*AssignmentDetails', () => {
         ],
       },
     };
-    expect(result).toMatchObject(expected);
+    expect(result).toEqual(expected);
   });
 
   it('should set the details for a matched split', () => {
@@ -136,7 +136,7 @@ describe('EppoClient get*AssignmentDetails', () => {
         unevaluatedAllocations: [],
       },
     };
-    expect(result).toMatchObject(expected);
+    expect(result).toEqual(expected);
   });
 
   it('should handle matching a split allocation with a matched rule', () => {
@@ -195,14 +195,14 @@ describe('EppoClient get*AssignmentDetails', () => {
         ],
       },
     };
-    expect(result).toMatchObject(expected);
+    expect(result).toEqual(expected);
   });
 
   it('should handle unrecognized flags', () => {
     const client = new EppoClient(storage);
     client.setIsGracefulFailureMode(false);
     const result = client.getIntegerAssignmentDetails('asdf', 'alice', {}, 0);
-    expect(result).toMatchObject({
+    expect(result).toEqual({
       value: 0,
       evaluationDetails: {
         environmentName: 'Test',
@@ -296,8 +296,9 @@ describe('EppoClient get*AssignmentDetails', () => {
                 defaultValue,
               );
               expect(result.value).toEqual(subject.assignment);
-              expect(result.evaluationDetails).toMatchObject({
+              expect(result.evaluationDetails).toEqual({
                 ...subject.evaluationDetails,
+                environmentName: 'Test',
                 configFetchedAt: expect.any(String),
                 configPublishedAt: expect.any(String),
               });

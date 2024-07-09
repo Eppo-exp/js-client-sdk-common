@@ -171,22 +171,34 @@ describe('EppoClient Bandits E2E test', () => {
       expect(banditEvent.actionNumericAttributes).toStrictEqual({ brand_affinity: -1 });
       expect(banditEvent.actionCategoricalAttributes).toStrictEqual({ loyalty_tier: 'bronze' });
       expect(banditEvent.metaData?.obfuscated).toBe(false);
-      expect(banditEvent.evaluationDetails).toMatchObject({
+
+      expect(banditEvent.evaluationDetails.configFetchedAt).toBeTruthy();
+      expect(typeof banditEvent.evaluationDetails.configFetchedAt).toBe('string');
+      const expectedEvaluationDetails: IFlagEvaluationDetails = {
         configFetchedAt: expect.any(String),
-        configPublishedAt: expect.any(String),
+        configPublishedAt: '2024-04-17T19:40:53.716Z',
         environmentName: 'Test',
         flagEvaluationCode: 'MATCH',
         flagEvaluationDescription:
           'bob belongs to the range of traffic assigned to "banner_bandit" defined in allocation "training".',
-        matchedAllocation: { allocationEvaluationCode: 'MATCH', key: 'training', orderPosition: 2 },
+        matchedAllocation: {
+          allocationEvaluationCode: AllocationEvaluationCode.MATCH,
+          key: 'training',
+          orderPosition: 2,
+        },
         matchedRule: null,
         unevaluatedAllocations: [],
         unmatchedAllocations: [
-          { allocationEvaluationCode: 'TRAFFIC_EXPOSURE_MISS', key: 'analysis', orderPosition: 1 },
+          {
+            allocationEvaluationCode: AllocationEvaluationCode.TRAFFIC_EXPOSURE_MISS,
+            key: 'analysis',
+            orderPosition: 1,
+          },
         ],
         variationKey: 'banner_bandit',
         variationValue: 'banner_bandit',
-      });
+      };
+      expect(banditEvent.evaluationDetails).toEqual(expectedEvaluationDetails);
     });
 
     it('Flushed queued logging events when a logger is set', () => {
@@ -259,9 +271,11 @@ describe('EppoClient Bandits E2E test', () => {
         expect(banditAssignment.variation).toBe('control');
         expect(banditAssignment.action).toBeNull();
 
+        expect(banditAssignment.evaluationDetails.configFetchedAt).toBeTruthy();
+        expect(typeof banditAssignment.evaluationDetails.configFetchedAt).toBe('string');
         const expectedEvaluationDetails: IFlagEvaluationDetails = {
           configFetchedAt: expect.any(String),
-          configPublishedAt: expect.any(String),
+          configPublishedAt: '2024-04-17T19:40:53.716Z',
           environmentName: 'Test',
           flagEvaluationCode: 'ASSIGNMENT_ERROR',
           flagEvaluationDescription: 'Error evaluating bandit action: Intentional Error For Test',
@@ -283,7 +297,7 @@ describe('EppoClient Bandits E2E test', () => {
           variationKey: null,
           variationValue: null,
         };
-        expect(banditAssignment.evaluationDetails).toMatchObject(expectedEvaluationDetails);
+        expect(banditAssignment.evaluationDetails).toEqual(expectedEvaluationDetails);
       });
 
       it('Throws the error when graceful mode is off', () => {
