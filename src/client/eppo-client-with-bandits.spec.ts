@@ -249,7 +249,7 @@ describe('EppoClient Bandits E2E test', () => {
 
       it('Returns default value when graceful mode is on', () => {
         client.setIsGracefulFailureMode(true);
-        const banditAssignment = client.getBanditAction(
+        const banditAssignment = client.getBanditActionDetails(
           flagKey,
           subjectKey,
           subjectAttributes,

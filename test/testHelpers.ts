@@ -2,6 +2,7 @@ import * as fs from 'fs';
 
 import { AttributeType, VariationType } from '../src';
 import { IAssignmentDetails } from '../src/client/eppo-client';
+import { IFlagEvaluationDetails } from '../src/flag-evaluation-details-builder';
 import { IBanditParametersResponse, IUniversalFlagConfigResponse } from '../src/http-client';
 import { ContextAttributes } from '../src/types';
 
@@ -17,7 +18,7 @@ export interface SubjectTestCase {
   subjectKey: string;
   subjectAttributes: Record<string, AttributeType>;
   assignment: string | number | boolean | object;
-  assignmentDetails: IAssignmentDetails<string | number | boolean | object>;
+  evaluationDetails: IFlagEvaluationDetails;
 }
 
 export interface IAssignmentTestCase {
@@ -135,26 +136,5 @@ export function validateTestAssignments(
       }
     }
     expect(subject.assignment).toEqual(assignment);
-  }
-}
-
-export function validateTestAssignmentDetails(
-  assignments: {
-    subject: SubjectTestCase;
-    assignmentDetails: IAssignmentDetails<string | boolean | number | object>;
-  }[],
-  flag: string,
-) {
-  for (const { subject, assignmentDetails } of assignments) {
-    try {
-      expect(assignmentDetails).toMatchObject({
-        ...subject.assignmentDetails,
-        configFetchedAt: expect.any(String),
-        configPublishedAt: expect.any(String),
-      });
-    } catch (err) {
-      err.message = `The assignment details for subject ${subject.subjectKey} did not match the expected value for flag ${flag}. ${err.message}`;
-      throw err;
-    }
   }
 }

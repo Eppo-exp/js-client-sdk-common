@@ -12,7 +12,7 @@ describe('IAssignmentEvent', () => {
       timestamp: new Date().toISOString(),
       subjectAttributes: { age: 25, country: 'USA' },
       holdoutKey: 'holdout_key_123',
-      details: {
+      evaluationDetails: {
         environmentName: 'Test',
         variationKey: 'variationKey',
         variationValue: 'variation_123',

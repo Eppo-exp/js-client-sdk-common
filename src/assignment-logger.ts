@@ -52,7 +52,7 @@ export interface IAssignmentEvent {
   /**
    * The flag evaluation details
    */
-  details: IFlagEvaluationDetails;
+  evaluationDetails: IFlagEvaluationDetails;
 }
 
 /**

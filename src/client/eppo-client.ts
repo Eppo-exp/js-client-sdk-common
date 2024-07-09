@@ -47,9 +47,18 @@ import {
 import { validateNotBlank } from '../validation';
 import { LIB_VERSION } from '../version';
 
-export interface IAssignmentDetails<T extends Variation['value'] | object>
-  extends IFlagEvaluationDetails {
+export interface IAssignmentDetails<T extends Variation['value'] | object> {
   value: T;
+  evaluationDetails: IFlagEvaluationDetails;
+}
+
+export interface IBanditAction {
+  variation: string;
+  action: string | null;
+}
+
+export interface IBanditActionDetails extends IBanditAction {
+  evaluationDetails: IFlagEvaluationDetails;
 }
 
 export type FlagConfigurationRequestParameters = {
@@ -228,7 +237,7 @@ export default class EppoClient {
     );
     return {
       value: eppoValue.stringValue ?? defaultValue,
-      ...flagEvaluationDetails,
+      evaluationDetails: flagEvaluationDetails,
     };
   }
 
@@ -290,7 +299,7 @@ export default class EppoClient {
     );
     return {
       value: eppoValue.boolValue ?? defaultValue,
-      ...flagEvaluationDetails,
+      evaluationDetails: flagEvaluationDetails,
     };
   }
 
@@ -340,7 +349,7 @@ export default class EppoClient {
     );
     return {
       value: eppoValue.numericValue ?? defaultValue,
-      ...flagEvaluationDetails,
+      evaluationDetails: flagEvaluationDetails,
     };
   }
 
@@ -390,7 +399,7 @@ export default class EppoClient {
     );
     return {
       value: eppoValue.numericValue ?? defaultValue,
-      ...flagEvaluationDetails,
+      evaluationDetails: flagEvaluationDetails,
     };
   }
 
@@ -428,7 +437,7 @@ export default class EppoClient {
     );
     return {
       value: eppoValue.objectValue ?? defaultValue,
-      ...flagEvaluationDetails,
+      evaluationDetails: flagEvaluationDetails,
     };
   }
 
@@ -438,7 +447,24 @@ export default class EppoClient {
     subjectAttributes: BanditSubjectAttributes,
     actions: BanditActions,
     defaultValue: string,
-  ): { variation: string; action: string | null; evaluationDetails: IFlagEvaluationDetails } {
+  ): IBanditAction {
+    const { variation, action } = this.getBanditActionDetails(
+      flagKey,
+      subjectKey,
+      subjectAttributes,
+      actions,
+      defaultValue,
+    );
+    return { variation, action };
+  }
+
+  public getBanditActionDetails(
+    flagKey: string,
+    subjectKey: string,
+    subjectAttributes: BanditSubjectAttributes,
+    actions: BanditActions,
+    defaultValue: string,
+  ): IBanditActionDetails {
     const flagEvaluationDetailsBuilder = this.flagEvaluationDetailsBuilder(flagKey);
     const defaultResult = { variation: defaultValue, action: null };
     let variation = defaultValue;
@@ -461,7 +487,7 @@ export default class EppoClient {
       // Note for getting assignments, we don't care about context
       const nonContextualSubjectAttributes =
         this.ensureNonContextualSubjectAttributes(subjectAttributes);
-      const { value, ...evaluationDetails } = this.getStringAssignmentDetails(
+      const { value, evaluationDetails } = this.getStringAssignmentDetails(
         flagKey,
         subjectKey,
         nonContextualSubjectAttributes,
@@ -881,7 +907,7 @@ export default class EppoClient {
       timestamp: new Date().toISOString(),
       subjectAttributes,
       metaData: this.buildLoggerMetadata(),
-      details: result.flagEvaluationDetails,
+      evaluationDetails: result.flagEvaluationDetails,
     };
 
     if (variation && allocationKey) {

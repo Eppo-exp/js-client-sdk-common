@@ -11,7 +11,7 @@ import { IConfigurationStore } from '../configuration-store/configuration-store'
 import { MemoryOnlyConfigurationStore } from '../configuration-store/memory.store';
 import { AllocationEvaluationCode } from '../flag-evaluation-details-builder';
 import FetchHttpClient from '../http-client';
-import { Flag, ObfuscatedFlag, VariationType } from '../interfaces';
+import { Flag, ObfuscatedFlag, Variation, VariationType } from '../interfaces';
 import { OperatorType } from '../rules';
 
 import EppoClient, { IAssignmentDetails } from './eppo-client';
@@ -63,36 +63,38 @@ describe('EppoClient get*AssignmentDetails', () => {
     );
     const expected: IAssignmentDetails<number> = {
       value: 3,
-      environmentName: 'Test',
-      variationKey: 'three',
-      variationValue: 3,
-      flagEvaluationCode: 'MATCH',
-      flagEvaluationDescription:
-        'Supplied attributes match rules defined in allocation "targeted allocation".',
-      configFetchedAt: expect.any(String),
-      configPublishedAt: expect.any(String),
-      matchedRule: {
-        conditions: [
+      evaluationDetails: {
+        environmentName: 'Test',
+        variationKey: 'three',
+        variationValue: 3,
+        flagEvaluationCode: 'MATCH',
+        flagEvaluationDescription:
+          'Supplied attributes match rules defined in allocation "targeted allocation".',
+        configFetchedAt: expect.any(String),
+        configPublishedAt: expect.any(String),
+        matchedRule: {
+          conditions: [
+            {
+              attribute: 'country',
+              operator: OperatorType.ONE_OF,
+              value: ['US', 'Canada', 'Mexico'],
+            },
+          ],
+        },
+        matchedAllocation: {
+          key: 'targeted allocation',
+          allocationEvaluationCode: AllocationEvaluationCode.MATCH,
+          orderPosition: 1,
+        },
+        unmatchedAllocations: [],
+        unevaluatedAllocations: [
           {
-            attribute: 'country',
-            operator: OperatorType.ONE_OF,
-            value: ['US', 'Canada', 'Mexico'],
+            key: '50/50 split',
+            allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
+            orderPosition: 2,
           },
         ],
       },
-      matchedAllocation: {
-        key: 'targeted allocation',
-        allocationEvaluationCode: AllocationEvaluationCode.MATCH,
-        orderPosition: 1,
-      },
-      unmatchedAllocations: [],
-      unevaluatedAllocations: [
-        {
-          key: '50/50 split',
-          allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
-          orderPosition: 2,
-        },
-      ],
     };
     expect(result).toMatchObject(expected);
   });
@@ -109,28 +111,30 @@ describe('EppoClient get*AssignmentDetails', () => {
     );
     const expected: IAssignmentDetails<number> = {
       value: 2,
-      environmentName: 'Test',
-      variationKey: 'two',
-      variationValue: 2,
-      flagEvaluationCode: 'MATCH',
-      flagEvaluationDescription:
-        'alice belongs to the range of traffic assigned to "two" defined in allocation "50/50 split".',
-      configFetchedAt: expect.any(String),
-      configPublishedAt: expect.any(String),
-      matchedRule: null,
-      matchedAllocation: {
-        key: '50/50 split',
-        allocationEvaluationCode: AllocationEvaluationCode.MATCH,
-        orderPosition: 2,
-      },
-      unmatchedAllocations: [
-        {
-          key: 'targeted allocation',
-          allocationEvaluationCode: AllocationEvaluationCode.FAILING_RULE,
-          orderPosition: 1,
+      evaluationDetails: {
+        environmentName: 'Test',
+        variationKey: 'two',
+        variationValue: 2,
+        flagEvaluationCode: 'MATCH',
+        flagEvaluationDescription:
+          'alice belongs to the range of traffic assigned to "two" defined in allocation "50/50 split".',
+        configFetchedAt: expect.any(String),
+        configPublishedAt: expect.any(String),
+        matchedRule: null,
+        matchedAllocation: {
+          key: '50/50 split',
+          allocationEvaluationCode: AllocationEvaluationCode.MATCH,
+          orderPosition: 2,
         },
-      ],
-      unevaluatedAllocations: [],
+        unmatchedAllocations: [
+          {
+            key: 'targeted allocation',
+            allocationEvaluationCode: AllocationEvaluationCode.FAILING_RULE,
+            orderPosition: 1,
+          },
+        ],
+        unevaluatedAllocations: [],
+      },
     };
     expect(result).toMatchObject(expected);
   });
@@ -147,47 +151,49 @@ describe('EppoClient get*AssignmentDetails', () => {
     );
     const expected: IAssignmentDetails<string> = {
       value: 'control',
-      environmentName: 'Test',
-      flagEvaluationCode: 'MATCH',
-      flagEvaluationDescription:
-        'Supplied attributes match rules defined in allocation "experiment" and alice belongs to the range of traffic assigned to "control".',
-      variationKey: 'control',
-      variationValue: 'control',
-      configFetchedAt: expect.any(String),
-      configPublishedAt: expect.any(String),
-      matchedRule: {
-        conditions: [
+      evaluationDetails: {
+        environmentName: 'Test',
+        flagEvaluationCode: 'MATCH',
+        flagEvaluationDescription:
+          'Supplied attributes match rules defined in allocation "experiment" and alice belongs to the range of traffic assigned to "control".',
+        variationKey: 'control',
+        variationValue: 'control',
+        configFetchedAt: expect.any(String),
+        configPublishedAt: expect.any(String),
+        matchedRule: {
+          conditions: [
+            {
+              attribute: 'country',
+              operator: OperatorType.NOT_ONE_OF,
+              value: ['US', 'Canada', 'Mexico'],
+            },
+          ],
+        },
+        matchedAllocation: {
+          key: 'experiment',
+          allocationEvaluationCode: AllocationEvaluationCode.MATCH,
+          orderPosition: 3,
+        },
+        unmatchedAllocations: [
           {
-            attribute: 'country',
-            operator: OperatorType.NOT_ONE_OF,
-            value: ['US', 'Canada', 'Mexico'],
+            key: 'id rule',
+            allocationEvaluationCode: AllocationEvaluationCode.FAILING_RULE,
+            orderPosition: 1,
+          },
+          {
+            key: 'internal users',
+            allocationEvaluationCode: AllocationEvaluationCode.FAILING_RULE,
+            orderPosition: 2,
+          },
+        ],
+        unevaluatedAllocations: [
+          {
+            key: 'rollout',
+            allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
+            orderPosition: 4,
           },
         ],
       },
-      matchedAllocation: {
-        key: 'experiment',
-        allocationEvaluationCode: AllocationEvaluationCode.MATCH,
-        orderPosition: 3,
-      },
-      unmatchedAllocations: [
-        {
-          key: 'id rule',
-          allocationEvaluationCode: AllocationEvaluationCode.FAILING_RULE,
-          orderPosition: 1,
-        },
-        {
-          key: 'internal users',
-          allocationEvaluationCode: AllocationEvaluationCode.FAILING_RULE,
-          orderPosition: 2,
-        },
-      ],
-      unevaluatedAllocations: [
-        {
-          key: 'rollout',
-          allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
-          orderPosition: 4,
-        },
-      ],
     };
     expect(result).toMatchObject(expected);
   });
@@ -198,17 +204,19 @@ describe('EppoClient get*AssignmentDetails', () => {
     const result = client.getIntegerAssignmentDetails('asdf', 'alice', {}, 0);
     expect(result).toMatchObject({
       value: 0,
-      environmentName: 'Test',
-      flagEvaluationCode: 'FLAG_UNRECOGNIZED_OR_DISABLED',
-      flagEvaluationDescription: 'Unrecognized or disabled flag: asdf',
-      variationKey: null,
-      variationValue: null,
-      configFetchedAt: expect.any(String),
-      configPublishedAt: expect.any(String),
-      matchedRule: null,
-      matchedAllocation: null,
-      unmatchedAllocations: [],
-      unevaluatedAllocations: [],
+      evaluationDetails: {
+        environmentName: 'Test',
+        flagEvaluationCode: 'FLAG_UNRECOGNIZED_OR_DISABLED',
+        flagEvaluationDescription: 'Unrecognized or disabled flag: asdf',
+        variationKey: null,
+        variationValue: null,
+        configFetchedAt: expect.any(String),
+        configPublishedAt: expect.any(String),
+        matchedRule: null,
+        matchedAllocation: null,
+        unmatchedAllocations: [],
+        unevaluatedAllocations: [],
+      },
     } as IAssignmentDetails<number>);
   });
 
@@ -281,17 +289,26 @@ describe('EppoClient get*AssignmentDetails', () => {
               if (!assignmentFn) {
                 throw new Error(`Unknown variation type: ${variationType}`);
               }
-              const assignmentDetails = assignmentFn(
+              const result: IAssignmentDetails<Variation['value'] | object> = assignmentFn(
                 flag,
                 subject.subjectKey,
                 subject.subjectAttributes,
                 defaultValue,
               );
-              expect(assignmentDetails).toMatchObject({
-                ...subject.assignmentDetails,
+              expect(result.value).toEqual(subject.assignment);
+              expect(result.evaluationDetails).toMatchObject({
+                ...subject.evaluationDetails,
                 configFetchedAt: expect.any(String),
                 configPublishedAt: expect.any(String),
               });
+              expect(result.evaluationDetails.configPublishedAt).toEqual(
+                '2024-04-17T19:40:53.716Z',
+              );
+              // date fetched will always be current day when running this test
+              const dateFmt = (isoFormat: string) => isoFormat.slice(0, 11);
+              expect(dateFmt(result.evaluationDetails.configFetchedAt)).toEqual(
+                dateFmt(new Date().toISOString()),
+              );
             });
           }
         },
