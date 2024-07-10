@@ -41,7 +41,6 @@ export default class ConfigurationRequestor {
         createdAt: configResponse.createdAt,
       });
 
-      this.banditVariationConfigurationStore?.setEntries(banditVariations);
       // TODO: different polling intervals for bandit parameters
       const banditResponse = await this.httpClient.getBanditParameters();
       if (banditResponse?.bandits) {
@@ -54,7 +53,6 @@ export default class ConfigurationRequestor {
           environment: configResponse.environment,
           createdAt: configResponse.createdAt,
         });
-        await this.banditModelConfigurationStore.setEntries(banditResponse.bandits);
       }
     }
   }

@@ -16,6 +16,8 @@ describe('IAssignmentEvent', () => {
         environmentName: 'Test',
         variationKey: 'variationKey',
         variationValue: 'variation_123',
+        banditKey: null,
+        banditAction: null,
         flagEvaluationCode: 'MATCH',
         flagEvaluationDescription: '',
         configFetchedAt: new Date().toISOString(),

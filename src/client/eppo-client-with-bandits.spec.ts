@@ -197,6 +197,8 @@ describe('EppoClient Bandits E2E test', () => {
         ],
         variationKey: 'banner_bandit',
         variationValue: 'banner_bandit',
+        banditKey: 'banner_bandit',
+        banditAction: 'adidas',
       };
       expect(banditEvent.evaluationDetails).toEqual(expectedEvaluationDetails);
     });
@@ -248,6 +250,8 @@ describe('EppoClient Bandits E2E test', () => {
     });
 
     describe('Bandit evaluation errors', () => {
+      const testStart = Date.now();
+
       beforeEach(() => {
         jest
           .spyOn(
@@ -271,8 +275,9 @@ describe('EppoClient Bandits E2E test', () => {
         expect(banditAssignment.variation).toBe('control');
         expect(banditAssignment.action).toBeNull();
 
-        expect(banditAssignment.evaluationDetails.configFetchedAt).toBeTruthy();
-        expect(typeof banditAssignment.evaluationDetails.configFetchedAt).toBe('string');
+        expect(
+          Date.parse(banditAssignment.evaluationDetails.configFetchedAt),
+        ).toBeGreaterThanOrEqual(testStart);
         const expectedEvaluationDetails: IFlagEvaluationDetails = {
           configFetchedAt: expect.any(String),
           configPublishedAt: '2024-04-17T19:40:53.716Z',
@@ -296,6 +301,8 @@ describe('EppoClient Bandits E2E test', () => {
           unmatchedAllocations: [],
           variationKey: null,
           variationValue: null,
+          banditKey: null,
+          banditAction: null,
         };
         expect(banditAssignment.evaluationDetails).toEqual(expectedEvaluationDetails);
       });

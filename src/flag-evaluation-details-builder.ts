@@ -29,10 +29,12 @@ export interface AllocationEvaluation {
 
 export interface IFlagEvaluationDetails {
   environmentName: string;
-  variationKey: string | null;
-  variationValue: Variation['value'] | null;
   flagEvaluationCode: FlagEvaluationCode;
   flagEvaluationDescription: string;
+  variationKey: string | null;
+  variationValue: Variation['value'] | null;
+  banditKey: string | null;
+  banditAction: string | null;
   configFetchedAt: string;
   configPublishedAt: string;
   matchedRule: Rule | null;
@@ -135,6 +137,8 @@ export class FlagEvaluationDetailsBuilder {
     flagEvaluationDescription,
     variationKey: this.variationKey,
     variationValue: this.variationValue,
+    banditKey: null, // gets set downstream if applicable
+    banditAction: null, // gets set downstream if applicable
     configFetchedAt: this.configFetchedAt,
     configPublishedAt: this.configPublishedAt,
     matchedRule: this.matchedRule,

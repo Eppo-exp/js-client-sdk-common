@@ -36,6 +36,8 @@ async function init(configurationStore: IConfigurationStore<Flag | ObfuscatedFla
 }
 
 describe('EppoClient get*AssignmentDetails', () => {
+  const testStart = Date.now();
+
   global.fetch = jest.fn(() => {
     const ufc = readMockUFCResponse(MOCK_UFC_RESPONSE_FILE);
 
@@ -62,16 +64,19 @@ describe('EppoClient get*AssignmentDetails', () => {
       0,
     );
     const expected: IAssignmentDetails<number> = {
-      value: 3,
+      variation: 3,
+      action: null,
       evaluationDetails: {
         environmentName: 'Test',
         variationKey: 'three',
         variationValue: 3,
+        banditKey: null,
+        banditAction: null,
         flagEvaluationCode: 'MATCH',
         flagEvaluationDescription:
           'Supplied attributes match rules defined in allocation "targeted allocation".',
         configFetchedAt: expect.any(String),
-        configPublishedAt: expect.any(String),
+        configPublishedAt: '2024-04-17T19:40:53.716Z',
         matchedRule: {
           conditions: [
             {
@@ -96,6 +101,7 @@ describe('EppoClient get*AssignmentDetails', () => {
         ],
       },
     };
+    expect(Date.parse(result.evaluationDetails.configFetchedAt)).toBeGreaterThanOrEqual(testStart);
     expect(result).toEqual(expected);
   });
 
@@ -110,11 +116,14 @@ describe('EppoClient get*AssignmentDetails', () => {
       0,
     );
     const expected: IAssignmentDetails<number> = {
-      value: 2,
+      variation: 2,
+      action: null,
       evaluationDetails: {
         environmentName: 'Test',
         variationKey: 'two',
         variationValue: 2,
+        banditKey: null,
+        banditAction: null,
         flagEvaluationCode: 'MATCH',
         flagEvaluationDescription:
           'alice belongs to the range of traffic assigned to "two" defined in allocation "50/50 split".',
@@ -150,7 +159,8 @@ describe('EppoClient get*AssignmentDetails', () => {
       '',
     );
     const expected: IAssignmentDetails<string> = {
-      value: 'control',
+      variation: 'control',
+      action: null,
       evaluationDetails: {
         environmentName: 'Test',
         flagEvaluationCode: 'MATCH',
@@ -158,6 +168,8 @@ describe('EppoClient get*AssignmentDetails', () => {
           'Supplied attributes match rules defined in allocation "experiment" and alice belongs to the range of traffic assigned to "control".',
         variationKey: 'control',
         variationValue: 'control',
+        banditKey: null,
+        banditAction: null,
         configFetchedAt: expect.any(String),
         configPublishedAt: expect.any(String),
         matchedRule: {
@@ -203,13 +215,16 @@ describe('EppoClient get*AssignmentDetails', () => {
     client.setIsGracefulFailureMode(false);
     const result = client.getIntegerAssignmentDetails('asdf', 'alice', {}, 0);
     expect(result).toEqual({
-      value: 0,
+      variation: 0,
+      action: null,
       evaluationDetails: {
         environmentName: 'Test',
         flagEvaluationCode: 'FLAG_UNRECOGNIZED_OR_DISABLED',
         flagEvaluationDescription: 'Unrecognized or disabled flag: asdf',
         variationKey: null,
         variationValue: null,
+        banditKey: null,
+        banditAction: null,
         configFetchedAt: expect.any(String),
         configPublishedAt: expect.any(String),
         matchedRule: null,
@@ -221,6 +236,8 @@ describe('EppoClient get*AssignmentDetails', () => {
   });
 
   describe('UFC General Test Cases', () => {
+    const testStart = Date.now();
+
     const getTestFilePaths = () => {
       const testDir = 'test/data/ufc/tests';
       return fs.readdirSync(testDir).map((testFilename) => `${testDir}/${testFilename}`);
@@ -295,20 +312,17 @@ describe('EppoClient get*AssignmentDetails', () => {
                 subject.subjectAttributes,
                 defaultValue,
               );
-              expect(result.value).toEqual(subject.assignment);
+              expect(result.variation).toEqual(subject.assignment);
               expect(result.evaluationDetails).toEqual({
                 ...subject.evaluationDetails,
-                environmentName: 'Test',
                 configFetchedAt: expect.any(String),
                 configPublishedAt: expect.any(String),
               });
               expect(result.evaluationDetails.configPublishedAt).toEqual(
                 '2024-04-17T19:40:53.716Z',
               );
-              // date fetched will always be current day when running this test
-              const dateFmt = (isoFormat: string) => isoFormat.slice(0, 11);
-              expect(dateFmt(result.evaluationDetails.configFetchedAt)).toEqual(
-                dateFmt(new Date().toISOString()),
+              expect(Date.parse(result.evaluationDetails.configFetchedAt)).toBeGreaterThanOrEqual(
+                testStart,
               );
             });
           }
