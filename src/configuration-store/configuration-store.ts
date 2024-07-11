@@ -31,10 +31,10 @@ export interface IConfigurationStore<T> {
   isExpired(): Promise<boolean>;
   setEntries(entries: Record<string, T>): Promise<boolean>;
   setEnvironment(environment: Environment): void;
-  getEnvironment(): Environment;
-  getConfigFetchedAt(): string;
+  getEnvironment(): Environment | null;
+  getConfigFetchedAt(): string | null;
   setConfigFetchedAt(configFetchedAt: string): void;
-  getConfigPublishedAt(): string;
+  getConfigPublishedAt(): string | null;
   setConfigPublishedAt(configPublishedAt: string): void;
 }
 

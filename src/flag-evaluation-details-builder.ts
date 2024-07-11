@@ -44,12 +44,12 @@ export interface IFlagEvaluationDetails {
 }
 
 export class FlagEvaluationDetailsBuilder {
-  private variationKey: IFlagEvaluationDetails['variationKey'];
-  private variationValue: IFlagEvaluationDetails['variationValue'];
-  private matchedRule: IFlagEvaluationDetails['matchedRule'];
-  private matchedAllocation: IFlagEvaluationDetails['matchedAllocation'];
-  private unmatchedAllocations: IFlagEvaluationDetails['unmatchedAllocations'];
-  private unevaluatedAllocations: IFlagEvaluationDetails['unevaluatedAllocations'];
+  private variationKey: IFlagEvaluationDetails['variationKey'] = null;
+  private variationValue: IFlagEvaluationDetails['variationValue'] = null;
+  private matchedRule: IFlagEvaluationDetails['matchedRule'] = null;
+  private matchedAllocation: IFlagEvaluationDetails['matchedAllocation'] = null;
+  private unmatchedAllocations: IFlagEvaluationDetails['unmatchedAllocations'] = [];
+  private unevaluatedAllocations: IFlagEvaluationDetails['unevaluatedAllocations'] = [];
 
   constructor(
     private readonly environmentName: string,
@@ -63,8 +63,8 @@ export class FlagEvaluationDetailsBuilder {
   setNone = (): FlagEvaluationDetailsBuilder => {
     this.variationKey = null;
     this.variationValue = null;
-    this.matchedAllocation = null;
     this.matchedRule = null;
+    this.matchedAllocation = null;
     this.unmatchedAllocations = [];
     this.unevaluatedAllocations = this.allocations.map(
       (allocation, i): AllocationEvaluation => ({

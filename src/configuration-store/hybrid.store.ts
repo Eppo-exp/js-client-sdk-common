@@ -8,9 +8,9 @@ export class HybridConfigurationStore<T> implements IConfigurationStore<T> {
     protected readonly servingStore: ISyncStore<T>,
     protected readonly persistentStore: IAsyncStore<T> | null,
   ) {}
-  private environment: Environment;
-  private configFetchedAt: string;
-  private configPublishedAt: string;
+  private environment: Environment | null = null;
+  private configFetchedAt: string | null = null;
+  private configPublishedAt: string | null = null;
 
   /**
    * Initialize the configuration store by loading the entries from the persistent store into the serving store.
@@ -74,11 +74,11 @@ export class HybridConfigurationStore<T> implements IConfigurationStore<T> {
     this.environment = environment;
   }
 
-  getEnvironment(): Environment {
+  getEnvironment(): Environment | null {
     return this.environment;
   }
 
-  public getConfigFetchedAt(): string {
+  public getConfigFetchedAt(): string | null {
     return this.configFetchedAt;
   }
 
@@ -86,7 +86,7 @@ export class HybridConfigurationStore<T> implements IConfigurationStore<T> {
     this.configFetchedAt = configFetchedAt;
   }
 
-  public getConfigPublishedAt(): string {
+  public getConfigPublishedAt(): string | null {
     return this.configPublishedAt;
   }
 
