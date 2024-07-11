@@ -1,4 +1,5 @@
 import { logger, loggerPrefix } from '../application-logger';
+import { Environment } from '../interfaces';
 
 import { IAsyncStore, IConfigurationStore, ISyncStore } from './configuration-store';
 
@@ -7,6 +8,9 @@ export class HybridConfigurationStore<T> implements IConfigurationStore<T> {
     protected readonly servingStore: ISyncStore<T>,
     protected readonly persistentStore: IAsyncStore<T> | null,
   ) {}
+  private environment: Environment | null = null;
+  private configFetchedAt: string | null = null;
+  private configPublishedAt: string | null = null;
 
   /**
    * Initialize the configuration store by loading the entries from the persistent store into the serving store.
@@ -57,11 +61,36 @@ export class HybridConfigurationStore<T> implements IConfigurationStore<T> {
     return this.servingStore.getKeys();
   }
 
-  public async setEntries(entries: Record<string, T>): Promise<void> {
+  public async setEntries(entries: Record<string, T>): Promise<boolean> {
     if (this.persistentStore) {
       // Persistence store is now initialized and should mark itself accordingly.
       await this.persistentStore.setEntries(entries);
     }
     this.servingStore.setEntries(entries);
+    return true;
+  }
+
+  setEnvironment(environment: Environment): void {
+    this.environment = environment;
+  }
+
+  getEnvironment(): Environment | null {
+    return this.environment;
+  }
+
+  public getConfigFetchedAt(): string | null {
+    return this.configFetchedAt;
+  }
+
+  public setConfigFetchedAt(configFetchedAt: string): void {
+    this.configFetchedAt = configFetchedAt;
+  }
+
+  public getConfigPublishedAt(): string | null {
+    return this.configPublishedAt;
+  }
+
+  public setConfigPublishedAt(configPublishedAt: string): void {
+    this.configPublishedAt = configPublishedAt;
   }
 }

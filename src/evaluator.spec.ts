@@ -1,5 +1,5 @@
 import { Evaluator, hashKey, isInShardRange, matchesRules } from './evaluator';
-import { Flag, Variation, Shard, VariationType } from './interfaces';
+import { Flag, Variation, Shard, VariationType, ConfigDetails } from './interfaces';
 import { getMD5Hash } from './obfuscation';
 import { ObfuscatedOperatorType, OperatorType, Rule } from './rules';
 import { DeterministicSharder } from './sharders';
@@ -10,6 +10,18 @@ describe('Evaluator', () => {
   const VARIATION_C: Variation = { key: 'c', value: 'C' };
 
   const evaluator = new Evaluator();
+
+  let configDetails: ConfigDetails;
+
+  beforeEach(() => {
+    configDetails = {
+      configEnvironment: {
+        name: 'Test',
+      },
+      configFetchedAt: new Date().toISOString(),
+      configPublishedAt: new Date().toISOString(),
+    };
+  });
 
   it('should return none result for disabled flag', () => {
     const flag: Flag = {
@@ -34,7 +46,7 @@ describe('Evaluator', () => {
       totalShards: 10,
     };
 
-    const result = evaluator.evaluateFlag(flag, 'subject_key', {}, false);
+    const result = evaluator.evaluateFlag(flag, configDetails, 'subject_key', {}, false);
     expect(result.flagKey).toEqual('disabled_flag');
     expect(result.allocationKey).toBeNull();
     expect(result.variation).toBeNull();
@@ -85,7 +97,7 @@ describe('Evaluator', () => {
       totalShards: 10,
     };
 
-    const result = evaluator.evaluateFlag(emptyFlag, 'subject_key', {}, false);
+    const result = evaluator.evaluateFlag(emptyFlag, configDetails, 'subject_key', {}, false);
     expect(result.flagKey).toEqual('empty');
     expect(result.allocationKey).toBeNull();
     expect(result.variation).toBeNull();
@@ -115,7 +127,7 @@ describe('Evaluator', () => {
       totalShards: 10000,
     };
 
-    const result = evaluator.evaluateFlag(flag, 'user-1', {}, false);
+    const result = evaluator.evaluateFlag(flag, configDetails, 'user-1', {}, false);
     expect(result.variation).toEqual({ key: 'control', value: 'control-value' });
   });
 
@@ -148,13 +160,13 @@ describe('Evaluator', () => {
       totalShards: 10000,
     };
 
-    let result = evaluator.evaluateFlag(flag, 'alice', {}, false);
+    let result = evaluator.evaluateFlag(flag, configDetails, 'alice', {}, false);
     expect(result.variation).toEqual({ key: 'control', value: 'control' });
 
-    result = evaluator.evaluateFlag(flag, 'bob', {}, false);
+    result = evaluator.evaluateFlag(flag, configDetails, 'bob', {}, false);
     expect(result.variation).toEqual({ key: 'control', value: 'control' });
 
-    result = evaluator.evaluateFlag(flag, 'charlie', {}, false);
+    result = evaluator.evaluateFlag(flag, configDetails, 'charlie', {}, false);
     expect(result.variation).toBeNull();
   });
 
@@ -187,7 +199,7 @@ describe('Evaluator', () => {
       totalShards: 10000,
     };
 
-    const result = evaluator.evaluateFlag(flag, 'alice', { id: 'charlie' }, false);
+    const result = evaluator.evaluateFlag(flag, configDetails, 'alice', { id: 'charlie' }, false);
     expect(result.variation).toBeNull();
   });
 
@@ -214,7 +226,7 @@ describe('Evaluator', () => {
       totalShards: 10,
     };
 
-    const result = evaluator.evaluateFlag(flag, 'subject_key', {}, false);
+    const result = evaluator.evaluateFlag(flag, configDetails, 'subject_key', {}, false);
     expect(result.flagKey).toEqual('flag');
     expect(result.allocationKey).toEqual('default');
     expect(result.variation).toEqual(VARIATION_A);
@@ -264,6 +276,7 @@ describe('Evaluator', () => {
 
     const result = evaluator.evaluateFlag(
       flag,
+      configDetails,
       'subject_key',
       { email: 'eppo@example.com' },
       false,
@@ -314,7 +327,13 @@ describe('Evaluator', () => {
       totalShards: 10,
     };
 
-    const result = evaluator.evaluateFlag(flag, 'subject_key', { email: 'eppo@test.com' }, false);
+    const result = evaluator.evaluateFlag(
+      flag,
+      configDetails,
+      'subject_key',
+      { email: 'eppo@test.com' },
+      false,
+    );
     expect(result.flagKey).toEqual('flag');
     expect(result.allocationKey).toEqual('default');
     expect(result.variation).toEqual(VARIATION_A);
@@ -365,7 +384,13 @@ describe('Evaluator', () => {
       totalShards: 10,
     };
 
-    const result = evaluator.evaluateFlag(flag, 'subject_key', { email: 'eppo@test.com' }, false);
+    const result = evaluator.evaluateFlag(
+      flag,
+      configDetails,
+      'subject_key',
+      { email: 'eppo@test.com' },
+      false,
+    );
     expect(result.flagKey).toEqual('obfuscated_flag_key');
     expect(result.allocationKey).toEqual('default');
     expect(result.variation).toEqual(VARIATION_A);
@@ -428,18 +453,18 @@ describe('Evaluator', () => {
       }),
     );
 
-    expect(deterministicEvaluator.evaluateFlag(flag, 'alice', {}, false).variation).toEqual(
-      VARIATION_A,
-    );
-    expect(deterministicEvaluator.evaluateFlag(flag, 'bob', {}, false).variation).toEqual(
-      VARIATION_B,
-    );
-    expect(deterministicEvaluator.evaluateFlag(flag, 'charlie', {}, false).variation).toEqual(
-      VARIATION_C,
-    );
-    expect(deterministicEvaluator.evaluateFlag(flag, 'dave', {}, false).variation).toEqual(
-      VARIATION_C,
-    );
+    expect(
+      deterministicEvaluator.evaluateFlag(flag, configDetails, 'alice', {}, false).variation,
+    ).toEqual(VARIATION_A);
+    expect(
+      deterministicEvaluator.evaluateFlag(flag, configDetails, 'bob', {}, false).variation,
+    ).toEqual(VARIATION_B);
+    expect(
+      deterministicEvaluator.evaluateFlag(flag, configDetails, 'charlie', {}, false).variation,
+    ).toEqual(VARIATION_C);
+    expect(
+      deterministicEvaluator.evaluateFlag(flag, configDetails, 'dave', {}, false).variation,
+    ).toEqual(VARIATION_C);
   });
 
   it('should not match on allocation before startAt has passed', () => {
@@ -468,7 +493,7 @@ describe('Evaluator', () => {
       totalShards: 10,
     };
 
-    const result = evaluator.evaluateFlag(flag, 'subject_key', {}, false);
+    const result = evaluator.evaluateFlag(flag, configDetails, 'subject_key', {}, false);
     expect(result.flagKey).toEqual('flag');
     expect(result.allocationKey).toBeNull();
     expect(result.variation).toBeNull();
@@ -500,7 +525,7 @@ describe('Evaluator', () => {
       totalShards: 10,
     };
 
-    const result = evaluator.evaluateFlag(flag, 'subject_key', {}, false);
+    const result = evaluator.evaluateFlag(flag, configDetails, 'subject_key', {}, false);
     expect(result.flagKey).toEqual('flag');
     expect(result.allocationKey).toEqual('default');
     expect(result.variation).toEqual(VARIATION_A);
@@ -532,7 +557,7 @@ describe('Evaluator', () => {
       totalShards: 10,
     };
 
-    const result = evaluator.evaluateFlag(flag, 'subject_key', {}, false);
+    const result = evaluator.evaluateFlag(flag, configDetails, 'subject_key', {}, false);
     expect(result.flagKey).toEqual('flag');
     expect(result.allocationKey).toBeNull();
     expect(result.variation).toBeNull();
@@ -559,7 +584,7 @@ describe('matchesRules', () => {
       const rules: Rule[] = [];
       const subjectAttributes = { id: 'test-subject' };
       const obfuscated = false;
-      expect(matchesRules(rules, subjectAttributes, obfuscated)).toBeTruthy();
+      expect(matchesRules(rules, subjectAttributes, obfuscated).matched).toBeTruthy();
     });
 
     it('should return true when a rule matches', () => {
@@ -576,7 +601,7 @@ describe('matchesRules', () => {
       ];
       const subjectAttributes = { id: 'test-subject', age: 20 };
       const obfuscated = false;
-      expect(matchesRules(rules, subjectAttributes, obfuscated)).toBeTruthy();
+      expect(matchesRules(rules, subjectAttributes, obfuscated).matched).toBeTruthy();
     });
 
     it('should return true when one of two rules matches', () => {
@@ -602,7 +627,7 @@ describe('matchesRules', () => {
       ];
       const subjectAttributes = { id: 'test-subject', age: 10 };
       const obfuscated = false;
-      expect(matchesRules(rules, subjectAttributes, obfuscated)).toBeTruthy();
+      expect(matchesRules(rules, subjectAttributes, obfuscated).matched).toBeTruthy();
     });
 
     it('should return true when null or rule is passed', () => {
@@ -627,9 +652,11 @@ describe('matchesRules', () => {
         },
       ];
       const obfuscated = false;
-      expect(matchesRules(rules, { id: 'test-subject', age: 20 }, obfuscated)).toBeTruthy();
-      expect(matchesRules(rules, { id: 'test-subject', age: 10 }, obfuscated)).toBeFalsy();
-      expect(matchesRules(rules, { id: 'test-subject', country: 'UK' }, obfuscated)).toBeTruthy();
+      expect(matchesRules(rules, { id: 'test-subject', age: 20 }, obfuscated).matched).toBeTruthy();
+      expect(matchesRules(rules, { id: 'test-subject', age: 10 }, obfuscated).matched).toBeFalsy();
+      expect(
+        matchesRules(rules, { id: 'test-subject', country: 'UK' }, obfuscated).matched,
+      ).toBeTruthy();
     });
 
     it('should return false when no rules match', () => {
@@ -646,7 +673,7 @@ describe('matchesRules', () => {
       ];
       const subjectAttributes = { id: 'test-subject', age: 16 };
       const obfuscated = false;
-      expect(matchesRules(rules, subjectAttributes, obfuscated)).toBeFalsy();
+      expect(matchesRules(rules, subjectAttributes, obfuscated).matched).toBeFalsy();
     });
   });
 });

@@ -12,6 +12,10 @@ import { BanditEvaluator } from '../bandit-evaluator';
 import { IBanditEvent, IBanditLogger } from '../bandit-logger';
 import ConfigurationRequestor from '../configuration-requestor';
 import { MemoryOnlyConfigurationStore } from '../configuration-store/memory.store';
+import {
+  AllocationEvaluationCode,
+  IFlagEvaluationDetails,
+} from '../flag-evaluation-details-builder';
 import FetchHttpClient from '../http-client';
 import { BanditVariation, BanditParameters, Flag } from '../interfaces';
 import { Attributes, ContextAttributes } from '../types';
@@ -167,6 +171,36 @@ describe('EppoClient Bandits E2E test', () => {
       expect(banditEvent.actionNumericAttributes).toStrictEqual({ brand_affinity: -1 });
       expect(banditEvent.actionCategoricalAttributes).toStrictEqual({ loyalty_tier: 'bronze' });
       expect(banditEvent.metaData?.obfuscated).toBe(false);
+
+      expect(banditEvent.evaluationDetails.configFetchedAt).toBeTruthy();
+      expect(typeof banditEvent.evaluationDetails.configFetchedAt).toBe('string');
+      const expectedEvaluationDetails: IFlagEvaluationDetails = {
+        configFetchedAt: expect.any(String),
+        configPublishedAt: '2024-04-17T19:40:53.716Z',
+        environmentName: 'Test',
+        flagEvaluationCode: 'MATCH',
+        flagEvaluationDescription:
+          'bob belongs to the range of traffic assigned to "banner_bandit" defined in allocation "training".',
+        matchedAllocation: {
+          allocationEvaluationCode: AllocationEvaluationCode.MATCH,
+          key: 'training',
+          orderPosition: 2,
+        },
+        matchedRule: null,
+        unevaluatedAllocations: [],
+        unmatchedAllocations: [
+          {
+            allocationEvaluationCode: AllocationEvaluationCode.TRAFFIC_EXPOSURE_MISS,
+            key: 'analysis',
+            orderPosition: 1,
+          },
+        ],
+        variationKey: 'banner_bandit',
+        variationValue: 'banner_bandit',
+        banditKey: 'banner_bandit',
+        banditAction: 'adidas',
+      };
+      expect(banditEvent.evaluationDetails).toEqual(expectedEvaluationDetails);
     });
 
     it('Flushed queued logging events when a logger is set', () => {
@@ -216,6 +250,8 @@ describe('EppoClient Bandits E2E test', () => {
     });
 
     describe('Bandit evaluation errors', () => {
+      const testStart = Date.now();
+
       beforeEach(() => {
         jest
           .spyOn(
@@ -229,7 +265,7 @@ describe('EppoClient Bandits E2E test', () => {
 
       it('Returns default value when graceful mode is on', () => {
         client.setIsGracefulFailureMode(true);
-        const banditAssignment = client.getBanditAction(
+        const banditAssignment = client.getBanditActionDetails(
           flagKey,
           subjectKey,
           subjectAttributes,
@@ -238,6 +274,37 @@ describe('EppoClient Bandits E2E test', () => {
         );
         expect(banditAssignment.variation).toBe('control');
         expect(banditAssignment.action).toBeNull();
+
+        expect(
+          Date.parse(banditAssignment.evaluationDetails.configFetchedAt),
+        ).toBeGreaterThanOrEqual(testStart);
+        const expectedEvaluationDetails: IFlagEvaluationDetails = {
+          configFetchedAt: expect.any(String),
+          configPublishedAt: '2024-04-17T19:40:53.716Z',
+          environmentName: 'Test',
+          flagEvaluationCode: 'ASSIGNMENT_ERROR',
+          flagEvaluationDescription: 'Error evaluating bandit action: Intentional Error For Test',
+          matchedAllocation: null,
+          matchedRule: null,
+          unevaluatedAllocations: [
+            {
+              allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
+              key: 'analysis',
+              orderPosition: 1,
+            },
+            {
+              allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
+              key: 'training',
+              orderPosition: 2,
+            },
+          ],
+          unmatchedAllocations: [],
+          variationKey: null,
+          variationValue: null,
+          banditKey: null,
+          banditAction: null,
+        };
+        expect(banditAssignment.evaluationDetails).toEqual(expectedEvaluationDetails);
       });
 
       it('Throws the error when graceful mode is off', () => {

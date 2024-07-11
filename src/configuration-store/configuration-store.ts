@@ -1,3 +1,5 @@
+import { Environment } from '../interfaces';
+
 /**
  * ConfigurationStore interface
  *
@@ -27,7 +29,13 @@ export interface IConfigurationStore<T> {
   getKeys(): string[];
   isInitialized(): boolean;
   isExpired(): Promise<boolean>;
-  setEntries(entries: Record<string, T>): Promise<void>;
+  setEntries(entries: Record<string, T>): Promise<boolean>;
+  setEnvironment(environment: Environment): void;
+  getEnvironment(): Environment | null;
+  getConfigFetchedAt(): string | null;
+  setConfigFetchedAt(configFetchedAt: string): void;
+  getConfigPublishedAt(): string | null;
+  setConfigPublishedAt(configPublishedAt: string): void;
 }
 
 export interface ISyncStore<T> {

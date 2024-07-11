@@ -9,6 +9,7 @@
     "outDir": "dist",
     "noImplicitAny": true,
     "strictNullChecks": true,
+    "strictPropertyInitialization": true
   },
   "include": ["src/**/*.ts"],
   "exclude": [

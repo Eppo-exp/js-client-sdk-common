@@ -1,3 +1,5 @@
+import { Environment } from '../interfaces';
+
 import { IConfigurationStore, ISyncStore } from './configuration-store';
 
 export class MemoryStore<T> implements ISyncStore<T> {
@@ -29,6 +31,9 @@ export class MemoryStore<T> implements ISyncStore<T> {
 export class MemoryOnlyConfigurationStore<T> implements IConfigurationStore<T> {
   private readonly servingStore: ISyncStore<T> = new MemoryStore<T>();
   private initialized = false;
+  private configFetchedAt: string | null = null;
+  private configPublishedAt: string | null = null;
+  private environment: Environment | null = null;
 
   init(): Promise<void> {
     this.initialized = true;
@@ -55,8 +60,33 @@ export class MemoryOnlyConfigurationStore<T> implements IConfigurationStore<T> {
     return this.initialized;
   }
 
-  async setEntries(entries: Record<string, T>): Promise<void> {
+  async setEntries(entries: Record<string, T>): Promise<boolean> {
     this.servingStore.setEntries(entries);
     this.initialized = true;
+    return true;
+  }
+
+  public getEnvironment(): Environment | null {
+    return this.environment;
+  }
+
+  public setEnvironment(environment: Environment): void {
+    this.environment = environment;
+  }
+
+  public getConfigFetchedAt(): string | null {
+    return this.configFetchedAt;
+  }
+
+  public setConfigFetchedAt(configFetchedAt: string): void {
+    this.configFetchedAt = configFetchedAt;
+  }
+
+  public getConfigPublishedAt(): string | null {
+    return this.configPublishedAt;
+  }
+
+  public setConfigPublishedAt(configPublishedAt: string): void {
+    this.configPublishedAt = configPublishedAt;
   }
 }

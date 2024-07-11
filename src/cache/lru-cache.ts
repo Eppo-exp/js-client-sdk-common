@@ -13,6 +13,8 @@
  */
 export class LRUCache implements Map<string, string> {
   private readonly cache = new Map<string, string>();
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
   [Symbol.toStringTag]: string;
 
   constructor(private readonly capacity: number) {}
