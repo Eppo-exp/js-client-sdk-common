@@ -467,19 +467,6 @@ export default class EppoClient {
     let variation = defaultValue;
     let action: string | null = null;
     try {
-      const banditVariations = this.banditVariationConfigurationStore?.get(flagKey);
-      if (banditVariations && !Object.keys(actions).length) {
-        // No actions passed for a flag known to have an active bandit, so we just return the default values so that
-        // we don't log a variation or bandit assignment
-        return {
-          ...defaultResult,
-          evaluationDetails: flagEvaluationDetailsBuilder.buildForNoneResult(
-            'NO_ACTIONS_SUPPLIED_FOR_BANDIT',
-            'No bandit actions passed for a flag known to have an active bandit',
-          ),
-        };
-      }
-
       // Get the assigned variation for the flag with a possible bandit
       // Note for getting assignments, we don't care about context
       const nonContextualSubjectAttributes =
@@ -495,11 +482,23 @@ export default class EppoClient {
       // Check if the assigned variation is an active bandit
       // Note: the reason for non-bandit assignments include the subject being bucketed into a non-bandit variation or
       // a rollout having been done.
+      const banditVariations = this.banditVariationConfigurationStore?.get(flagKey);
       const banditKey = banditVariations?.find(
         (banditVariation) => banditVariation.variationValue === variation,
       )?.key;
 
       if (banditKey) {
+        // If no actions are passed, return the default value and do not log a bandit assignment
+        if (!Object.keys(actions).length) {
+          return {
+            ...defaultResult,
+            evaluationDetails: flagEvaluationDetailsBuilder.buildForNoneResult(
+              'NO_ACTIONS_SUPPLIED_FOR_BANDIT',
+              'No actions passed for a flag that evaluated to a bandit variation',
+            ),
+          };
+        }
+
         // Retrieve the model parameters for the bandit
         const banditParameters = this.banditModelConfigurationStore?.get(banditKey);
 

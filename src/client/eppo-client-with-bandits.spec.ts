@@ -233,7 +233,7 @@ describe('EppoClient Bandits E2E test', () => {
       expect(banditEvent.action).toBe('adidas');
     });
 
-    it('Does not log if no actions provided', () => {
+    it('Logs assignment but not bandit action if no actions provided', () => {
       const banditAssignment = client.getBanditAction(
         'banner_bandit_flag',
         'eve',
@@ -245,7 +245,7 @@ describe('EppoClient Bandits E2E test', () => {
       expect(banditAssignment.variation).toBe('control');
       expect(banditAssignment.action).toBeNull();
 
-      expect(mockLogAssignment).not.toHaveBeenCalled();
+      expect(mockLogAssignment).toHaveBeenCalledTimes(1);
       expect(mockLogBanditAction).not.toHaveBeenCalled();
     });
 
