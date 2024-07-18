@@ -462,7 +462,6 @@ export default class EppoClient {
     actions: BanditActions,
     defaultValue: string,
   ): IAssignmentDetails<string> {
-    //const flagEvaluationDetailsBuilder = this.flagEvaluationDetailsBuilder(flagKey);
     let variation = defaultValue;
     let action: string | null = null;
 
