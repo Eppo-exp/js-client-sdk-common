@@ -462,99 +462,116 @@ export default class EppoClient {
     actions: BanditActions,
     defaultValue: string,
   ): IAssignmentDetails<string> {
-    const flagEvaluationDetailsBuilder = this.flagEvaluationDetailsBuilder(flagKey);
-    const defaultResult = { variation: defaultValue, action: null };
     let variation = defaultValue;
     let action: string | null = null;
-    try {
-      const banditVariations = this.banditVariationConfigurationStore?.get(flagKey);
-      if (banditVariations && !Object.keys(actions).length) {
-        // No actions passed for a flag known to have an active bandit, so we just return the default values so that
-        // we don't log a variation or bandit assignment
-        return {
-          ...defaultResult,
-          evaluationDetails: flagEvaluationDetailsBuilder.buildForNoneResult(
-            'NO_ACTIONS_SUPPLIED_FOR_BANDIT',
-            'No bandit actions passed for a flag known to have an active bandit',
-          ),
-        };
-      }
 
+    // Initialize with a generic evaluation details. This will mutate as the function progresses.
+    let evaluationDetails: IFlagEvaluationDetails = this.flagEvaluationDetailsBuilder(
+      flagKey,
+    ).buildForNoneResult(
+      'ASSIGNMENT_ERROR',
+      'Unexpected error getting assigned variation for bandit action',
+    );
+    try {
       // Get the assigned variation for the flag with a possible bandit
       // Note for getting assignments, we don't care about context
       const nonContextualSubjectAttributes =
         this.ensureNonContextualSubjectAttributes(subjectAttributes);
-      const { variation: _variation, evaluationDetails } = this.getStringAssignmentDetails(
-        flagKey,
-        subjectKey,
-        nonContextualSubjectAttributes,
-        defaultValue,
-      );
-      variation = _variation;
+      const { variation: assignedVariation, evaluationDetails: assignmentEvaluationDetails } =
+        this.getStringAssignmentDetails(
+          flagKey,
+          subjectKey,
+          nonContextualSubjectAttributes,
+          defaultValue,
+        );
+      variation = assignedVariation;
+      evaluationDetails = assignmentEvaluationDetails;
 
       // Check if the assigned variation is an active bandit
       // Note: the reason for non-bandit assignments include the subject being bucketed into a non-bandit variation or
       // a rollout having been done.
+      const banditVariations = this.banditVariationConfigurationStore?.get(flagKey);
       const banditKey = banditVariations?.find(
         (banditVariation) => banditVariation.variationValue === variation,
       )?.key;
 
       if (banditKey) {
-        // Retrieve the model parameters for the bandit
-        const banditParameters = this.banditModelConfigurationStore?.get(banditKey);
-
-        if (!banditParameters) {
-          throw new Error('No model parameters for bandit ' + banditKey);
-        }
-
-        const banditModelData = banditParameters.modelData;
-        const contextualSubjectAttributes =
-          this.ensureContextualSubjectAttributes(subjectAttributes);
-        const actionsWithContextualAttributes = this.ensureActionsWithContextualAttributes(actions);
-        const banditEvaluation = this.banditEvaluator.evaluateBandit(
+        evaluationDetails.banditKey = banditKey;
+        action = this.evaluateBanditAction(
           flagKey,
           subjectKey,
-          contextualSubjectAttributes,
-          actionsWithContextualAttributes,
-          banditModelData,
-        );
-        action = banditEvaluation.actionKey;
-        evaluationDetails.banditAction = action;
-        evaluationDetails.banditKey = banditKey;
-
-        const banditEvent: IBanditEvent = {
-          timestamp: new Date().toISOString(),
-          featureFlag: flagKey,
-          bandit: banditKey,
-          subject: subjectKey,
-          action,
-          actionProbability: banditEvaluation.actionWeight,
-          optimalityGap: banditEvaluation.optimalityGap,
-          modelVersion: banditParameters.modelVersion,
-          subjectNumericAttributes: contextualSubjectAttributes.numericAttributes,
-          subjectCategoricalAttributes: contextualSubjectAttributes.categoricalAttributes,
-          actionNumericAttributes: actionsWithContextualAttributes[action].numericAttributes,
-          actionCategoricalAttributes:
-            actionsWithContextualAttributes[action].categoricalAttributes,
-          metaData: this.buildLoggerMetadata(),
+          subjectAttributes,
+          actions,
+          banditKey,
           evaluationDetails,
-        };
-        this.logBanditAction(banditEvent);
+        );
+        evaluationDetails.banditAction = action;
       }
-      return { variation, action, evaluationDetails };
     } catch (err) {
-      logger.error('Error evaluating bandit action', err);
+      logger.error('Error determining bandit action', err);
       if (!this.isGracefulFailureMode) {
         throw err;
       }
-      return {
-        ...defaultResult,
-        evaluationDetails: flagEvaluationDetailsBuilder.buildForNoneResult(
-          'ASSIGNMENT_ERROR',
-          `Error evaluating bandit action: ${err.message}`,
-        ),
-      };
+      if (variation) {
+        // If we have a variation, the assignment succeeded and the error was with the bandit part.
+        // Update the flag evaluation code to indicate that
+        evaluationDetails.flagEvaluationCode = 'BANDIT_ERROR';
+      }
+      evaluationDetails.flagEvaluationDescription = `Error evaluating bandit action: ${err.message}`;
     }
+    return { variation, action, evaluationDetails };
+  }
+
+  private evaluateBanditAction(
+    flagKey: string,
+    subjectKey: string,
+    subjectAttributes: BanditSubjectAttributes,
+    actions: BanditActions,
+    banditKey: string,
+    evaluationDetails: IFlagEvaluationDetails,
+  ): string | null {
+    // If no actions, there is nothing to do
+    if (!Object.keys(actions).length) {
+      return null;
+    }
+    // Retrieve the model parameters for the bandit
+    const banditParameters = this.banditModelConfigurationStore?.get(banditKey);
+
+    if (!banditParameters) {
+      throw new Error('No model parameters for bandit ' + banditKey);
+    }
+
+    const banditModelData = banditParameters.modelData;
+    const contextualSubjectAttributes = this.ensureContextualSubjectAttributes(subjectAttributes);
+    const actionsWithContextualAttributes = this.ensureActionsWithContextualAttributes(actions);
+    const banditEvaluation = this.banditEvaluator.evaluateBandit(
+      flagKey,
+      subjectKey,
+      contextualSubjectAttributes,
+      actionsWithContextualAttributes,
+      banditModelData,
+    );
+    const action = banditEvaluation.actionKey;
+
+    const banditEvent: IBanditEvent = {
+      timestamp: new Date().toISOString(),
+      featureFlag: flagKey,
+      bandit: banditKey,
+      subject: subjectKey,
+      action,
+      actionProbability: banditEvaluation.actionWeight,
+      optimalityGap: banditEvaluation.optimalityGap,
+      modelVersion: banditParameters.modelVersion,
+      subjectNumericAttributes: contextualSubjectAttributes.numericAttributes,
+      subjectCategoricalAttributes: contextualSubjectAttributes.categoricalAttributes,
+      actionNumericAttributes: actionsWithContextualAttributes[action].numericAttributes,
+      actionCategoricalAttributes: actionsWithContextualAttributes[action].categoricalAttributes,
+      metaData: this.buildLoggerMetadata(),
+      evaluationDetails,
+    };
+    this.logBanditAction(banditEvent);
+
+    return action;
   }
 
   private ensureNonContextualSubjectAttributes(

@@ -233,7 +233,7 @@ describe('EppoClient Bandits E2E test', () => {
       expect(banditEvent.action).toBe('adidas');
     });
 
-    it('Does not log if no actions provided', () => {
+    it('Logs assignment but not bandit action if no actions provided', () => {
       const banditAssignment = client.getBanditAction(
         'banner_bandit_flag',
         'eve',
@@ -242,10 +242,10 @@ describe('EppoClient Bandits E2E test', () => {
         'control',
       );
 
-      expect(banditAssignment.variation).toBe('control');
+      expect(banditAssignment.variation).toBe('banner_bandit');
       expect(banditAssignment.action).toBeNull();
 
-      expect(mockLogAssignment).not.toHaveBeenCalled();
+      expect(mockLogAssignment).toHaveBeenCalledTimes(1);
       expect(mockLogBanditAction).not.toHaveBeenCalled();
     });
 
@@ -263,7 +263,7 @@ describe('EppoClient Bandits E2E test', () => {
           });
       });
 
-      it('Returns default value when graceful mode is on', () => {
+      it('Returns null action when graceful mode is on', () => {
         client.setIsGracefulFailureMode(true);
         const banditAssignment = client.getBanditActionDetails(
           flagKey,
@@ -272,7 +272,7 @@ describe('EppoClient Bandits E2E test', () => {
           actions,
           'control',
         );
-        expect(banditAssignment.variation).toBe('control');
+        expect(banditAssignment.variation).toBe('banner_bandit');
         expect(banditAssignment.action).toBeNull();
 
         expect(
@@ -282,26 +282,25 @@ describe('EppoClient Bandits E2E test', () => {
           configFetchedAt: expect.any(String),
           configPublishedAt: '2024-04-17T19:40:53.716Z',
           environmentName: 'Test',
-          flagEvaluationCode: 'ASSIGNMENT_ERROR',
+          flagEvaluationCode: 'BANDIT_ERROR',
           flagEvaluationDescription: 'Error evaluating bandit action: Intentional Error For Test',
-          matchedAllocation: null,
+          matchedAllocation: {
+            allocationEvaluationCode: AllocationEvaluationCode.MATCH,
+            key: 'training',
+            orderPosition: 2,
+          },
           matchedRule: null,
-          unevaluatedAllocations: [
+          unevaluatedAllocations: [],
+          unmatchedAllocations: [
             {
-              allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
+              allocationEvaluationCode: AllocationEvaluationCode.TRAFFIC_EXPOSURE_MISS,
               key: 'analysis',
               orderPosition: 1,
             },
-            {
-              allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
-              key: 'training',
-              orderPosition: 2,
-            },
           ],
-          unmatchedAllocations: [],
-          variationKey: null,
-          variationValue: null,
-          banditKey: null,
+          variationKey: 'banner_bandit',
+          variationValue: 'banner_bandit',
+          banditKey: 'banner_bandit',
           banditAction: null,
         };
         expect(banditAssignment.evaluationDetails).toEqual(expectedEvaluationDetails);
