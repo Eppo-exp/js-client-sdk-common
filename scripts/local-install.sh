@@ -14,11 +14,6 @@ set -eo pipefail
 ##  Install js-client-sdk-common changes into a test app
 ##   ./scripts/local-install.sh . ../js-client-sdk && ./scripts/local-install.sh ../js-client-sdk ../test-apps/my-react-app
 
-if ! command -v jq &> /dev/null; then
-  echo "jq must be installed before using this script"
-  exit 1
-fi
-
 if [[ "$1" = "" || "$2" = "" ]]; then
   echo 'usage: local-install.sh <package-to-install-dir> <consuming-app-dir>'
   exit 1
@@ -53,14 +48,16 @@ COMPRESSED_PACKAGE="$(tail -1 /tmp/pack.out)"
 tar -xzf "${COMPRESSED_PACKAGE}"
 rm "${COMPRESSED_PACKAGE}"
 mv package "${PACKAGE_DIR}"
-PACKAGE_NAME=$(cat ./package.json | jq -r '.name')
+PACKAGE_NAME=$(node -p "require('./package.json').name")
 popd > /dev/null
 
 ### Install local package to target package
 pushd "$2" > /dev/null
 TARGET_DIR="$(pwd)"
 rm -rf node_modules/.cache
-yarn remove "${PACKAGE_NAME}"
+if [ "$(grep -c '"'"$PACKAGE_NAME"'"' ./package.json)" -gt 0 ]; then
+  yarn remove "${PACKAGE_NAME}"
+fi
 yarn add "${PACKAGE_DIR}" --exact
 popd > /dev/null
 
