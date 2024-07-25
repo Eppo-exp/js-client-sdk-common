@@ -750,9 +750,15 @@ export default class EppoClient {
     }
 
     if (!checkTypeMatch(expectedVariationType, flag.variationType)) {
-      throw new TypeError(
-        `Variation value does not have the correct type. Found: ${flag.variationType} != ${expectedVariationType} for flag ${flagKey}`,
-      );
+      const errorMessage = `Variation value does not have the correct type. Found ${flag.variationType}, but expected ${expectedVariationType} for flag ${flagKey}`;
+      if (this.isGracefulFailureMode) {
+        const flagEvaluationDetails = flagEvaluationDetailsBuilder.buildForNoneResult(
+          'TYPE_MISMATCH',
+          errorMessage,
+        );
+        return noneResult(flagKey, subjectKey, subjectAttributes, flagEvaluationDetails);
+      }
+      throw new TypeError(errorMessage);
     }
 
     if (!flag.enabled) {
@@ -780,9 +786,9 @@ export default class EppoClient {
 
     if (result?.variation && !checkValueTypeMatch(expectedVariationType, result.variation.value)) {
       const { key: vKey, value: vValue } = result.variation;
-      const reason = `Expected variation type ${expectedVariationType} does not match for variation '${vKey}' with value ${vValue}`;
+      const reason = `Variation (${vKey}) is configured for type ${expectedVariationType}, but is set to incompatible value (${vValue})`;
       const flagEvaluationDetails = flagEvaluationDetailsBuilder.buildForNoneResult(
-        'TYPE_MISMATCH',
+        'ASSIGNMENT_ERROR',
         reason,
       );
       return noneResult(flagKey, subjectKey, subjectAttributes, flagEvaluationDetails);

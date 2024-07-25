@@ -235,6 +235,49 @@ describe('EppoClient get*AssignmentDetails', () => {
     } as IAssignmentDetails<number>);
   });
 
+  it('should handle type mismatches with graceful failure mode enabled', () => {
+    const client = new EppoClient(storage);
+    client.setIsGracefulFailureMode(true);
+    const result = client.getBooleanAssignmentDetails('integer-flag', 'alice', {}, true);
+    expect(result).toEqual({
+      variation: true,
+      action: null,
+      evaluationDetails: {
+        environmentName: 'Test',
+        flagEvaluationCode: 'TYPE_MISMATCH',
+        flagEvaluationDescription:
+          'Variation value does not have the correct type. Found INTEGER, but expected BOOLEAN for flag integer-flag',
+        variationKey: null,
+        variationValue: null,
+        banditKey: null,
+        banditAction: null,
+        configFetchedAt: expect.any(String),
+        configPublishedAt: expect.any(String),
+        matchedRule: null,
+        matchedAllocation: null,
+        unmatchedAllocations: [],
+        unevaluatedAllocations: [
+          {
+            key: 'targeted allocation',
+            allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
+            orderPosition: 1,
+          },
+          {
+            key: '50/50 split',
+            allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
+            orderPosition: 2,
+          },
+        ],
+      },
+    } as IAssignmentDetails<boolean>);
+  });
+
+  it('should throw an error for type mismatches with graceful failure mode disabled', () => {
+    const client = new EppoClient(storage);
+    client.setIsGracefulFailureMode(false);
+    expect(() => client.getBooleanAssignmentDetails('integer-flag', 'alice', {}, true)).toThrow();
+  });
+
   describe('UFC General Test Cases', () => {
     const testStart = Date.now();
 
