@@ -680,7 +680,7 @@ export default class EppoClient {
         expectedVariationType,
       );
 
-      if (!result.variation) {
+      if (!result.variation || result.flagEvaluationDetails.flagEvaluationCode !== 'MATCH') {
         return {
           eppoValue: defaultValue,
           flagEvaluationDetails: result.flagEvaluationDetails,
@@ -782,16 +782,6 @@ export default class EppoClient {
     if (this.isObfuscated) {
       // flag.key is obfuscated, replace with requested flag key
       result.flagKey = flagKey;
-    }
-
-    if (result?.variation && !checkValueTypeMatch(expectedVariationType, result.variation.value)) {
-      const { key: vKey, value: vValue } = result.variation;
-      const reason = `Variation (${vKey}) is configured for type ${expectedVariationType}, but is set to incompatible value (${vValue})`;
-      const flagEvaluationDetails = flagEvaluationDetailsBuilder.buildForNoneResult(
-        'ASSIGNMENT_ERROR',
-        reason,
-      );
-      return noneResult(flagKey, subjectKey, subjectAttributes, flagEvaluationDetails);
     }
 
     try {

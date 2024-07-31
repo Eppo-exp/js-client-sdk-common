@@ -1,8 +1,10 @@
+import { checkValueTypeMatch } from './client/eppo-client';
 import {
   AllocationEvaluation,
   AllocationEvaluationCode,
   IFlagEvaluationDetails,
   FlagEvaluationDetailsBuilder,
+  FlagEvaluationCode,
 } from './flag-evaluation-details-builder';
 import {
   Flag,
@@ -94,6 +96,14 @@ export class Evaluator {
             split.shards.every((shard) => this.matchesShard(shard, subjectKey, flag.totalShards))
           ) {
             const variation = flag.variations[split.variationKey];
+            const { flagEvaluationCode, flagEvaluationDescription } =
+              this.getMatchedEvaluationCodeAndDescription(
+                variation,
+                allocation,
+                split,
+                subjectKey,
+                expectedVariationType,
+              );
             const flagEvaluationDetails = flagEvaluationDetailsBuilder
               .setMatch(
                 i,
@@ -103,10 +113,7 @@ export class Evaluator {
                 unmatchedAllocations,
                 expectedVariationType,
               )
-              .build(
-                'MATCH',
-                this.getMatchedEvaluationDetailsMessage(allocation, split, subjectKey),
-              );
+              .build(flagEvaluationCode, flagEvaluationDescription);
             return {
               flagKey: flag.key,
               subjectKey,
@@ -143,23 +150,41 @@ export class Evaluator {
     return shard.ranges.some((range) => isInShardRange(assignedShard, range));
   }
 
-  private getMatchedEvaluationDetailsMessage = (
+  private getMatchedEvaluationCodeAndDescription = (
+    variation: Variation,
     allocation: Allocation,
     split: Split,
     subjectKey: string,
-  ): string => {
+    expectedVariationType: VariationType | undefined,
+  ): { flagEvaluationCode: FlagEvaluationCode; flagEvaluationDescription: string } => {
+    if (!checkValueTypeMatch(expectedVariationType, variation.value)) {
+      const { key: vKey, value: vValue } = variation;
+      return {
+        flagEvaluationCode: 'ASSIGNMENT_ERROR',
+        flagEvaluationDescription: `Variation (${vKey}) is configured for type ${expectedVariationType}, but is set to incompatible value (${vValue})`,
+      };
+    }
     const hasDefinedRules = !!allocation.rules?.length;
     const isExperiment = allocation.splits.length > 1;
     const isPartialRollout = split.shards.length > 1;
     const isExperimentOrPartialRollout = isExperiment || isPartialRollout;
 
     if (hasDefinedRules && isExperimentOrPartialRollout) {
-      return `Supplied attributes match rules defined in allocation "${allocation.key}" and ${subjectKey} belongs to the range of traffic assigned to "${split.variationKey}".`;
+      return {
+        flagEvaluationCode: 'MATCH',
+        flagEvaluationDescription: `Supplied attributes match rules defined in allocation "${allocation.key}" and ${subjectKey} belongs to the range of traffic assigned to "${split.variationKey}".`,
+      };
     }
     if (hasDefinedRules && !isExperimentOrPartialRollout) {
-      return `Supplied attributes match rules defined in allocation "${allocation.key}".`;
+      return {
+        flagEvaluationCode: 'MATCH',
+        flagEvaluationDescription: `Supplied attributes match rules defined in allocation "${allocation.key}".`,
+      };
     }
-    return `${subjectKey} belongs to the range of traffic assigned to "${split.variationKey}" defined in allocation "${allocation.key}".`;
+    return {
+      flagEvaluationCode: 'MATCH',
+      flagEvaluationDescription: `${subjectKey} belongs to the range of traffic assigned to "${split.variationKey}" defined in allocation "${allocation.key}".`,
+    };
   };
 }
 
