@@ -49,8 +49,8 @@ export class FlagEvaluationDetailsBuilder {
   private variationValue: IFlagEvaluationDetails['variationValue'] = null;
   private matchedRule: IFlagEvaluationDetails['matchedRule'] = null;
   private matchedAllocation: IFlagEvaluationDetails['matchedAllocation'] = null;
-  private unmatchedAllocations: IFlagEvaluationDetails['unmatchedAllocations'] = [];
-  private unevaluatedAllocations: IFlagEvaluationDetails['unevaluatedAllocations'] = [];
+  private readonly unmatchedAllocations: IFlagEvaluationDetails['unmatchedAllocations'] = [];
+  private readonly unevaluatedAllocations: IFlagEvaluationDetails['unevaluatedAllocations'] = [];
 
   constructor(
     private readonly environmentName: string,
@@ -61,31 +61,15 @@ export class FlagEvaluationDetailsBuilder {
     this.setNone();
   }
 
+  addUnmatchedAllocation = (allocationEvaluation: AllocationEvaluation) => {
+    this.unmatchedAllocations.push(allocationEvaluation);
+  };
+
   setNone = (): FlagEvaluationDetailsBuilder => {
     this.variationKey = null;
     this.variationValue = null;
     this.matchedRule = null;
     this.matchedAllocation = null;
-    this.unmatchedAllocations = [];
-    this.unevaluatedAllocations = this.allocations.map(
-      (allocation, i): AllocationEvaluation => ({
-        key: allocation.key,
-        allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
-        orderPosition: i + 1,
-      }),
-    );
-    return this;
-  };
-
-  setNoMatchFound = (
-    unmatchedAllocations: Array<AllocationEvaluation> = [],
-  ): FlagEvaluationDetailsBuilder => {
-    this.variationKey = null;
-    this.variationValue = null;
-    this.matchedAllocation = null;
-    this.matchedRule = null;
-    this.unmatchedAllocations = unmatchedAllocations;
-    this.unevaluatedAllocations = [];
     return this;
   };
 
@@ -94,7 +78,6 @@ export class FlagEvaluationDetailsBuilder {
     variation: Variation,
     allocation: Allocation,
     matchedRule: Rule | null,
-    unmatchedAllocations: Array<AllocationEvaluation>,
     expectedVariationType: VariationType | undefined,
   ): FlagEvaluationDetailsBuilder => {
     this.variationKey = variation.key;
@@ -110,17 +93,6 @@ export class FlagEvaluationDetailsBuilder {
       allocationEvaluationCode: AllocationEvaluationCode.MATCH,
       orderPosition: indexPosition + 1, // orderPosition is 1-indexed to match UI
     };
-    this.unmatchedAllocations = unmatchedAllocations;
-    const unevaluatedStartIndex = indexPosition + 1;
-    const unevaluatedStartOrderPosition = unevaluatedStartIndex + 1; // orderPosition is 1-indexed to match UI
-    this.unevaluatedAllocations = this.allocations.slice(unevaluatedStartIndex).map(
-      (allocation, i) =>
-        ({
-          key: allocation.key,
-          allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
-          orderPosition: unevaluatedStartOrderPosition + i,
-        } as AllocationEvaluation),
-    );
     return this;
   };
 
@@ -145,6 +117,32 @@ export class FlagEvaluationDetailsBuilder {
     matchedRule: this.matchedRule,
     matchedAllocation: this.matchedAllocation,
     unmatchedAllocations: this.unmatchedAllocations,
-    unevaluatedAllocations: this.unevaluatedAllocations,
+    unevaluatedAllocations: this.calculateUnevaluatedAllocations(),
   });
+
+  gracefulBuild = (
+    flagEvaluationCode: FlagEvaluationCode,
+    flagEvaluationDescription: string,
+  ): IFlagEvaluationDetails | null => {
+    try {
+      return this.build(flagEvaluationCode, flagEvaluationDescription);
+    } catch (err) {
+      return null;
+    }
+  };
+
+  private calculateUnevaluatedAllocations = (): Array<AllocationEvaluation> => {
+    const unevaluatedStartIndex = this.matchedAllocation
+      ? this.unmatchedAllocations.length + 1
+      : this.unmatchedAllocations.length;
+    const unevaluatedStartOrderPosition = unevaluatedStartIndex + 1; // orderPosition is 1-indexed to match UI
+    return this.allocations.slice(unevaluatedStartIndex).map(
+      (allocation, i) =>
+        ({
+          key: allocation.key,
+          allocationEvaluationCode: AllocationEvaluationCode.UNEVALUATED,
+          orderPosition: unevaluatedStartOrderPosition + i,
+        } as AllocationEvaluation),
+    );
+  };
 }

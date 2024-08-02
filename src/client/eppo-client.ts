@@ -24,6 +24,7 @@ import {
   FlagEvaluationDetailsBuilder,
   IFlagEvaluationDetails,
 } from '../flag-evaluation-details-builder';
+import { FlagEvaluationError } from '../flag-evaluation-error';
 import FetchHttpClient from '../http-client';
 import {
   BanditParameters,
@@ -679,29 +680,50 @@ export default class EppoClient {
         subjectAttributes,
         expectedVariationType,
       );
+      return this.parseVariationWithDetails(result, defaultValue, expectedVariationType);
+    } catch (error) {
+      const eppoValue = this.rethrowIfNotGraceful(error, defaultValue);
+      if (error instanceof FlagEvaluationError && error.flagEvaluationDetails) {
+        return {
+          eppoValue,
+          flagEvaluationDetails: error.flagEvaluationDetails,
+        };
+      } else {
+        const flagEvaluationDetails = new FlagEvaluationDetailsBuilder(
+          '',
+          [],
+          '',
+          '',
+        ).buildForNoneResult('ASSIGNMENT_ERROR', `Assignment Error: ${error.message}`);
+        return {
+          eppoValue,
+          flagEvaluationDetails,
+        };
+      }
+    }
+  }
 
-      if (!result.variation) {
+  private parseVariationWithDetails(
+    result: FlagEvaluation,
+    defaultValue: EppoValue,
+    expectedVariationType: VariationType,
+  ): { eppoValue: EppoValue; flagEvaluationDetails: IFlagEvaluationDetails } {
+    try {
+      if (!result.variation || result.flagEvaluationDetails.flagEvaluationCode !== 'MATCH') {
         return {
           eppoValue: defaultValue,
           flagEvaluationDetails: result.flagEvaluationDetails,
         };
       }
-
       return {
         eppoValue: EppoValue.valueOf(result.variation.value, expectedVariationType),
         flagEvaluationDetails: result.flagEvaluationDetails,
       };
     } catch (error) {
       const eppoValue = this.rethrowIfNotGraceful(error, defaultValue);
-      const flagEvaluationDetails = new FlagEvaluationDetailsBuilder(
-        '',
-        [],
-        '',
-        '',
-      ).buildForNoneResult('ASSIGNMENT_ERROR', `Assignment Error: ${error.message}`);
       return {
         eppoValue,
-        flagEvaluationDetails,
+        flagEvaluationDetails: result.flagEvaluationDetails,
       };
     }
   }
@@ -782,16 +804,6 @@ export default class EppoClient {
     if (this.isObfuscated) {
       // flag.key is obfuscated, replace with requested flag key
       result.flagKey = flagKey;
-    }
-
-    if (result?.variation && !checkValueTypeMatch(expectedVariationType, result.variation.value)) {
-      const { key: vKey, value: vValue } = result.variation;
-      const reason = `Variation (${vKey}) is configured for type ${expectedVariationType}, but is set to incompatible value (${vValue})`;
-      const flagEvaluationDetails = flagEvaluationDetailsBuilder.buildForNoneResult(
-        'ASSIGNMENT_ERROR',
-        reason,
-      );
-      return noneResult(flagKey, subjectKey, subjectAttributes, flagEvaluationDetails);
     }
 
     try {
