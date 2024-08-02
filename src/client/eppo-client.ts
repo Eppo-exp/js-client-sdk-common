@@ -680,18 +680,7 @@ export default class EppoClient {
         subjectAttributes,
         expectedVariationType,
       );
-
-      if (!result.variation || result.flagEvaluationDetails.flagEvaluationCode !== 'MATCH') {
-        return {
-          eppoValue: defaultValue,
-          flagEvaluationDetails: result.flagEvaluationDetails,
-        };
-      }
-
-      return {
-        eppoValue: EppoValue.valueOf(result.variation.value, expectedVariationType),
-        flagEvaluationDetails: result.flagEvaluationDetails,
-      };
+      return this.parseVariationWithDetails(result, defaultValue, expectedVariationType);
     } catch (error) {
       const eppoValue = this.rethrowIfNotGraceful(error, defaultValue);
       if (error instanceof FlagEvaluationError && error.flagEvaluationDetails) {
@@ -711,6 +700,31 @@ export default class EppoClient {
           flagEvaluationDetails,
         };
       }
+    }
+  }
+
+  private parseVariationWithDetails(
+    result: FlagEvaluation,
+    defaultValue: EppoValue,
+    expectedVariationType: VariationType,
+  ): { eppoValue: EppoValue; flagEvaluationDetails: IFlagEvaluationDetails } {
+    try {
+      if (!result.variation || result.flagEvaluationDetails.flagEvaluationCode !== 'MATCH') {
+        return {
+          eppoValue: defaultValue,
+          flagEvaluationDetails: result.flagEvaluationDetails,
+        };
+      }
+      return {
+        eppoValue: EppoValue.valueOf(result.variation.value, expectedVariationType),
+        flagEvaluationDetails: result.flagEvaluationDetails,
+      };
+    } catch (error) {
+      const eppoValue = this.rethrowIfNotGraceful(error, defaultValue);
+      return {
+        eppoValue,
+        flagEvaluationDetails: result.flagEvaluationDetails,
+      };
     }
   }
 
