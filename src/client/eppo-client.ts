@@ -24,6 +24,7 @@ import {
   FlagEvaluationDetailsBuilder,
   IFlagEvaluationDetails,
 } from '../flag-evaluation-details-builder';
+import { FlagEvaluationError } from '../flag-evaluation-error';
 import FetchHttpClient from '../http-client';
 import {
   BanditParameters,
@@ -693,16 +694,23 @@ export default class EppoClient {
       };
     } catch (error) {
       const eppoValue = this.rethrowIfNotGraceful(error, defaultValue);
-      const flagEvaluationDetails = new FlagEvaluationDetailsBuilder(
-        '',
-        [],
-        '',
-        '',
-      ).buildForNoneResult('ASSIGNMENT_ERROR', `Assignment Error: ${error.message}`);
-      return {
-        eppoValue,
-        flagEvaluationDetails,
-      };
+      if (error instanceof FlagEvaluationError && error.flagEvaluationDetails) {
+        return {
+          eppoValue,
+          flagEvaluationDetails: error.flagEvaluationDetails,
+        };
+      } else {
+        const flagEvaluationDetails = new FlagEvaluationDetailsBuilder(
+          '',
+          [],
+          '',
+          '',
+        ).buildForNoneResult('ASSIGNMENT_ERROR', `Assignment Error: ${error.message}`);
+        return {
+          eppoValue,
+          flagEvaluationDetails,
+        };
+      }
     }
   }
 

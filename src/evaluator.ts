@@ -1,11 +1,11 @@
 import { checkValueTypeMatch } from './client/eppo-client';
 import {
-  AllocationEvaluation,
   AllocationEvaluationCode,
   IFlagEvaluationDetails,
   FlagEvaluationDetailsBuilder,
   FlagEvaluationCode,
 } from './flag-evaluation-details-builder';
+import { FlagEvaluationError } from './flag-evaluation-error';
 import {
   Flag,
   Shard,
@@ -52,97 +52,99 @@ export class Evaluator {
       configDetails.configFetchedAt,
       configDetails.configPublishedAt,
     );
+    try {
+      if (!flag.enabled) {
+        return noneResult(
+          flag.key,
+          subjectKey,
+          subjectAttributes,
+          flagEvaluationDetailsBuilder.buildForNoneResult(
+            'FLAG_UNRECOGNIZED_OR_DISABLED',
+            `Unrecognized or disabled flag: ${flag.key}`,
+          ),
+        );
+      }
 
-    if (!flag.enabled) {
+      const now = new Date();
+      for (let i = 0; i < flag.allocations.length; i++) {
+        const allocation = flag.allocations[i];
+        const addUnmatchedAllocation = (code: AllocationEvaluationCode) => {
+          flagEvaluationDetailsBuilder.addUnmatchedAllocation({
+            key: allocation.key,
+            allocationEvaluationCode: code,
+            orderPosition: i + 1,
+          });
+        };
+
+        if (allocation.startAt && now < new Date(allocation.startAt)) {
+          addUnmatchedAllocation(AllocationEvaluationCode.BEFORE_START_TIME);
+          continue;
+        }
+        if (allocation.endAt && now > new Date(allocation.endAt)) {
+          addUnmatchedAllocation(AllocationEvaluationCode.AFTER_END_TIME);
+          continue;
+        }
+        const { matched, matchedRule } = matchesRules(
+          allocation?.rules ?? [],
+          { id: subjectKey, ...subjectAttributes },
+          obfuscated,
+        );
+        if (matched) {
+          for (const split of allocation.splits) {
+            if (
+              split.shards.every((shard) => this.matchesShard(shard, subjectKey, flag.totalShards))
+            ) {
+              const variation = flag.variations[split.variationKey];
+              const { flagEvaluationCode, flagEvaluationDescription } =
+                this.getMatchedEvaluationCodeAndDescription(
+                  variation,
+                  allocation,
+                  split,
+                  subjectKey,
+                  expectedVariationType,
+                );
+              const flagEvaluationDetails = flagEvaluationDetailsBuilder
+                .setMatch(i, variation, allocation, matchedRule, expectedVariationType)
+                .build(flagEvaluationCode, flagEvaluationDescription);
+              return {
+                flagKey: flag.key,
+                subjectKey,
+                subjectAttributes,
+                allocationKey: allocation.key,
+                variation,
+                extraLogging: split.extraLogging ?? {},
+                doLog: allocation.doLog,
+                flagEvaluationDetails,
+              };
+            }
+          }
+          // matched, but does not fall within split range
+          addUnmatchedAllocation(AllocationEvaluationCode.TRAFFIC_EXPOSURE_MISS);
+        } else {
+          addUnmatchedAllocation(AllocationEvaluationCode.FAILING_RULE);
+        }
+      }
       return noneResult(
         flag.key,
         subjectKey,
         subjectAttributes,
         flagEvaluationDetailsBuilder.buildForNoneResult(
-          'FLAG_UNRECOGNIZED_OR_DISABLED',
-          `Unrecognized or disabled flag: ${flag.key}`,
-        ),
-      );
-    }
-
-    const now = new Date();
-    const unmatchedAllocations: Array<AllocationEvaluation> = [];
-    for (let i = 0; i < flag.allocations.length; i++) {
-      const allocation = flag.allocations[i];
-      const addUnmatchedAllocation = (code: AllocationEvaluationCode) => {
-        unmatchedAllocations.push({
-          key: allocation.key,
-          allocationEvaluationCode: code,
-          orderPosition: i + 1,
-        });
-      };
-
-      if (allocation.startAt && now < new Date(allocation.startAt)) {
-        addUnmatchedAllocation(AllocationEvaluationCode.BEFORE_START_TIME);
-        continue;
-      }
-      if (allocation.endAt && now > new Date(allocation.endAt)) {
-        addUnmatchedAllocation(AllocationEvaluationCode.AFTER_END_TIME);
-        continue;
-      }
-      const { matched, matchedRule } = matchesRules(
-        allocation?.rules ?? [],
-        { id: subjectKey, ...subjectAttributes },
-        obfuscated,
-      );
-      if (matched) {
-        for (const split of allocation.splits) {
-          if (
-            split.shards.every((shard) => this.matchesShard(shard, subjectKey, flag.totalShards))
-          ) {
-            const variation = flag.variations[split.variationKey];
-            const { flagEvaluationCode, flagEvaluationDescription } =
-              this.getMatchedEvaluationCodeAndDescription(
-                variation,
-                allocation,
-                split,
-                subjectKey,
-                expectedVariationType,
-              );
-            const flagEvaluationDetails = flagEvaluationDetailsBuilder
-              .setMatch(
-                i,
-                variation,
-                allocation,
-                matchedRule,
-                unmatchedAllocations,
-                expectedVariationType,
-              )
-              .build(flagEvaluationCode, flagEvaluationDescription);
-            return {
-              flagKey: flag.key,
-              subjectKey,
-              subjectAttributes,
-              allocationKey: allocation.key,
-              variation,
-              extraLogging: split.extraLogging ?? {},
-              doLog: allocation.doLog,
-              flagEvaluationDetails,
-            };
-          }
-        }
-        // matched, but does not fall within split range
-        addUnmatchedAllocation(AllocationEvaluationCode.TRAFFIC_EXPOSURE_MISS);
-      } else {
-        addUnmatchedAllocation(AllocationEvaluationCode.FAILING_RULE);
-      }
-    }
-    return noneResult(
-      flag.key,
-      subjectKey,
-      subjectAttributes,
-      flagEvaluationDetailsBuilder
-        .setNoMatchFound(unmatchedAllocations)
-        .build(
           'DEFAULT_ALLOCATION_NULL',
           'No allocations matched. Falling back to "Default Allocation", serving NULL',
         ),
-    );
+      );
+    } catch (err) {
+      const flagEvaluationDetails = flagEvaluationDetailsBuilder.gracefulBuild(
+        'ASSIGNMENT_ERROR',
+        `Assignment Error: ${err.message}`,
+      );
+      if (flagEvaluationDetails) {
+        const flagEvaluationError = new FlagEvaluationError(err.message);
+        flagEvaluationError.flagEvaluationDetails = flagEvaluationDetails;
+        throw flagEvaluationError;
+      }
+      throw err;
+    }
   }
 
   matchesShard(shard: Shard, subjectKey: string, totalShards: number): boolean {
