@@ -144,7 +144,12 @@ export class BanditEvaluator {
     let currTopScore: number | null = null;
     let currTopAction: string | null = null;
     actionScoreEntries.forEach(([actionKey, actionScore]) => {
-      if (currTopScore === null || actionScore > currTopScore) {
+      if (
+        currTopScore === null ||
+        currTopAction === null ||
+        actionScore > currTopScore ||
+        (actionScore === currTopScore && actionKey < currTopAction)
+      ) {
         currTopScore = actionScore;
         currTopAction = actionKey;
       }
