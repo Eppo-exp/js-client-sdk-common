@@ -8,10 +8,11 @@ import {
 } from '../../test/testHelpers';
 import ApiEndpoints from '../api-endpoints';
 import { IAssignmentEvent, IAssignmentLogger } from '../assignment-logger';
-import { BanditEvaluator } from '../bandit-evaluator';
+import { BanditEvaluation, BanditEvaluator } from '../bandit-evaluator';
 import { IBanditEvent, IBanditLogger } from '../bandit-logger';
 import ConfigurationRequestor from '../configuration-requestor';
 import { MemoryOnlyConfigurationStore } from '../configuration-store/memory.store';
+import { Evaluator, FlagEvaluation } from '../evaluator';
 import {
   AllocationEvaluationCode,
   IFlagEvaluationDetails,
@@ -20,7 +21,7 @@ import FetchHttpClient from '../http-client';
 import { BanditVariation, BanditParameters, Flag } from '../interfaces';
 import { Attributes, ContextAttributes } from '../types';
 
-import EppoClient from './eppo-client';
+import EppoClient, { IAssignmentDetails } from './eppo-client';
 
 describe('EppoClient Bandits E2E test', () => {
   const flagStore = new MemoryOnlyConfigurationStore<Flag>();
@@ -427,6 +428,129 @@ describe('EppoClient Bandits E2E test', () => {
 
         expect(mockLogBanditAction).toHaveBeenCalledTimes(2);
         expect(mockLogBanditAction.mock.calls[1][0].actionProbability).toBeCloseTo(0.256);
+      });
+    });
+
+    describe('Assignment logging deduplication', () => {
+      let mockEvaluateFlag: jest.SpyInstance;
+      let mockEvaluateBandit: jest.SpyInstance;
+      let variationToReturn: string;
+      let actionToReturn: string | null;
+
+      // Convenience method for repeatedly making the exact same assignment call
+      function requestClientBanditAction(): Omit<IAssignmentDetails<string>, 'evaluationDetails'> {
+        return client.getBanditAction(flagKey, subjectKey, subjectAttributes, ['toyota', 'honda'], 'control');
+      }
+
+      beforeAll(() => {
+        mockEvaluateFlag = jest
+          .spyOn(Evaluator.prototype, 'evaluateFlag')
+          .mockImplementation(() => {
+            return {
+              flagKey,
+              subjectKey,
+              subjectAttributes,
+              allocationKey: 'mock-allocation',
+              variation: { key: variationToReturn, value: variationToReturn },
+              extraLogging: {},
+              doLog: true,
+              flagEvaluationDetails: {
+                flagEvaluationCode: 'MATCH',
+                flagEvaluationDescription: 'Mocked evaluation',
+              },
+            } as FlagEvaluation;
+          });
+
+        mockEvaluateBandit = jest
+          .spyOn(BanditEvaluator.prototype, 'evaluateBandit')
+          .mockImplementation(() => {
+            return {
+              flagKey,
+              subjectKey,
+              subjectAttributes: { numericAttributes: {}, categoricalAttributes: {} },
+              actionKey: actionToReturn,
+              actionAttributes: { numericAttributes: {}, categoricalAttributes: {} },
+              actionScore: 10,
+              actionWeight: 0.5,
+              gamma: 1.0,
+              optimalityGap: 5,
+            } as BanditEvaluation;
+          });
+      });
+
+      beforeEach(() => {
+        client.useNonExpiringInMemoryAssignmentCache();
+      });
+
+      afterEach(() => {
+        client.disableAssignmentCache();
+      });
+
+      afterAll(() => {
+        mockEvaluateFlag.mockClear();
+        mockEvaluateBandit.mockClear();
+      });
+
+      it('handles bandit actions appropriately', async () => {
+        // First assign to non-bandit variation
+        variationToReturn = 'non-bandit';
+        actionToReturn = null;
+        const firstNonBanditAssignment = requestClientBanditAction();
+
+        expect(firstNonBanditAssignment.variation).toBe('non-bandit');
+        expect(firstNonBanditAssignment.action).toBeNull();
+        expect(mockLogAssignment).toHaveBeenCalledTimes(1);
+        expect(mockLogBanditAction).not.toHaveBeenCalled();
+
+        // Assign bandit action
+        variationToReturn = 'banner_bandit';
+        actionToReturn = 'toyota';
+        const firstBanditAssignment = requestClientBanditAction();
+
+        expect(firstBanditAssignment.variation).toBe('banner_bandit');
+        expect(firstBanditAssignment.action).toBe('toyota');
+        expect(mockLogAssignment).toHaveBeenCalledTimes(2);
+        expect(mockLogBanditAction).toHaveBeenCalledTimes(1);
+
+        // Repeat bandit action assignment
+        variationToReturn = 'banner_bandit';
+        actionToReturn = 'toyota';
+        const secondBanditAssignment = requestClientBanditAction();
+
+        expect(secondBanditAssignment.variation).toBe('banner_bandit');
+        expect(secondBanditAssignment.action).toBe('toyota');
+        expect(mockLogAssignment).toHaveBeenCalledTimes(2);
+        expect(mockLogBanditAction).toHaveBeenCalledTimes(1);
+
+        // New bandit action assignment
+        variationToReturn = 'banner_bandit';
+        actionToReturn = 'honda';
+        const thirdBanditAssignment = requestClientBanditAction();
+
+        expect(thirdBanditAssignment.variation).toBe('banner_bandit');
+        expect(thirdBanditAssignment.action).toBe('honda');
+        expect(mockLogAssignment).toHaveBeenCalledTimes(2);
+        expect(mockLogBanditAction).toHaveBeenCalledTimes(2);
+
+        // Flip-flop to an earlier action assignment
+        variationToReturn = 'banner_bandit';
+        actionToReturn = 'toyota';
+        const fourthBanditAssignment = requestClientBanditAction();
+
+        expect(fourthBanditAssignment.variation).toBe('banner_bandit');
+        expect(thirdBanditAssignment.action).toBe('toyota');
+        expect(mockLogAssignment).toHaveBeenCalledTimes(2);
+        expect(mockLogBanditAction).toHaveBeenCalledTimes(3);
+
+        // Flip-flop back to non-bandit assignment
+        variationToReturn = 'non-bandit';
+        actionToReturn = null;
+        const secondNonBanditAssignment = requestClientBanditAction();
+
+        expect(secondNonBanditAssignment.variation).toBe('non-bandit');
+        expect(secondNonBanditAssignment.action).toBeNull();
+        expect(mockLogAssignment).toHaveBeenCalledTimes(3);
+        expect(mockLogBanditAction).toHaveBeenCalledTimes(3);
       });
     });
   });
