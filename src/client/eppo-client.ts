@@ -75,6 +75,7 @@ export default class EppoClient {
   private banditLogger?: IBanditLogger;
   private isGracefulFailureMode = true;
   private assignmentCache?: AssignmentCache;
+  private banditAssignmentCache?: AssignmentCache;
   private requestPoller?: IPoller;
   private readonly evaluator = new Evaluator();
   private readonly banditEvaluator = new BanditEvaluator();
@@ -651,6 +652,25 @@ export default class EppoClient {
   }
 
   private logBanditAction(banditEvent: IBanditEvent): void {
+    const subjectKey = banditEvent.subject;
+    const flagKey = banditEvent.featureFlag;
+    const banditKey = banditEvent.bandit;
+    const actionKey = banditEvent.action ?? '__eppo_no_action';
+
+    // What our bandit assignment cache cares about for avoiding logging duplicate bandit assignments,
+    // if one is active. Like the flag assignment cache, entries are only stored for a given flag
+    // and subject.
+    const banditAssignmentCacheProperties = {
+      flagKey,
+      subjectKey,
+      banditKey,
+      actionKey,
+    };
+
+    if (this.banditAssignmentCache?.has(banditAssignmentCacheProperties)) {
+      return;
+    }
+
     if (!this.banditLogger) {
       // No bandit logger set; enqueue the event in case a logger is later set
       if (this.queuedBanditEvents.length < MAX_EVENT_QUEUE_SIZE) {
@@ -661,6 +681,7 @@ export default class EppoClient {
     // If here, we have a logger
     try {
       this.banditLogger.logBanditAction(banditEvent);
+      this.banditAssignmentCache?.set(banditAssignmentCacheProperties);
     } catch (err) {
       logger.warn('Error encountered logging bandit action', err);
     }
@@ -902,6 +923,22 @@ export default class EppoClient {
 
   public useCustomAssignmentCache(cache: AssignmentCache) {
     this.assignmentCache = cache;
+  }
+
+  public disableBanditAssignmentCache() {
+    this.banditAssignmentCache = undefined;
+  }
+
+  public useNonExpiringInMemoryBanditAssignmentCache() {
+    this.banditAssignmentCache = new NonExpiringInMemoryAssignmentCache();
+  }
+
+  public useLRUInMemoryBanditAssignmentCache(maxSize: number) {
+    this.banditAssignmentCache = new LRUInMemoryAssignmentCache(maxSize);
+  }
+
+  public useCustomBanditAssignmentCache(cache: AssignmentCache) {
+    this.banditAssignmentCache = cache;
   }
 
   public setIsGracefulFailureMode(gracefulFailureMode: boolean) {

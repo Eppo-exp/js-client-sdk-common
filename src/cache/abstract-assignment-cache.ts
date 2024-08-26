@@ -2,10 +2,17 @@ import { getMD5Hash } from '../obfuscation';
 
 import { LRUCache } from './lru-cache';
 
-export type AssignmentCacheValue = {
+export type FlagAssignmentCacheValue = {
   allocationKey: string;
   variationKey: string;
 };
+
+export type BanditAssignmentCacheValue = {
+  banditKey: string;
+  actionKey: string;
+};
+
+type AssignmentCacheValue = FlagAssignmentCacheValue | BanditAssignmentCacheValue;
 
 export type AssignmentCacheKey = {
   subjectKey: string;
@@ -19,11 +26,18 @@ export function assignmentCacheKeyToString({ subjectKey, flagKey }: AssignmentCa
   return getMD5Hash([subjectKey, flagKey].join(';'));
 }
 
-export function assignmentCacheValueToString({
-  allocationKey,
-  variationKey,
-}: AssignmentCacheValue): string {
-  return getMD5Hash([allocationKey, variationKey].join(';'));
+export function assignmentCacheValueToString(cacheValue: AssignmentCacheValue): string {
+  const fieldsToHash: string[] = [];
+
+  if ('allocationKey' in cacheValue && 'variationKey' in cacheValue) {
+    fieldsToHash.push(cacheValue.allocationKey, cacheValue.variationKey);
+  }
+
+  if ('banditKey' in cacheValue && 'actionKey' in cacheValue) {
+    fieldsToHash.push(cacheValue.banditKey, cacheValue.actionKey);
+  }
+
+  return getMD5Hash(fieldsToHash.join(';'));
 }
 
 export interface AsyncMap<K, V> {

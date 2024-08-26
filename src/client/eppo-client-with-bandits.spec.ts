@@ -480,6 +480,7 @@ describe('EppoClient Bandits E2E test', () => {
 
       beforeEach(() => {
         client.useNonExpiringInMemoryAssignmentCache();
+        client.useNonExpiringInMemoryBanditAssignmentCache();
       });
 
       afterEach(() => {
@@ -538,7 +539,7 @@ describe('EppoClient Bandits E2E test', () => {
         const fourthBanditAssignment = requestClientBanditAction();
 
         expect(fourthBanditAssignment.variation).toBe('banner_bandit');
-        expect(thirdBanditAssignment.action).toBe('toyota');
+        expect(fourthBanditAssignment.action).toBe('toyota');
         expect(mockLogAssignment).toHaveBeenCalledTimes(2);
         expect(mockLogBanditAction).toHaveBeenCalledTimes(3);
 
