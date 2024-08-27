@@ -440,7 +440,13 @@ describe('EppoClient Bandits E2E test', () => {
 
       // Convenience method for repeatedly making the exact same assignment call
       function requestClientBanditAction(): Omit<IAssignmentDetails<string>, 'evaluationDetails'> {
-        return client.getBanditAction(flagKey, subjectKey, subjectAttributes, ['toyota', 'honda'], 'control');
+        return client.getBanditAction(
+          flagKey,
+          subjectKey,
+          subjectAttributes,
+          ['toyota', 'honda'],
+          'control',
+        );
       }
 
       beforeAll(() => {

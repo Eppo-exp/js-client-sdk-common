@@ -2,17 +2,17 @@ import { getMD5Hash } from '../obfuscation';
 
 import { LRUCache } from './lru-cache';
 
-export type FlagAssignmentCacheValue = {
+type FlagAssignmentCacheValue = {
   allocationKey: string;
   variationKey: string;
 };
 
-export type BanditAssignmentCacheValue = {
+type BanditAssignmentCacheValue = {
   banditKey: string;
   actionKey: string;
 };
 
-type AssignmentCacheValue = FlagAssignmentCacheValue | BanditAssignmentCacheValue;
+export type AssignmentCacheValue = FlagAssignmentCacheValue | BanditAssignmentCacheValue;
 
 export type AssignmentCacheKey = {
   subjectKey: string;
