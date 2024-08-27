@@ -26,18 +26,8 @@ export function assignmentCacheKeyToString({ subjectKey, flagKey }: AssignmentCa
   return getMD5Hash([subjectKey, flagKey].join(';'));
 }
 
-export function assignmentCacheValueToString(cacheValue: AssignmentCacheValue): string {
-  const fieldsToHash: string[] = [];
-
-  if ('allocationKey' in cacheValue && 'variationKey' in cacheValue) {
-    fieldsToHash.push(cacheValue.allocationKey, cacheValue.variationKey);
-  }
-
-  if ('banditKey' in cacheValue && 'actionKey' in cacheValue) {
-    fieldsToHash.push(cacheValue.banditKey, cacheValue.actionKey);
-  }
-
-  return getMD5Hash(fieldsToHash.join(';'));
+export function assignmentCacheValueToString(cacheValue: Record<string, string>): string {
+  return getMD5Hash(Object.values(cacheValue).join(';'));
 }
 
 export interface AsyncMap<K, V> {
