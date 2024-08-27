@@ -652,16 +652,12 @@ export default class EppoClient {
   }
 
   private logBanditAction(banditEvent: IBanditEvent): void {
+    // First we check if this bandit action has been logged before
     const subjectKey = banditEvent.subject;
     const flagKey = banditEvent.featureFlag;
     const banditKey = banditEvent.bandit;
     const actionKey = banditEvent.action ?? '__eppo_no_action';
 
-    // What our bandit assignment cache cares about for avoiding logging duplicate bandit assignments,
-    // if one is active. Like the flag assignment cache, entries are only stored for a given flag
-    // and subject. However, Bandit and action keys are also used for determining assignment uniqueness.
-    // This means that if a flag's bandit assigns one action, and then later a new action, the first
-    // one will be evicted from the cache. If later assigned again, it will be treated as new.
     const banditAssignmentCacheProperties = {
       flagKey,
       subjectKey,
@@ -674,6 +670,7 @@ export default class EppoClient {
       return;
     }
 
+    // If no logger defined, queue up the events (up to a max) to flush if a logger is later defined
     if (!this.banditLogger) {
       // No bandit logger set; enqueue the event in case a logger is later set
       if (this.queuedBanditEvents.length < MAX_EVENT_QUEUE_SIZE) {
@@ -681,6 +678,7 @@ export default class EppoClient {
       }
       return;
     }
+
     // If here, we have a logger and a new assignment to be logged
     try {
       this.banditLogger.logBanditAction(banditEvent);
