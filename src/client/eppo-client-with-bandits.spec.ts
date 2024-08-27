@@ -434,6 +434,7 @@ describe('EppoClient Bandits E2E test', () => {
     describe('Assignment logging deduplication', () => {
       let mockEvaluateFlag: jest.SpyInstance;
       let mockEvaluateBandit: jest.SpyInstance;
+      // The below two variables allow easily changing what the mock evaluation functions return throughout the test
       let variationToReturn: string;
       let actionToReturn: string | null;
 
@@ -485,6 +486,7 @@ describe('EppoClient Bandits E2E test', () => {
 
       afterEach(() => {
         client.disableAssignmentCache();
+        client.disableBanditAssignmentCache();
       });
 
       afterAll(() => {
@@ -500,8 +502,8 @@ describe('EppoClient Bandits E2E test', () => {
 
         expect(firstNonBanditAssignment.variation).toBe('non-bandit');
         expect(firstNonBanditAssignment.action).toBeNull();
-        expect(mockLogAssignment).toHaveBeenCalledTimes(1);
-        expect(mockLogBanditAction).not.toHaveBeenCalled();
+        expect(mockLogAssignment).toHaveBeenCalledTimes(1); // new variation assignment
+        expect(mockLogBanditAction).not.toHaveBeenCalled(); // no bandit assignment
 
         // Assign bandit action
         variationToReturn = 'banner_bandit';
@@ -510,8 +512,8 @@ describe('EppoClient Bandits E2E test', () => {
 
         expect(firstBanditAssignment.variation).toBe('banner_bandit');
         expect(firstBanditAssignment.action).toBe('toyota');
-        expect(mockLogAssignment).toHaveBeenCalledTimes(2);
-        expect(mockLogBanditAction).toHaveBeenCalledTimes(1);
+        expect(mockLogAssignment).toHaveBeenCalledTimes(2); // new variation assignment
+        expect(mockLogBanditAction).toHaveBeenCalledTimes(1); // new bandit assignment
 
         // Repeat bandit action assignment
         variationToReturn = 'banner_bandit';
@@ -520,8 +522,8 @@ describe('EppoClient Bandits E2E test', () => {
 
         expect(secondBanditAssignment.variation).toBe('banner_bandit');
         expect(secondBanditAssignment.action).toBe('toyota');
-        expect(mockLogAssignment).toHaveBeenCalledTimes(2);
-        expect(mockLogBanditAction).toHaveBeenCalledTimes(1);
+        expect(mockLogAssignment).toHaveBeenCalledTimes(2); // repeat variation assignment
+        expect(mockLogBanditAction).toHaveBeenCalledTimes(1); // repeat bandit assignment
 
         // New bandit action assignment
         variationToReturn = 'banner_bandit';
@@ -530,8 +532,8 @@ describe('EppoClient Bandits E2E test', () => {
 
         expect(thirdBanditAssignment.variation).toBe('banner_bandit');
         expect(thirdBanditAssignment.action).toBe('honda');
-        expect(mockLogAssignment).toHaveBeenCalledTimes(2);
-        expect(mockLogBanditAction).toHaveBeenCalledTimes(2);
+        expect(mockLogAssignment).toHaveBeenCalledTimes(2); // repeat variation assignment
+        expect(mockLogBanditAction).toHaveBeenCalledTimes(2); // new bandit assignment
 
         // Flip-flop to an earlier action assignment
         variationToReturn = 'banner_bandit';
@@ -540,8 +542,8 @@ describe('EppoClient Bandits E2E test', () => {
 
         expect(fourthBanditAssignment.variation).toBe('banner_bandit');
         expect(fourthBanditAssignment.action).toBe('toyota');
-        expect(mockLogAssignment).toHaveBeenCalledTimes(2);
-        expect(mockLogBanditAction).toHaveBeenCalledTimes(3);
+        expect(mockLogAssignment).toHaveBeenCalledTimes(2); // repeat variation assignment
+        expect(mockLogBanditAction).toHaveBeenCalledTimes(3); // "new" bandit assignment
 
         // Flip-flop back to non-bandit assignment
         variationToReturn = 'non-bandit';
@@ -550,8 +552,8 @@ describe('EppoClient Bandits E2E test', () => {
 
         expect(secondNonBanditAssignment.variation).toBe('non-bandit');
         expect(secondNonBanditAssignment.action).toBeNull();
-        expect(mockLogAssignment).toHaveBeenCalledTimes(3);
-        expect(mockLogBanditAction).toHaveBeenCalledTimes(3);
+        expect(mockLogAssignment).toHaveBeenCalledTimes(3); // "new" variation assignment
+        expect(mockLogBanditAction).toHaveBeenCalledTimes(3); // no bandit assignment
       });
     });
   });
