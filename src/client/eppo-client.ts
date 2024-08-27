@@ -670,18 +670,15 @@ export default class EppoClient {
       return;
     }
 
-    // If no logger defined, queue up the events (up to a max) to flush if a logger is later defined
-    if (!this.banditLogger) {
-      // No bandit logger set; enqueue the event in case a logger is later set
-      if (this.queuedBanditEvents.length < MAX_EVENT_QUEUE_SIZE) {
-        this.queuedBanditEvents.push(banditEvent);
-      }
-      return;
-    }
-
     // If here, we have a logger and a new assignment to be logged
     try {
-      this.banditLogger.logBanditAction(banditEvent);
+      if (this.banditLogger) {
+        this.banditLogger.logBanditAction(banditEvent);
+      } else if (this.queuedBanditEvents.length < MAX_EVENT_QUEUE_SIZE) {
+        // If no logger defined, queue up the events (up to a max) to flush if a logger is later defined
+        this.queuedBanditEvents.push(banditEvent);
+      }
+      // Record in the assignment cache, if active, to deduplicate subsequent repeat assignments
       this.banditAssignmentCache?.set(banditAssignmentCacheProperties);
     } catch (err) {
       logger.warn('Error encountered logging bandit action', err);
@@ -994,14 +991,14 @@ export default class EppoClient {
       }
     }
 
-    // assignment logger may be null while waiting for initialization
-    if (!this.assignmentLogger) {
-      this.queuedAssignmentEvents.length < MAX_EVENT_QUEUE_SIZE &&
-        this.queuedAssignmentEvents.push(event);
-      return;
-    }
     try {
-      this.assignmentLogger.logAssignment(event);
+      if (this.assignmentLogger) {
+        this.assignmentLogger.logAssignment(event);
+      } else if (this.queuedAssignmentEvents.length < MAX_EVENT_QUEUE_SIZE) {
+        // assignment logger may be null while waiting for initialization, queue up events (up to a max)
+        // to be flushed when set
+        this.queuedAssignmentEvents.push(event);
+      }
       this.assignmentCache?.set({
         flagKey,
         subjectKey,

@@ -205,6 +205,8 @@ describe('EppoClient Bandits E2E test', () => {
     });
 
     it('Flushed queued logging events when a logger is set', () => {
+      client.useLRUInMemoryAssignmentCache(5);
+      client.useLRUInMemoryBanditAssignmentCache(5);
       client.setAssignmentLogger(null as unknown as IAssignmentLogger);
       client.setBanditLogger(null as unknown as IBanditLogger);
       const banditAssignment = client.getBanditAction(
@@ -217,6 +219,20 @@ describe('EppoClient Bandits E2E test', () => {
 
       expect(banditAssignment.variation).toBe('banner_bandit');
       expect(banditAssignment.action).toBe('adidas');
+
+      expect(mockLogAssignment).not.toHaveBeenCalled();
+      expect(mockLogBanditAction).not.toHaveBeenCalled();
+
+      const repeatAssignment = client.getBanditAction(
+        flagKey,
+        subjectKey,
+        subjectAttributes,
+        actions,
+        'control',
+      );
+
+      expect(repeatAssignment.variation).toBe('banner_bandit');
+      expect(repeatAssignment.action).toBe('adidas');
 
       expect(mockLogAssignment).not.toHaveBeenCalled();
       expect(mockLogBanditAction).not.toHaveBeenCalled();
