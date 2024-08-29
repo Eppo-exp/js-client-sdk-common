@@ -2,15 +2,26 @@ import { getMD5Hash } from '../obfuscation';
 
 import { LRUCache } from './lru-cache';
 
-export type AssignmentCacheValue = {
-  allocationKey: string;
-  variationKey: string;
-};
-
+/**
+ * Assignment cache keys are only on the subject and flag level, while the entire value is used
+ * for uniqueness checking. This way that if an assigned variation or bandit action changes for a
+ * flag, it evicts the old one. Then, if an older assignment is later reassigned, it will be treated
+ * as new.
+ */
 export type AssignmentCacheKey = {
   subjectKey: string;
   flagKey: string;
 };
+
+export type CacheKeyPair<T extends string, U extends string> = {
+  [K in T]: string;
+} & {
+  [K in U]: string;
+};
+
+type VariationCacheValue = CacheKeyPair<'allocationKey', 'variationKey'>;
+type BanditCacheValue = CacheKeyPair<'banditKey', 'actionKey'>;
+export type AssignmentCacheValue = VariationCacheValue | BanditCacheValue;
 
 export type AssignmentCacheEntry = AssignmentCacheKey & AssignmentCacheValue;
 
@@ -19,11 +30,9 @@ export function assignmentCacheKeyToString({ subjectKey, flagKey }: AssignmentCa
   return getMD5Hash([subjectKey, flagKey].join(';'));
 }
 
-export function assignmentCacheValueToString({
-  allocationKey,
-  variationKey,
-}: AssignmentCacheValue): string {
-  return getMD5Hash([allocationKey, variationKey].join(';'));
+/** Converts an {@link AssignmentCacheValue} to a string. */
+export function assignmentCacheValueToString(cacheValue: AssignmentCacheValue): string {
+  return getMD5Hash(Object.values(cacheValue).join(';'));
 }
 
 export interface AsyncMap<K, V> {

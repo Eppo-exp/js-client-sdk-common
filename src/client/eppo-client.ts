@@ -75,6 +75,7 @@ export default class EppoClient {
   private banditLogger?: IBanditLogger;
   private isGracefulFailureMode = true;
   private assignmentCache?: AssignmentCache;
+  private banditAssignmentCache?: AssignmentCache;
   private requestPoller?: IPoller;
   private readonly evaluator = new Evaluator();
   private readonly banditEvaluator = new BanditEvaluator();
@@ -651,16 +652,34 @@ export default class EppoClient {
   }
 
   private logBanditAction(banditEvent: IBanditEvent): void {
-    if (!this.banditLogger) {
-      // No bandit logger set; enqueue the event in case a logger is later set
-      if (this.queuedBanditEvents.length < MAX_EVENT_QUEUE_SIZE) {
-        this.queuedBanditEvents.push(banditEvent);
-      }
+    // First we check if this bandit action has been logged before
+    const subjectKey = banditEvent.subject;
+    const flagKey = banditEvent.featureFlag;
+    const banditKey = banditEvent.bandit;
+    const actionKey = banditEvent.action ?? '__eppo_no_action';
+
+    const banditAssignmentCacheProperties = {
+      flagKey,
+      subjectKey,
+      banditKey,
+      actionKey,
+    };
+
+    if (this.banditAssignmentCache?.has(banditAssignmentCacheProperties)) {
+      // Ignore repeat assignment
       return;
     }
-    // If here, we have a logger
+
+    // If here, we have a logger and a new assignment to be logged
     try {
-      this.banditLogger.logBanditAction(banditEvent);
+      if (this.banditLogger) {
+        this.banditLogger.logBanditAction(banditEvent);
+      } else if (this.queuedBanditEvents.length < MAX_EVENT_QUEUE_SIZE) {
+        // If no logger defined, queue up the events (up to a max) to flush if a logger is later defined
+        this.queuedBanditEvents.push(banditEvent);
+      }
+      // Record in the assignment cache, if active, to deduplicate subsequent repeat assignments
+      this.banditAssignmentCache?.set(banditAssignmentCacheProperties);
     } catch (err) {
       logger.warn('Error encountered logging bandit action', err);
     }
@@ -904,6 +923,22 @@ export default class EppoClient {
     this.assignmentCache = cache;
   }
 
+  public disableBanditAssignmentCache() {
+    this.banditAssignmentCache = undefined;
+  }
+
+  public useNonExpiringInMemoryBanditAssignmentCache() {
+    this.banditAssignmentCache = new NonExpiringInMemoryAssignmentCache();
+  }
+
+  public useLRUInMemoryBanditAssignmentCache(maxSize: number) {
+    this.banditAssignmentCache = new LRUInMemoryAssignmentCache(maxSize);
+  }
+
+  public useCustomBanditAssignmentCache(cache: AssignmentCache) {
+    this.banditAssignmentCache = cache;
+  }
+
   public setIsGracefulFailureMode(gracefulFailureMode: boolean) {
     this.isGracefulFailureMode = gracefulFailureMode;
   }
@@ -956,14 +991,14 @@ export default class EppoClient {
       }
     }
 
-    // assignment logger may be null while waiting for initialization
-    if (!this.assignmentLogger) {
-      this.queuedAssignmentEvents.length < MAX_EVENT_QUEUE_SIZE &&
-        this.queuedAssignmentEvents.push(event);
-      return;
-    }
     try {
-      this.assignmentLogger.logAssignment(event);
+      if (this.assignmentLogger) {
+        this.assignmentLogger.logAssignment(event);
+      } else if (this.queuedAssignmentEvents.length < MAX_EVENT_QUEUE_SIZE) {
+        // assignment logger may be null while waiting for initialization, queue up events (up to a max)
+        // to be flushed when set
+        this.queuedAssignmentEvents.push(event);
+      }
       this.assignmentCache?.set({
         flagKey,
         subjectKey,

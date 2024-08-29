@@ -8,10 +8,11 @@ import {
 } from '../../test/testHelpers';
 import ApiEndpoints from '../api-endpoints';
 import { IAssignmentEvent, IAssignmentLogger } from '../assignment-logger';
-import { BanditEvaluator } from '../bandit-evaluator';
+import { BanditEvaluation, BanditEvaluator } from '../bandit-evaluator';
 import { IBanditEvent, IBanditLogger } from '../bandit-logger';
 import ConfigurationRequestor from '../configuration-requestor';
 import { MemoryOnlyConfigurationStore } from '../configuration-store/memory.store';
+import { Evaluator, FlagEvaluation } from '../evaluator';
 import {
   AllocationEvaluationCode,
   IFlagEvaluationDetails,
@@ -20,7 +21,7 @@ import FetchHttpClient from '../http-client';
 import { BanditVariation, BanditParameters, Flag } from '../interfaces';
 import { Attributes, ContextAttributes } from '../types';
 
-import EppoClient from './eppo-client';
+import EppoClient, { IAssignmentDetails } from './eppo-client';
 
 describe('EppoClient Bandits E2E test', () => {
   const flagStore = new MemoryOnlyConfigurationStore<Flag>();
@@ -204,6 +205,8 @@ describe('EppoClient Bandits E2E test', () => {
     });
 
     it('Flushed queued logging events when a logger is set', () => {
+      client.useLRUInMemoryAssignmentCache(5);
+      client.useLRUInMemoryBanditAssignmentCache(5);
       client.setAssignmentLogger(null as unknown as IAssignmentLogger);
       client.setBanditLogger(null as unknown as IBanditLogger);
       const banditAssignment = client.getBanditAction(
@@ -216,6 +219,20 @@ describe('EppoClient Bandits E2E test', () => {
 
       expect(banditAssignment.variation).toBe('banner_bandit');
       expect(banditAssignment.action).toBe('adidas');
+
+      expect(mockLogAssignment).not.toHaveBeenCalled();
+      expect(mockLogBanditAction).not.toHaveBeenCalled();
+
+      const repeatAssignment = client.getBanditAction(
+        flagKey,
+        subjectKey,
+        subjectAttributes,
+        actions,
+        'control',
+      );
+
+      expect(repeatAssignment.variation).toBe('banner_bandit');
+      expect(repeatAssignment.action).toBe('adidas');
 
       expect(mockLogAssignment).not.toHaveBeenCalled();
       expect(mockLogBanditAction).not.toHaveBeenCalled();
@@ -427,6 +444,138 @@ describe('EppoClient Bandits E2E test', () => {
 
         expect(mockLogBanditAction).toHaveBeenCalledTimes(2);
         expect(mockLogBanditAction.mock.calls[1][0].actionProbability).toBeCloseTo(0.256);
+      });
+    });
+
+    describe('Assignment logging deduplication', () => {
+      let mockEvaluateFlag: jest.SpyInstance;
+      let mockEvaluateBandit: jest.SpyInstance;
+      // The below two variables allow easily changing what the mock evaluation functions return throughout the test
+      let variationToReturn: string;
+      let actionToReturn: string | null;
+
+      // Convenience method for repeatedly making the exact same assignment call
+      function requestClientBanditAction(): Omit<IAssignmentDetails<string>, 'evaluationDetails'> {
+        return client.getBanditAction(
+          flagKey,
+          subjectKey,
+          subjectAttributes,
+          ['toyota', 'honda'],
+          'control',
+        );
+      }
+
+      beforeAll(() => {
+        mockEvaluateFlag = jest
+          .spyOn(Evaluator.prototype, 'evaluateFlag')
+          .mockImplementation(() => {
+            return {
+              flagKey,
+              subjectKey,
+              subjectAttributes,
+              allocationKey: 'mock-allocation',
+              variation: { key: variationToReturn, value: variationToReturn },
+              extraLogging: {},
+              doLog: true,
+              flagEvaluationDetails: {
+                flagEvaluationCode: 'MATCH',
+                flagEvaluationDescription: 'Mocked evaluation',
+              },
+            } as FlagEvaluation;
+          });
+
+        mockEvaluateBandit = jest
+          .spyOn(BanditEvaluator.prototype, 'evaluateBandit')
+          .mockImplementation(() => {
+            return {
+              flagKey,
+              subjectKey,
+              subjectAttributes: { numericAttributes: {}, categoricalAttributes: {} },
+              actionKey: actionToReturn,
+              actionAttributes: { numericAttributes: {}, categoricalAttributes: {} },
+              actionScore: 10,
+              actionWeight: 0.5,
+              gamma: 1.0,
+              optimalityGap: 5,
+            } as BanditEvaluation;
+          });
+      });
+
+      beforeEach(() => {
+        client.useNonExpiringInMemoryAssignmentCache();
+        client.useNonExpiringInMemoryBanditAssignmentCache();
+      });
+
+      afterEach(() => {
+        client.disableAssignmentCache();
+        client.disableBanditAssignmentCache();
+      });
+
+      afterAll(() => {
+        mockEvaluateFlag.mockClear();
+        mockEvaluateBandit.mockClear();
+      });
+
+      it('handles bandit actions appropriately', async () => {
+        // First assign to non-bandit variation
+        variationToReturn = 'non-bandit';
+        actionToReturn = null;
+        const firstNonBanditAssignment = requestClientBanditAction();
+
+        expect(firstNonBanditAssignment.variation).toBe('non-bandit');
+        expect(firstNonBanditAssignment.action).toBeNull();
+        expect(mockLogAssignment).toHaveBeenCalledTimes(1); // new variation assignment
+        expect(mockLogBanditAction).not.toHaveBeenCalled(); // no bandit assignment
+
+        // Assign bandit action
+        variationToReturn = 'banner_bandit';
+        actionToReturn = 'toyota';
+        const firstBanditAssignment = requestClientBanditAction();
+
+        expect(firstBanditAssignment.variation).toBe('banner_bandit');
+        expect(firstBanditAssignment.action).toBe('toyota');
+        expect(mockLogAssignment).toHaveBeenCalledTimes(2); // new variation assignment
+        expect(mockLogBanditAction).toHaveBeenCalledTimes(1); // new bandit assignment
+
+        // Repeat bandit action assignment
+        variationToReturn = 'banner_bandit';
+        actionToReturn = 'toyota';
+        const secondBanditAssignment = requestClientBanditAction();
+
+        expect(secondBanditAssignment.variation).toBe('banner_bandit');
+        expect(secondBanditAssignment.action).toBe('toyota');
+        expect(mockLogAssignment).toHaveBeenCalledTimes(2); // repeat variation assignment
+        expect(mockLogBanditAction).toHaveBeenCalledTimes(1); // repeat bandit assignment
+
+        // New bandit action assignment
+        variationToReturn = 'banner_bandit';
+        actionToReturn = 'honda';
+        const thirdBanditAssignment = requestClientBanditAction();
+
+        expect(thirdBanditAssignment.variation).toBe('banner_bandit');
+        expect(thirdBanditAssignment.action).toBe('honda');
+        expect(mockLogAssignment).toHaveBeenCalledTimes(2); // repeat variation assignment
+        expect(mockLogBanditAction).toHaveBeenCalledTimes(2); // new bandit assignment
+
+        // Flip-flop to an earlier action assignment
+        variationToReturn = 'banner_bandit';
+        actionToReturn = 'toyota';
+        const fourthBanditAssignment = requestClientBanditAction();
+
+        expect(fourthBanditAssignment.variation).toBe('banner_bandit');
+        expect(fourthBanditAssignment.action).toBe('toyota');
+        expect(mockLogAssignment).toHaveBeenCalledTimes(2); // repeat variation assignment
+        expect(mockLogBanditAction).toHaveBeenCalledTimes(3); // "new" bandit assignment
+
+        // Flip-flop back to non-bandit assignment
+        variationToReturn = 'non-bandit';
+        actionToReturn = null;
+        const secondNonBanditAssignment = requestClientBanditAction();
+
+        expect(secondNonBanditAssignment.variation).toBe('non-bandit');
+        expect(secondNonBanditAssignment.action).toBeNull();
+        expect(mockLogAssignment).toHaveBeenCalledTimes(3); // "new" variation assignment
+        expect(mockLogBanditAction).toHaveBeenCalledTimes(3); // no bandit assignment
       });
     });
   });
