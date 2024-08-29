@@ -13,7 +13,15 @@ export type AssignmentCacheKey = {
   flagKey: string;
 };
 
-export type AssignmentCacheValue = Record<string, string>;
+export type CacheKeyPair<T extends string, U extends string> = {
+  [K in T]: string;
+} & {
+  [K in U]: string;
+};
+
+type VariationCacheValue = CacheKeyPair<'allocationKey', 'variationKey'>;
+type BanditCacheValue = CacheKeyPair<'banditKey', 'actionKey'>;
+export type AssignmentCacheValue = VariationCacheValue | BanditCacheValue;
 
 export type AssignmentCacheEntry = AssignmentCacheKey & AssignmentCacheValue;
 
