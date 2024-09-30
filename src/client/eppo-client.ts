@@ -68,6 +68,12 @@ export type FlagConfigurationRequestParameters = {
   skipInitialPoll?: boolean;
 };
 
+export interface IFlagExperiment<T> {
+  flagKey: string;
+  controlVariation: T;
+  treatmentVariations: Array<T>;
+}
+
 export default class EppoClient {
   private readonly queuedAssignmentEvents: IAssignmentEvent[] = [];
   private assignmentLogger?: IAssignmentLogger;
@@ -522,6 +528,35 @@ export default class EppoClient {
       evaluationDetails.flagEvaluationDescription = `Error evaluating bandit action: ${err.message}`;
     }
     return { variation, action, evaluationDetails };
+  }
+
+  /**
+   * For use with 3rd party CMS tooling, such as the Contentful Eppo plugin
+   */
+  public getExperimentContainer<T>(
+    flagExperiment: IFlagExperiment<T>,
+    subjectKey: string,
+    subjectAttributes: Attributes,
+  ): T {
+    const { flagKey, controlVariation, treatmentVariations } = flagExperiment;
+    const assignment = this.getStringAssignment(flagKey, subjectKey, subjectAttributes, 'control');
+    if (assignment === 'control') {
+      return controlVariation;
+    }
+    if (!assignment.startsWith('variation-')) {
+      logger.warn(
+        `Variation ${assignment} cannot be mapped to a container. Defaulting to control variation.`,
+      );
+      return controlVariation;
+    }
+    const treatmentVariationIndex = Number.parseInt(assignment.split('-')[1]);
+    if (treatmentVariationIndex > treatmentVariations.length) {
+      logger.warn(
+        `Selected treatment variation (${treatmentVariationIndex}) index is out of bounds. Defaulting to control variation.`,
+      );
+      return controlVariation;
+    }
+    return treatmentVariations[treatmentVariationIndex - 1];
   }
 
   private evaluateBanditAction(

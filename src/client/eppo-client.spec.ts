@@ -2,46 +2,24 @@ import { times } from 'lodash';
 import * as td from 'testdouble';
 
 import {
+  ASSIGNMENT_TEST_DATA_DIR,
   IAssignmentTestCase,
   MOCK_UFC_RESPONSE_FILE,
   OBFUSCATED_MOCK_UFC_RESPONSE_FILE,
   SubjectTestCase,
   getTestAssignments,
   readMockUFCResponse,
-  validateTestAssignments,
   testCasesByFileName,
-  ASSIGNMENT_TEST_DATA_DIR,
+  validateTestAssignments,
 } from '../../test/testHelpers';
-import ApiEndpoints from '../api-endpoints';
 import { IAssignmentLogger } from '../assignment-logger';
-import ConfigurationRequestor from '../configuration-requestor';
 import { IConfigurationStore } from '../configuration-store/configuration-store';
 import { MemoryOnlyConfigurationStore } from '../configuration-store/memory.store';
 import { MAX_EVENT_QUEUE_SIZE, POLL_INTERVAL_MS, POLL_JITTER_PCT } from '../constants';
-import FetchHttpClient from '../http-client';
 import { Flag, ObfuscatedFlag, VariationType } from '../interfaces';
 
 import EppoClient, { FlagConfigurationRequestParameters, checkTypeMatch } from './eppo-client';
-
-export async function init(configurationStore: IConfigurationStore<Flag | ObfuscatedFlag>) {
-  const apiEndpoints = new ApiEndpoints({
-    baseUrl: 'http://127.0.0.1:4000',
-    queryParams: {
-      apiKey: 'dummy',
-      sdkName: 'js-client-sdk-common',
-      sdkVersion: '1.0.0',
-    },
-  });
-  const httpClient = new FetchHttpClient(apiEndpoints, 1000);
-  const configurationRequestor = new ConfigurationRequestor(
-    httpClient,
-    configurationStore,
-    // Leave bandit stores empty for this test
-    null,
-    null,
-  );
-  await configurationRequestor.fetchAndStoreConfigurations();
-}
+import { initConfiguration } from './test-utils';
 
 describe('EppoClient E2E test', () => {
   global.fetch = jest.fn(() => {
@@ -56,7 +34,7 @@ describe('EppoClient E2E test', () => {
   const storage = new MemoryOnlyConfigurationStore<Flag | ObfuscatedFlag>();
 
   beforeAll(async () => {
-    await init(storage);
+    await initConfiguration(storage);
   });
 
   const flagKey = 'mock-flag';
@@ -211,7 +189,7 @@ describe('EppoClient E2E test', () => {
           });
         }) as jest.Mock;
 
-        await init(storage);
+        await initConfiguration(storage);
       });
 
       afterAll(() => {
@@ -260,7 +238,7 @@ describe('EppoClient E2E test', () => {
           });
         }) as jest.Mock;
 
-        await init(storage);
+        await initConfiguration(storage);
       });
 
       afterAll(() => {
