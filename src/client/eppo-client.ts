@@ -68,10 +68,10 @@ export type FlagConfigurationRequestParameters = {
   skipInitialPoll?: boolean;
 };
 
-export interface IFlagExperiment<T> {
+export interface IContainerExperiment<T> {
   flagKey: string;
-  controlVariation: T;
-  treatmentVariations: Array<T>;
+  controlVariationEntry: T;
+  treatmentVariationEntries: Array<T>;
 }
 
 export default class EppoClient {
@@ -531,32 +531,49 @@ export default class EppoClient {
   }
 
   /**
-   * For use with 3rd party CMS tooling, such as the Contentful Eppo plugin
+   * For use with 3rd party CMS tooling, such as the Contentful Eppo plugin.
+   *
+   * CMS plugins that integrate with Eppo will follow a common format for
+   * creating a feature flag. The flag created by the CMS plugin will have
+   * variations with values 'control', 'treatment-1', 'treatment-2', etc.
+   * This function allows users to easily return the CMS container entry
+   * for the assigned variation.
+   *
+   * @param flagExperiment the flag key, control container entry and treatment container entries.
+   * @param subjectKey an identifier of the experiment subject, for example a user ID.
+   * @param subjectAttributes optional attributes associated with the subject, for example name and email.
+   * @returns The container entry associated with the experiment.
    */
-  public getExperimentContainer<T>(
-    flagExperiment: IFlagExperiment<T>,
+  public getExperimentContainerEntry<T>(
+    flagExperiment: IContainerExperiment<T>,
     subjectKey: string,
     subjectAttributes: Attributes,
   ): T {
-    const { flagKey, controlVariation, treatmentVariations } = flagExperiment;
+    const { flagKey, controlVariationEntry, treatmentVariationEntries } = flagExperiment;
     const assignment = this.getStringAssignment(flagKey, subjectKey, subjectAttributes, 'control');
     if (assignment === 'control') {
-      return controlVariation;
+      return controlVariationEntry;
     }
     if (!assignment.startsWith('treatment-')) {
       logger.warn(
-        `Variation ${assignment} cannot be mapped to a container. Defaulting to control variation.`,
+        `Variation '${assignment}' cannot be mapped to a container. Defaulting to control variation.`,
       );
-      return controlVariation;
+      return controlVariationEntry;
     }
-    const treatmentVariationIndex = Number.parseInt(assignment.split('-')[1]);
-    if (treatmentVariationIndex > treatmentVariations.length) {
+    const treatmentVariationIndex = Number.parseInt(assignment.split('-')[1]) - 1;
+    if (isNaN(treatmentVariationIndex)) {
+      logger.warn(
+        `Variation '${assignment}' cannot be mapped to a container. Defaulting to control variation.`,
+      );
+      return controlVariationEntry;
+    }
+    if (treatmentVariationIndex >= treatmentVariationEntries.length) {
       logger.warn(
         `Selected treatment variation (${treatmentVariationIndex}) index is out of bounds. Defaulting to control variation.`,
       );
-      return controlVariation;
+      return controlVariationEntry;
     }
-    return treatmentVariations[treatmentVariationIndex - 1];
+    return treatmentVariationEntries[treatmentVariationIndex];
   }
 
   private evaluateBanditAction(

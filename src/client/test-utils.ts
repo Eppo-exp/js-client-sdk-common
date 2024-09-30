@@ -12,7 +12,7 @@ export async function initConfiguration(
     queryParams: {
       apiKey: 'dummy',
       sdkName: 'js-client-sdk-common',
-      sdkVersion: '1.0.0',
+      sdkVersion: '3.0.0',
     },
   });
   const httpClient = new FetchHttpClient(apiEndpoints, 1000);
