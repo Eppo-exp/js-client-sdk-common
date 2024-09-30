@@ -543,7 +543,7 @@ export default class EppoClient {
     if (assignment === 'control') {
       return controlVariation;
     }
-    if (!assignment.startsWith('variation-')) {
+    if (!assignment.startsWith('treatment-')) {
       logger.warn(
         `Variation ${assignment} cannot be mapped to a container. Defaulting to control variation.`,
       );

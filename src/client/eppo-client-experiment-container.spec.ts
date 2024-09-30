@@ -19,9 +19,9 @@ describe('getExperimentContainer', () => {
   }) as jest.Mock;
 
   const controlContainer: Container = { name: 'Control Container' };
-  const variation1Container: Container = { name: 'Variation 1 Container' };
-  const variation2Container: Container = { name: 'Variation 2 Container' };
-  const variation3Container: Container = { name: 'Variation 3 Container' };
+  const treatment1Container: Container = { name: 'Treatment Variation 1 Container' };
+  const treatment2Container: Container = { name: 'Treatment Variation 2 Container' };
+  const treatment3Container: Container = { name: 'Treatment Variation 3 Container' };
 
   let client: EppoClient;
   let flagExperiment: IFlagExperiment<Container>;
@@ -36,7 +36,7 @@ describe('getExperimentContainer', () => {
     flagExperiment = {
       flagKey: 'my-key',
       controlVariation: controlContainer,
-      treatmentVariations: [variation1Container, variation2Container, variation3Container],
+      treatmentVariations: [treatment1Container, treatment2Container, treatment3Container],
     };
     getStringAssignmentSpy = jest.spyOn(client, 'getStringAssignment');
     loggerWarnSpy = jest.spyOn(applicationLogger.logger, 'warn');
@@ -47,15 +47,15 @@ describe('getExperimentContainer', () => {
     loggerWarnSpy.mockRestore();
   });
 
-  it('should return the right container when a variation is assigned', async () => {
-    jest.spyOn(client, 'getStringAssignment').mockReturnValue('variation-2');
+  it('should return the right container when a treatment variation is assigned', async () => {
+    jest.spyOn(client, 'getStringAssignment').mockReturnValue('treatment-2');
     expect(client.getExperimentContainer(flagExperiment, 'subject-key', {})).toEqual(
-      variation2Container,
+      treatment2Container,
     );
 
-    jest.spyOn(client, 'getStringAssignment').mockReturnValue('variation-3');
+    jest.spyOn(client, 'getStringAssignment').mockReturnValue('treatment-3');
     expect(client.getExperimentContainer(flagExperiment, 'subject-key', {})).toEqual(
-      variation3Container,
+      treatment3Container,
     );
   });
 
@@ -75,8 +75,8 @@ describe('getExperimentContainer', () => {
     expect(loggerWarnSpy).toHaveBeenCalled();
   });
 
-  it('should default to the control container if an out-of-bounds variation is assigned', async () => {
-    jest.spyOn(client, 'getStringAssignment').mockReturnValue('variation-9');
+  it('should default to the control container if an out-of-bounds treatment variation is assigned', async () => {
+    jest.spyOn(client, 'getStringAssignment').mockReturnValue('treatment-9');
     expect(client.getExperimentContainer(flagExperiment, 'subject-key', {})).toEqual(
       controlContainer,
     );
