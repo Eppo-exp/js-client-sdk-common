@@ -15,7 +15,7 @@ import {
   DEFAULT_POLL_CONFIG_REQUEST_RETRIES,
   DEFAULT_REQUEST_TIMEOUT_MS,
   MAX_EVENT_QUEUE_SIZE,
-  POLL_INTERVAL_MS,
+  DEFAULT_POLL_INTERVAL_MS,
 } from '../constants';
 import { decodeFlag } from '../decoding';
 import { EppoValue } from '../eppo_value';
@@ -60,6 +60,7 @@ export type FlagConfigurationRequestParameters = {
   sdkName: string;
   baseUrl?: string;
   requestTimeoutMs?: number;
+  pollingIntervalMs?: number;
   numInitialRequestRetries?: number;
   numPollRequestRetries?: number;
   pollAfterSuccessfulInitialization?: boolean;
@@ -128,19 +129,9 @@ export default class EppoClient {
         'Eppo SDK unable to fetch flag configurations without configuration request parameters',
       );
     }
+    // if fetchFlagConfigurations() was previously called, stop any polling process from that call
+    this.requestPoller?.stop();
 
-    if (this.requestPoller) {
-      // if fetchFlagConfigurations() was previously called, stop any polling process from that call
-      this.requestPoller.stop();
-    }
-
-    const isExpired = await this.flagConfigurationStore.isExpired();
-    if (!isExpired) {
-      logger.info(
-        '[Eppo SDK] Configuration store is not expired. Skipping fetching flag configurations',
-      );
-      return;
-    }
     const {
       apiKey,
       sdkName,
@@ -154,6 +145,13 @@ export default class EppoClient {
       throwOnFailedInitialization = false,
       skipInitialPoll = false,
     } = this.configurationRequestParameters;
+
+    let { pollingIntervalMs = DEFAULT_POLL_INTERVAL_MS } = this.configurationRequestParameters;
+    if (pollingIntervalMs <= 0) {
+      logger.error('pollingIntervalMs must be greater than 0. Using default');
+      pollingIntervalMs = DEFAULT_POLL_INTERVAL_MS;
+    }
+
     // todo: Inject the chain of dependencies below
     const apiEndpoints = new ApiEndpoints({
       baseUrl,
@@ -167,18 +165,20 @@ export default class EppoClient {
       this.banditModelConfigurationStore ?? null,
     );
 
-    this.requestPoller = initPoller(
-      POLL_INTERVAL_MS,
-      configurationRequestor.fetchAndStoreConfigurations.bind(configurationRequestor),
-      {
-        maxStartRetries: numInitialRequestRetries,
-        maxPollRetries: numPollRequestRetries,
-        pollAfterSuccessfulStart: pollAfterSuccessfulInitialization,
-        pollAfterFailedStart: pollAfterFailedInitialization,
-        errorOnFailedStart: throwOnFailedInitialization,
-        skipInitialPoll: skipInitialPoll,
-      },
-    );
+    const pollingCallback = async () => {
+      if (await this.flagConfigurationStore.isExpired()) {
+        return configurationRequestor.fetchAndStoreConfigurations();
+      }
+    };
+
+    this.requestPoller = initPoller(pollingIntervalMs, pollingCallback, {
+      maxStartRetries: numInitialRequestRetries,
+      maxPollRetries: numPollRequestRetries,
+      pollAfterSuccessfulStart: pollAfterSuccessfulInitialization,
+      pollAfterFailedStart: pollAfterFailedInitialization,
+      errorOnFailedStart: throwOnFailedInitialization,
+      skipInitialPoll: skipInitialPoll,
+    });
 
     await this.requestPoller.start();
   }
