@@ -138,7 +138,6 @@ export default class EppoClient {
       sdkVersion,
       baseUrl, // Default is set in ApiEndpoints constructor if undefined
       requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
-      pollingIntervalMs = DEFAULT_POLL_INTERVAL_MS,
       numInitialRequestRetries = DEFAULT_INITIAL_CONFIG_REQUEST_RETRIES,
       numPollRequestRetries = DEFAULT_POLL_CONFIG_REQUEST_RETRIES,
       pollAfterSuccessfulInitialization = false,
@@ -146,8 +145,11 @@ export default class EppoClient {
       throwOnFailedInitialization = false,
       skipInitialPoll = false,
     } = this.configurationRequestParameters;
+
+    let { pollingIntervalMs = DEFAULT_POLL_INTERVAL_MS } = this.configurationRequestParameters;
     if (pollingIntervalMs <= 0) {
-      logger.error('PollingIntervalMs must be greater than 0');
+      logger.error('pollingIntervalMs must be greater than 0. Using default');
+      pollingIntervalMs = DEFAULT_POLL_INTERVAL_MS;
     }
 
     // todo: Inject the chain of dependencies below
