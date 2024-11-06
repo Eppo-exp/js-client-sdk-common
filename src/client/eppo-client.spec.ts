@@ -17,7 +17,7 @@ import { IAssignmentLogger } from '../assignment-logger';
 import ConfigurationRequestor from '../configuration-requestor';
 import { IConfigurationStore } from '../configuration-store/configuration-store';
 import { MemoryOnlyConfigurationStore } from '../configuration-store/memory.store';
-import { MAX_EVENT_QUEUE_SIZE, POLL_INTERVAL_MS, POLL_JITTER_PCT } from '../constants';
+import { MAX_EVENT_QUEUE_SIZE, DEFAULT_POLL_INTERVAL_MS, POLL_JITTER_PCT } from '../constants';
 import FetchHttpClient from '../http-client';
 import { Flag, ObfuscatedFlag, VariationType } from '../interfaces';
 
@@ -576,7 +576,7 @@ describe('EppoClient E2E test', () => {
     const subject = 'alice';
     const pi = 3.1415926;
 
-    const maxRetryDelay = POLL_INTERVAL_MS * POLL_JITTER_PCT;
+    const maxRetryDelay = DEFAULT_POLL_INTERVAL_MS * POLL_JITTER_PCT;
 
     beforeAll(async () => {
       global.fetch = jest.fn(() => {
@@ -652,6 +652,38 @@ describe('EppoClient E2E test', () => {
       expect(variation).toBe(pi);
     });
 
+    describe('Poll after successful start', () => {
+      it('Continues to poll when cache has not expired', async () => {
+        class MockStore<T> extends MemoryOnlyConfigurationStore<T> {
+          public static expired = false;
+
+          async isExpired(): Promise<boolean> {
+            return MockStore.expired;
+          }
+        }
+
+        client = new EppoClient(new MockStore(), undefined, undefined, {
+          ...requestConfiguration,
+          pollAfterSuccessfulInitialization: true,
+        });
+        client.setIsGracefulFailureMode(false);
+        // no configuration loaded
+        let variation = client.getNumericAssignment(flagKey, subject, {}, 0.0);
+        expect(variation).toBe(0.0);
+
+        // have client fetch configurations; cache is not expired so assignment stays
+        await client.fetchFlagConfigurations();
+        variation = client.getNumericAssignment(flagKey, subject, {}, 0.0);
+        expect(variation).toBe(0.0);
+
+        // Expire the cache and advance time until a reload should happen
+        MockStore.expired = true;
+        await jest.advanceTimersByTimeAsync(DEFAULT_POLL_INTERVAL_MS * 1.5);
+
+        variation = client.getNumericAssignment(flagKey, subject, {}, 0.0);
+        expect(variation).toBe(pi);
+      });
+    });
     it('Does not fetch configurations if the configuration store is unexpired', async () => {
       class MockStore<T> extends MemoryOnlyConfigurationStore<T> {
         async isExpired(): Promise<boolean> {
@@ -720,7 +752,7 @@ describe('EppoClient E2E test', () => {
       expect(variation).toBe(pi);
       expect(callCount).toBe(2);
 
-      await jest.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+      await jest.advanceTimersByTimeAsync(DEFAULT_POLL_INTERVAL_MS);
       // By default, no more polling
       expect(callCount).toBe(pollAfterSuccessfulInitialization ? 3 : 2);
     });
@@ -782,7 +814,7 @@ describe('EppoClient E2E test', () => {
       expect(client.getNumericAssignment(flagKey, subject, {}, 10.0)).toBe(10.0);
 
       // Advance timers so a post-init poll can take place
-      await jest.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 1.5);
+      await jest.advanceTimersByTimeAsync(DEFAULT_POLL_INTERVAL_MS * 1.5);
 
       // if pollAfterFailedInitialization = true, we will poll later and get a config, otherwise not
       expect(callCount).toBe(pollAfterFailedInitialization ? 2 : 1);
