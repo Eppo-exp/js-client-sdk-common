@@ -97,7 +97,11 @@ export class LRUCache implements Map<string, string> {
     return this;
   }
 }
-
+/**
+ * Variation of LRUCache that expires after set time in milliseconds
+ * @param {number} maxSize - Maximum cache size
+ * @param {number} timeout - Time in milliseconds after which cache entry will evict itself
+ **/
 export class ExpiringLRUCache extends LRUCache {
   constructor(readonly maxSize: number, readonly timeout: number) {
     super(maxSize);

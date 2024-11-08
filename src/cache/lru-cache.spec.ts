@@ -1,4 +1,4 @@
-import {ExpiringLRUCache, LRUCache} from './lru-cache';
+import { ExpiringLRUCache, LRUCache } from './lru-cache';
 
 describe('LRUCache', () => {
   let cache: LRUCache;
