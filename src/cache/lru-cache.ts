@@ -97,3 +97,17 @@ export class LRUCache implements Map<string, string> {
     return this;
   }
 }
+
+export class ExpiringLRUCache extends LRUCache {
+  constructor(readonly maxSize: number, readonly timeout: number) {
+    super(maxSize);
+  }
+
+  set(key: string, value: string): this {
+    const cache = super.set(key, value);
+    setTimeout(() => {
+      this.delete(key);
+    }, this.timeout);
+    return cache;
+  }
+}

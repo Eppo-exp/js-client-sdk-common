@@ -1,6 +1,7 @@
 import { getMD5Hash } from '../obfuscation';
 
-import { LRUCache } from './lru-cache';
+import {ExpiringLRUCache, LRUCache} from './lru-cache';
+import {max} from "lodash";
 
 /**
  * Assignment cache keys are only on the subject and flag level, while the entire value is used
@@ -103,6 +104,7 @@ export class NonExpiringInMemoryAssignmentCache extends AbstractAssignmentCache<
  * The primary use case is for server-side SDKs, where the cache is shared across
  * multiple users. In this case, the cache size should be set to the maximum number
  * of users that can be active at the same time.
+ * @param {number} maxSize - Maximum cache size
  */
 export class LRUInMemoryAssignmentCache extends AbstractAssignmentCache<LRUCache> {
   constructor(maxSize: number) {
