@@ -3,11 +3,9 @@ import { logger } from '../application-logger';
 import { IAssignmentEvent, IAssignmentLogger } from '../assignment-logger';
 import { BanditEvaluator } from '../bandit-evaluator';
 import { IBanditEvent, IBanditLogger } from '../bandit-logger';
-import {
-  AssignmentCache,
-  LRUInMemoryAssignmentCache,
-  NonExpiringInMemoryAssignmentCache,
-} from '../cache/abstract-assignment-cache';
+import { AssignmentCache } from '../cache/abstract-assignment-cache';
+import { LRUInMemoryAssignmentCache } from '../cache/lru-in-memory-assignment-cache';
+import { NonExpiringInMemoryAssignmentCache } from '../cache/non-expiring-in-memory-cache-assignment';
 import ConfigurationRequestor from '../configuration-requestor';
 import { IConfigurationStore } from '../configuration-store/configuration-store';
 import {
@@ -252,25 +250,6 @@ export default class EppoClient {
     defaultValue: boolean,
   ): boolean {
     return this.getBooleanAssignment(flagKey, subjectKey, subjectAttributes, defaultValue);
-  }
-
-  /**
-   * Maps a subject to a boolean variation for a given experiment.
-   *
-   * @param flagKey feature flag identifier
-   * @param subjectKey an identifier of the experiment subject, for example a user ID.
-   * @param subjectAttributes optional attributes associated with the subject, for example name and email.
-   * @param defaultValue default value to return if the subject is not part of the experiment sample
-   * @returns a boolean variation value if the subject is part of the experiment sample, otherwise the default value
-   */
-  public getBooleanAssignment(
-    flagKey: string,
-    subjectKey: string,
-    subjectAttributes: Attributes,
-    defaultValue: boolean,
-  ): boolean {
-    return this.getBooleanAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue)
-      .variation;
   }
 
   /**
@@ -655,6 +634,25 @@ export default class EppoClient {
       result = this.deduceAttributeContext(subjectAttributes as Attributes);
     }
     return result;
+  }
+
+  /**
+   * Maps a subject to a boolean variation for a given experiment.
+   *
+   * @param flagKey feature flag identifier
+   * @param subjectKey an identifier of the experiment subject, for example a user ID.
+   * @param subjectAttributes optional attributes associated with the subject, for example name and email.
+   * @param defaultValue default value to return if the subject is not part of the experiment sample
+   * @returns a boolean variation value if the subject is part of the experiment sample, otherwise the default value
+   */
+  public getBooleanAssignment(
+    flagKey: string,
+    subjectKey: string,
+    subjectAttributes: Attributes,
+    defaultValue: boolean,
+  ): boolean {
+    return this.getBooleanAssignmentDetails(flagKey, subjectKey, subjectAttributes, defaultValue)
+      .variation;
   }
 
   private ensureActionsWithContextualAttributes(

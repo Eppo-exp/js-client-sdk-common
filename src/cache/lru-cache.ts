@@ -97,6 +97,7 @@ export class LRUCache implements Map<string, string> {
     return this;
   }
 }
+
 /**
  * Variation of LRUCache that expires after set time in milliseconds
  * @param {number} maxSize - Maximum cache size
